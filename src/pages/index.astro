@@ -1,0 +1,38 @@
+---
+// Temporary start page until the landing page is built.
+import Base from '../layouts/Base.astro';
+import Logo from '../components/Logo.astro';
+import { routes } from '../lib/routes';
+---
+
+<Base title="Inhandy">
+  <main>
+    <Logo size={48} />
+    <p>The landing page comes later. For now:</p>
+    <div class="links">
+      <a class="btn btn--mango btn--lg" href={routes.home}>Open the app</a>
+      <a class="btn" href={routes.brand}>Brand and components</a>
+    </div>
+  </main>
+</Base>
+
+<style>
+  main {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 64px 16px;
+  }
+
+  p {
+    margin: 24px 0;
+    font-size: 18px;
+    line-height: 1.5;
+    color: var(--ink-muted);
+  }
+
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+</style>

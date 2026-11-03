@@ -1,0 +1,689 @@
+---
+import AppShell from '../../../layouts/AppShell.astro';
+import Handy from '../../../components/Handy.astro';
+import GoalCard from '../../../components/GoalCard.astro';
+import { routes } from '../../../lib/routes';
+import { inr } from '../../../lib/format';
+import { GOAL_ICONS } from '../../../lib/goal-icons';
+import { DEFAULT_GOALS, DEFAULT_JARS, MONTHLY_INHAND, nextPayday, paydayStreak } from '../../../data/demo-plan';
+
+const jarFill = (pct: number) => Math.min(100, pct * 2.6) + '%';
+const freePct = 100 - DEFAULT_JARS.reduce((s, j) => s + j.pct, 0);
+---
+
+<AppShell title="Salary-day plan" active="plan">
+  <div class="petals" aria-hidden="true" data-petals></div>
+
+  <header class="head">
+    <span class="head__kicker">November plan</span>
+    <h1>Salary-day plan</h1>
+  </header>
+
+  <section class="card jars" aria-labelledby="jars-h">
+    <div class="card__top">
+      <h2 id="jars-h" class="card__title"><span class="num">{inr(MONTHLY_INHAND)}</span> pours into</h2>
+      <a href={routes.planEdit} class="link">Edit plan</a>
+    </div>
+    <div class="jars__row">
+      {
+        DEFAULT_JARS.map((j) => (
+          <div class="jar" data-jar={j.id} style={`--jar: ${j.color}`}>
+            <div class="jar__glass" aria-hidden="true">
+              <div class="jar__lid" />
+              <div class="jar__body">
+                <div class="jar__fill" data-fill style={`height: ${jarFill(j.pct)}`}>
+                  <svg class="jar__wave" viewBox="0 0 240 12" preserveAspectRatio="none">
+                    <path d="M0 6 Q15 0 30 6 T60 6 T90 6 T120 6 T150 6 T180 6 T210 6 T240 6 V12 H0 Z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <span class="jar__label">{j.label}</span>
+            <span class="num jar__amt" data-amt>
+              {inr((MONTHLY_INHAND * j.pct) / 100)}
+            </span>
+          </div>
+        ))
+      }
+    </div>
+    <p class="note">On salary day, move these first. Then spend what’s left, guilt-free.</p>
+  </section>
+
+  <div class="side">
+    <section class="payday" aria-label="Next payday">
+      <Handy mood="happy" size={72} decorative />
+      <div class="payday__text">
+        <span class="payday__kicker">Next salary day</span>
+        <span class="payday__date">{nextPayday.label}</span>
+        <span class="num payday__free"><span data-free>{inr((MONTHLY_INHAND * freePct) / 100)}</span> for daily spending (food, travel, bills)</span>
+      </div>
+    </section>
+
+    <section class="streak" aria-label="Salary-day streak">
+      <div class="streak__flames" aria-hidden="true">
+        {
+          Array.from({ length: paydayStreak }, (_, i) => (
+            <svg class:list={{ flick: i === paydayStreak - 1 }} width="30" height="36" viewBox="0 0 24 28">
+              <path d="M12 27c5 0 8.5-3.5 8.5-8.5 0-6-6-8.5-6-14.5-3.5 2.4-6 6-6 9.6-1.2-1.2-2.4-2.4-2.4-4.8-2.4 2.4-2.6 6-2.6 9.7C3.5 23.5 7 27 12 27z" fill="#FFB21E" stroke="#15131C" stroke-width="1.6" stroke-linejoin="round" />
+              <path d="M12 25c2.5 0 4.2-1.8 4.2-4.2 0-3-3-4.4-3-7.4-2 1.4-4.5 3.8-4.5 7 0 2.8 1.2 4.6 3.3 4.6z" fill="#FFD27A" />
+            </svg>
+          ))
+        }
+      </div>
+      <div class="streak__text">
+        <span class="streak__title">{paydayStreak} paydays in a row</span>
+        <span class="streak__sub">You filled your jars on salary day. Keep it going on {nextPayday.short}.</span>
+      </div>
+    </section>
+  </div>
+
+  <section class="goals" aria-labelledby="goals-h">
+    <div class="goals__top">
+      <h2 id="goals-h" class="goals__title">Goals</h2>
+      <a href={routes.newGoal} class="link">+ New goal</a>
+    </div>
+    <div class="goals__grid" data-goals>
+      {DEFAULT_GOALS.map((g) => <GoalCard {...g} />)}
+      <div class="goal-sip" data-sip-card>
+        <div class="goal-sip__top">
+          <span class="goal-sip__icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d={GOAL_ICONS.sprout.d}></path></svg>
+          </span>
+          <div class="goal-sip__text">
+            <span class="goal-sip__label">First SIP</span>
+            <span class="goal-sip__sub">Not started yet</span>
+          </div>
+        </div>
+        <p class="goal-sip__body">
+          A SIP (systematic investment plan) puts a fixed amount into a mutual fund every month. Starting small is the whole trick.
+        </p>
+        <a href={routes.startSip} class="btn btn--mango goal-sip__cta">Start my first SIP · ₹2,000/mo</a>
+      </div>
+    </div>
+    <template id="goal-template">
+      <GoalCard id="" label="" sub="" icon="phone" target={1} saved={0} />
+    </template>
+  </section>
+</AppShell>
+
+<script>
+  import { inr } from '../../../lib/format';
+  import { GOAL_ICONS } from '../../../lib/goal-icons';
+  import { DEFAULT_JARS, MONTHLY_INHAND, type Goal } from '../../../data/demo-plan';
+  import { loadPlan, savePlan } from '../../../scripts/plan-store';
+
+  const state = loadPlan();
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Jars and daily-spending money from the saved split
+  let used = 0;
+  for (const j of DEFAULT_JARS) {
+    const pct = state.jars[j.id] ?? j.pct;
+    used += pct;
+    const el = document.querySelector<HTMLElement>(`[data-jar="${j.id}"]`);
+    if (!el) continue;
+    el.querySelector<HTMLElement>('[data-fill]')!.style.height = Math.min(100, pct * 2.6) + '%';
+    el.querySelector('[data-amt]')!.textContent = inr((MONTHLY_INHAND * pct) / 100);
+  }
+  document.querySelector('[data-free]')!.textContent = inr((MONTHLY_INHAND * Math.max(0, 100 - used)) / 100);
+
+  // Goals
+  const grid = document.querySelector<HTMLElement>('[data-goals]')!;
+  const template = document.querySelector<HTMLTemplateElement>('#goal-template')!;
+  const sipCard = grid.querySelector('[data-sip-card]');
+
+  function fillCard(card: HTMLElement, g: Goal) {
+    const done = g.saved >= g.target;
+    card.dataset.goalId = g.id;
+    card.classList.toggle('goal--done', done);
+    card.querySelector('[data-icon]')!.setAttribute('d', GOAL_ICONS[g.icon]?.d ?? GOAL_ICONS.sprout.d);
+    card.querySelector('[data-label]')!.textContent = g.label;
+    card.querySelector('[data-sub]')!.textContent = done ? 'Goal reached. Treat yourself (a little).' : g.sub;
+    card.querySelector<HTMLElement>('[data-done]')!.hidden = !done;
+    card.querySelector<HTMLElement>('[data-bar]')!.style.width =
+      Math.min(100, g.target > 0 ? (g.saved / g.target) * 100 : 0).toFixed(1) + '%';
+    card.querySelector('[data-track]')!.setAttribute('aria-label', `${g.label}: ${inr(g.saved)} of ${inr(g.target)}`);
+    card.querySelector('[data-saved]')!.textContent = inr(g.saved);
+    card.querySelector('[data-target]')!.textContent = inr(g.target);
+    const btn = card.querySelector<HTMLButtonElement>('[data-add]')!;
+    btn.disabled = done;
+    btn.textContent = done ? 'Goal complete' : 'Add ₹1,000';
+  }
+
+  function renderGoals() {
+    grid.querySelectorAll('[data-goal-id]').forEach((c) => c.remove());
+    for (const g of state.goals) {
+      const card = (template.content.firstElementChild as HTMLElement).cloneNode(true) as HTMLElement;
+      fillCard(card, g);
+      grid.insertBefore(card, sipCard);
+    }
+  }
+
+  function bob(el: HTMLElement) {
+    if (reduceMotion) return;
+    el.classList.remove('bob');
+    void el.offsetWidth;
+    el.classList.add('bob');
+  }
+
+  // A shower of mango petals when a goal is reached
+  function celebrate() {
+    if (reduceMotion) return;
+    const box = document.querySelector<HTMLElement>('[data-petals]')!;
+    box.replaceChildren();
+    const colors = ['#FFB21E', '#FFC94D', '#F98B0B', '#FFD27A'];
+    for (let i = 0; i < 28; i++) {
+      const p = document.createElement('span');
+      p.className = 'petal';
+      p.style.cssText = [
+        `left: ${(Math.random() * 100).toFixed(1)}%`,
+        `width: ${10 + Math.random() * 10}px`,
+        `height: ${16 + Math.random() * 12}px`,
+        `background: ${colors[i % colors.length]}`,
+        `--dur: ${(1.8 + Math.random() * 1.2).toFixed(2)}s`,
+        `--delay: ${(Math.random() * 0.4).toFixed(2)}s`,
+        `--dx: ${((Math.random() - 0.5) * 160).toFixed(0)}px`,
+        `--rot: ${((Math.random() - 0.5) * 900).toFixed(0)}deg`,
+      ].join(';');
+      box.append(p);
+    }
+    window.setTimeout(() => box.replaceChildren(), 3200);
+  }
+
+  grid.addEventListener('click', (e) => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('[data-add]');
+    if (!btn) return;
+    const card = btn.closest<HTMLElement>('[data-goal-id]')!;
+    const goal = state.goals.find((g) => g.id === card.dataset.goalId);
+    if (!goal || goal.saved >= goal.target) return;
+    goal.saved = Math.min(goal.target, goal.saved + 1000);
+    savePlan(state);
+    fillCard(card, goal);
+    bob(card);
+    if (goal.saved >= goal.target) celebrate();
+  });
+
+  renderGoals();
+</script>
+
+<style>
+  .petals {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 30;
+    overflow: hidden;
+  }
+
+  .petals :global(.petal) {
+    position: absolute;
+    top: -30px;
+    border-radius: 70% 0 70% 0;
+    opacity: 0;
+    animation: petal var(--dur) cubic-bezier(0.25, 0.6, 0.4, 1) var(--delay) forwards;
+  }
+
+  @keyframes petal {
+    0% {
+      opacity: 0;
+      transform: translate(0, 0) rotate(0);
+    }
+    8% {
+      opacity: 1;
+    }
+    85% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      transform: translate(var(--dx), 900px) rotate(var(--rot));
+    }
+  }
+
+  :global(.bob) {
+    animation: bob 0.5s cubic-bezier(0.3, 1.6, 0.5, 1);
+  }
+
+  @keyframes bob {
+    0% {
+      transform: scale(0.9);
+    }
+    60% {
+      transform: scale(1.04);
+    }
+    100% {
+      transform: none;
+    }
+  }
+
+  .head {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .head__kicker {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+
+  h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 40px;
+    letter-spacing: -0.03em;
+  }
+
+  .card {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 28px;
+    border-radius: 28px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 6px 0 var(--ink);
+  }
+
+  .card__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .card__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 22px;
+  }
+
+  .link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 4px;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--violet);
+  }
+
+  .note {
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: #e2f8ef;
+    color: #0a6b4d;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  /* Jars */
+  .jars {
+    grid-column: span 8;
+  }
+
+  .jars__row {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 20px;
+  }
+
+  .jar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+  }
+
+  .jar__glass {
+    position: relative;
+    width: 100%;
+    max-width: 96px;
+    height: 150px;
+  }
+
+  .jar__lid {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    top: 0;
+    height: 10px;
+    border-radius: 5px;
+    background: var(--jar);
+    border: 2px solid var(--ink);
+    box-sizing: border-box;
+  }
+
+  .jar__body {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 8px;
+    bottom: 0;
+    border: 2.5px solid var(--ink);
+    border-radius: 14px 14px 18px 18px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.7);
+  }
+
+  .jar__fill {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--jar);
+    transition: height 0.5s cubic-bezier(0.3, 1.3, 0.5, 1);
+  }
+
+  .jar__wave {
+    position: absolute;
+    left: 0;
+    top: -7px;
+    width: 200%;
+    height: 8px;
+    fill: var(--jar);
+    animation: wave 2.6s linear infinite;
+  }
+
+  @keyframes wave {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  .jar__label {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .jar__amt {
+    font-size: 16px;
+    font-weight: 800;
+  }
+
+  /* Right column */
+  .side {
+    grid-column: span 4;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .payday {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 24px;
+    border-radius: 28px;
+    background: var(--mango);
+    border: 3px solid var(--ink);
+    box-shadow: 0 7px 0 var(--ink);
+  }
+
+  .payday__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .payday__kicker {
+    font-size: 16px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .payday__date {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 28px;
+    line-height: 1.05;
+  }
+
+  .payday__free {
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .streak {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 24px;
+    border-radius: 24px;
+    background: #ffe7b0;
+    border: 2.5px solid var(--ink);
+  }
+
+  .streak__flames {
+    display: flex;
+    gap: 2px;
+  }
+
+  .flick {
+    animation: flick 1.6s ease-in-out infinite;
+    transform-origin: 50% 90%;
+  }
+
+  @keyframes flick {
+    0%,
+    100% {
+      transform: scale(1) rotate(-3deg);
+    }
+    50% {
+      transform: scale(1.1) rotate(3deg);
+    }
+  }
+
+  .streak__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .streak__title {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 24px;
+  }
+
+  .streak__sub {
+    font-size: 16px;
+    color: var(--ink-muted);
+  }
+
+  /* Goals */
+  .goals {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .goals__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .goals__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 26px;
+  }
+
+  .goals__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+    align-items: stretch;
+  }
+
+  .goal-sip {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 22px;
+    border-radius: 26px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 6px 0 var(--ink);
+  }
+
+  .goal-sip__top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .goal-sip__icon {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 15px;
+    background: var(--mint);
+    border: 2.5px solid var(--ink);
+    box-sizing: border-box;
+  }
+
+  .goal-sip__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .goal-sip__label {
+    font-weight: 800;
+  }
+
+  .goal-sip__sub {
+    color: var(--ink-muted);
+  }
+
+  .goal-sip__body {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  .goal-sip__cta {
+    margin-top: auto;
+    min-height: 48px;
+    border-radius: 15px;
+    font-weight: 800;
+    text-align: center;
+  }
+
+  /* Narrow laptops: jars take the full row, payday + streak sit side by side */
+  @media (max-width: 1279px) {
+    .jars {
+      grid-column: 1 / -1;
+    }
+
+    .side {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 1023px) {
+    .goals__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  /* Phone, following designs/Plan.dc.html: jars, goals, then streak */
+  @media (max-width: 639px) {
+    .head h1 {
+      font-size: 26px !important;
+      letter-spacing: -0.02em;
+    }
+
+    .card {
+      padding: 18px;
+      border-radius: 26px;
+    }
+
+    .card__title {
+      font-size: 18px;
+    }
+
+    .jars__row {
+      gap: 4px;
+    }
+
+    .jar__glass {
+      max-width: 56px;
+      height: 84px;
+    }
+
+    .jar__amt {
+      font-size: 14px;
+    }
+
+    /* Five jars across a phone leave ~58px each: let long names like "Emergency" hyphenate */
+    .jar {
+      min-width: 0;
+    }
+
+    .jar__label {
+      max-width: 100%;
+      font-size: 14px;
+      hyphens: auto;
+      overflow-wrap: anywhere;
+    }
+
+    .side {
+      display: contents;
+    }
+
+    .payday {
+      display: none;
+    }
+
+    .streak {
+      grid-column: 1 / -1;
+      order: 2;
+      flex-direction: row;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 18px;
+    }
+
+    .streak__title {
+      font-size: 17px;
+    }
+
+    .goals {
+      order: 1;
+      gap: 12px;
+    }
+
+    .goals__title {
+      font-size: 20px;
+    }
+
+    .goals__grid {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 16px;
+    }
+
+    .goal-sip {
+      padding: 16px;
+      border-radius: 24px;
+    }
+  }
+</style>

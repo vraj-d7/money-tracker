@@ -1,0 +1,1016 @@
+---
+// Autopay scan: upload → scanning → results.
+// No backend yet: the chosen PDF never leaves the browser, and results are the design's sample findings.
+import AppShell from '../../../layouts/AppShell.astro';
+import Handy from '../../../components/Handy.astro';
+import { routes } from '../../../lib/routes';
+import { inr } from '../../../lib/format';
+import { DEFAULT_CUT, SCAN_RESULTS, SCAN_STATUS } from '../../../data/demo-tools';
+
+const trust = ['We never ask for your bank password', 'PDF deleted right after the scan', 'Nothing shared with anyone'];
+const phases = [
+  { id: 'upload', label: '1 · Upload' },
+  { id: 'scan', label: '2 · Scanning' },
+  { id: 'results', label: '3 · Results' },
+];
+---
+
+<AppShell title="Autopay scan" active="scan">
+  <div class="scan" data-scan data-phase="upload" data-default-cut={JSON.stringify(DEFAULT_CUT)}>
+    <header class="head">
+      <div class="head__text">
+        <span class="eyebrow">Autopay scan</span>
+        <h1 data-title>Let’s find your forgotten autopays</h1>
+      </div>
+      <ol class="phases" aria-label="Scan steps">
+        {phases.map((p, i) => <li class="phase" data-phase-pill={p.id} aria-current={i === 0 ? 'step' : undefined}>{p.label}</li>)}
+      </ol>
+    </header>
+
+    <!-- 1 · Upload -->
+    <div class="split split--upload" data-panel="upload">
+      <section class="card upload">
+        <input type="file" accept="application/pdf,.pdf" id="statement" class="visually-hidden" data-file-input />
+        <label for="statement" class="drop" data-drop>
+          <span class="drop__icon" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5M12 17v-6M9 14l3-3 3 3"></path></svg>
+          </span>
+          <span class="drop__title">Drop your bank statement PDF here, or click to choose</span>
+          <span class="muted">Last 3 months works best · up to 10 MB</span>
+        </label>
+        <p class="error" data-file-error hidden></p>
+        <div class="file" data-file hidden>
+          <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0A6B4D" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"></path></svg>
+          <span class="file__text">
+            <span class="file__name" data-file-name></span>
+            <span class="num muted" data-file-size></span>
+          </span>
+          <button type="button" class="file__remove" aria-label="Remove file" data-file-remove>
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+          </button>
+        </div>
+        <div class="group">
+          <label for="pdf-pass" class="group__label">PDF password <span class="muted">(if your bank set one)</span></label>
+          <div class="field">
+            <input id="pdf-pass" type="password" autocomplete="off" placeholder="e.g. DDMMYYYY" />
+            <button type="button" class="field__show" aria-label="Show password" data-show-pass>Show</button>
+          </div>
+          <p class="muted">Often your date of birth or customer ID. Used once to open the file, never saved.</p>
+        </div>
+      </section>
+
+      <aside class="upload-side">
+        <div class="talk">
+          <Handy mood="chill" size={96} decorative />
+          <p class="talk__bubble">Just the PDF. Not your net-banking login. Never.</p>
+        </div>
+        <ul class="trust">
+          {
+            trust.map((t) => (
+              <li>
+                <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0A6B4D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" /><path d="M9 12l2 2 4-4" /></svg>
+                {t}
+              </li>
+            ))
+          }
+        </ul>
+        <section class="looks">
+          <h2 class="looks__title">What Handy looks for</h2>
+          <p class="muted">Charges that repeat every month, free trials that turned paid, sneaky price hikes and things you stopped using.</p>
+        </section>
+        <button type="button" class="btn btn--mango btn--lg start" data-start>Scan a sample statement</button>
+      </aside>
+    </div>
+
+    <!-- 2 · Scanning -->
+    <section class="card scanning" aria-label="Scanning" data-panel="scan" hidden>
+      <div class="scanning__art">
+        <Handy mood="gasp" size={180} decorative />
+        <svg class="sweep" aria-hidden="true" viewBox="0 0 80 80" width="120" height="120">
+          <circle cx="32" cy="32" r="20" fill="#FFFFFF" fill-opacity="0.35" stroke="#15131C" stroke-width="5"></circle>
+          <path d="M24 24 A10 10 0 0 1 34 20" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" fill="none"></path>
+          <path d="M47 47 L68 68" stroke="#15131C" stroke-width="9" stroke-linecap="round"></path>
+        </svg>
+      </div>
+      <div class="scanning__text">
+        <h2 class="scanning__title">Handy is on the case…</h2>
+        <p class="scanning__status" aria-live="polite" data-status>{SCAN_STATUS[0]}</p>
+        <div class="prog" role="progressbar" aria-label="Scanning statement"><div class="prog__fill"></div></div>
+        <div class="skeleton" aria-hidden="true">
+          {
+            ['70%', '52%', '64%', '46%'].map((w) => (
+              <div class="sk">
+                <span class="shimmer sk__icon" />
+                <span class="sk__lines">
+                  <span class="shimmer sk__line" style={`width: ${w}`} />
+                  <span class="shimmer sk__line sk__line--short" />
+                </span>
+                <span class="shimmer sk__amt" />
+              </div>
+            ))
+          }
+        </div>
+        <p class="muted lock">
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="3"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+          Your PDF is deleted as soon as we’re done.
+        </p>
+      </div>
+    </section>
+
+    <!-- 3 · Results -->
+    <div class="split split--results" data-panel="results" hidden>
+      <section class="subs" aria-label="Subscriptions found">
+        {
+          SCAN_RESULTS.map((s) => (
+            <div class="sub" data-sub={s.id} data-monthly={s.monthly}>
+              <div class="sub__info">
+                <span class="sub__initial" aria-hidden="true">
+                  {s.label.charAt(0)}
+                </span>
+                <span class="sub__text">
+                  <span class="sub__label">{s.label}</span>
+                  <span class:list={['sub__note', { 'sub__note--flag': s.flag }]}>{s.note}</span>
+                </span>
+                <span class="num sub__amt">
+                  {inr(s.monthly)}
+                  <span class="sub__per">/mo</span>
+                </span>
+              </div>
+              <div class="sub__choice" role="group" aria-label={`Keep or cancel ${s.label}`}>
+                <button type="button" class="choice choice--keep" data-keep aria-pressed="true">
+                  Keep
+                </button>
+                <button type="button" class="choice choice--cut" data-cut aria-pressed="false">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ))
+        }
+      </section>
+      <aside class="results-side">
+        <div class="total">
+          <Handy mood="gasp" size={64} decorative />
+          <div class="total__text">
+            <span class="num total__monthly"><span data-total-monthly></span><span class="total__per">/month</span></span>
+            <span class="num total__yearly">That’s <span data-total-yearly></span> a year, on autopilot.</span>
+          </div>
+        </div>
+        <div class="saving">
+          <span class="saving__label">Cancelling <span data-cut-count></span> saves you</span>
+          <span class="num saving__amount" aria-live="polite"><span data-saved-yearly></span><span class="saving__per"> a year</span></span>
+          <a href={routes.cancelGuide} class="btn btn--mango saving__cta" data-guide-link>Show me how to cancel</a>
+          <span class="saving__note">We walk you through each one. We can’t cancel on your behalf.</span>
+        </div>
+        <button type="button" class="btn" data-reset>Scan another statement</button>
+      </aside>
+    </div>
+  </div>
+</AppShell>
+
+<script>
+  import { inr } from '../../../lib/format';
+  import { SCAN_RESULTS, SCAN_STATUS } from '../../../data/demo-tools';
+  import { readLocal, writeLocal } from '../../../scripts/local-state';
+
+  const root = document.querySelector<HTMLElement>('[data-scan]')!;
+  const fileInput = root.querySelector<HTMLInputElement>('[data-file-input]')!;
+  const startBtn = root.querySelector<HTMLButtonElement>('[data-start]')!;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const MAX_BYTES = 10 * 1024 * 1024;
+  let file: File | null = null;
+  let statusTimer = 0;
+  let scanTimer = 0;
+
+  const cut = new Set<string>(readLocal<string[]>('scan:cut', JSON.parse(root.dataset.defaultCut!)));
+
+  function setPhase(phase: 'upload' | 'scan' | 'results') {
+    root.dataset.phase = phase;
+    root.querySelectorAll<HTMLElement>('[data-panel]').forEach((p) => (p.hidden = p.dataset.panel !== phase));
+    root.querySelectorAll<HTMLElement>('[data-phase-pill]').forEach((p) => {
+      if (p.dataset.phasePill === phase) p.setAttribute('aria-current', 'step');
+      else p.removeAttribute('aria-current');
+    });
+    root.querySelector('[data-title]')!.textContent =
+      phase === 'results' ? `Found ${SCAN_RESULTS.length} things on autopay` : 'Let’s find your forgotten autopays';
+    window.scrollTo({ top: 0 });
+  }
+
+  // File picking (click or drag-and-drop)
+  function setFile(f: File | null) {
+    const err = root.querySelector<HTMLElement>('[data-file-error]')!;
+    err.hidden = true;
+    if (f && !(f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'))) {
+      err.textContent = 'That’s not a PDF. Download the statement from your bank as a PDF and try again.';
+      err.hidden = false;
+      f = null;
+    } else if (f && f.size > MAX_BYTES) {
+      err.textContent = 'That file is over 10 MB. Try a shorter date range.';
+      err.hidden = false;
+      f = null;
+    }
+    file = f;
+    root.querySelector<HTMLElement>('[data-file]')!.hidden = !f;
+    if (f) {
+      root.querySelector('[data-file-name]')!.textContent = f.name;
+      root.querySelector('[data-file-size]')!.textContent = `${Math.max(1, Math.round(f.size / 1024))} KB`;
+    } else {
+      fileInput.value = '';
+    }
+    startBtn.textContent = f ? 'Scan for subscriptions' : 'Scan a sample statement';
+  }
+
+  fileInput.addEventListener('change', () => setFile(fileInput.files?.[0] ?? null));
+  root.querySelector('[data-file-remove]')!.addEventListener('click', () => setFile(null));
+
+  const drop = root.querySelector<HTMLElement>('[data-drop]')!;
+  drop.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    drop.classList.add('drop--over');
+  });
+  drop.addEventListener('dragleave', () => drop.classList.remove('drop--over'));
+  drop.addEventListener('drop', (e) => {
+    e.preventDefault();
+    drop.classList.remove('drop--over');
+    setFile(e.dataTransfer?.files?.[0] ?? null);
+  });
+
+  // Password show/hide
+  const pass = root.querySelector<HTMLInputElement>('#pdf-pass')!;
+  const showBtn = root.querySelector<HTMLButtonElement>('[data-show-pass]')!;
+  showBtn.addEventListener('click', () => {
+    const show = pass.type === 'password';
+    pass.type = show ? 'text' : 'password';
+    showBtn.textContent = show ? 'Hide' : 'Show';
+    showBtn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+  });
+
+  // Scanning (simulated) → results
+  startBtn.addEventListener('click', () => {
+    setPhase('scan');
+    let i = 0;
+    const status = root.querySelector('[data-status]')!;
+    status.textContent = SCAN_STATUS[0];
+    window.clearInterval(statusTimer);
+    statusTimer = window.setInterval(() => {
+      i = (i + 1) % SCAN_STATUS.length;
+      status.textContent = SCAN_STATUS[i];
+    }, 1400);
+    window.clearTimeout(scanTimer);
+    scanTimer = window.setTimeout(
+      () => {
+        window.clearInterval(statusTimer);
+        pass.value = ''; // never kept around
+        setPhase('results');
+        renderResults();
+      },
+      reduceMotion ? 1500 : 5600,
+    );
+  });
+
+  // Results: keep / cancel each one, with live totals
+  function renderResults() {
+    let total = 0;
+    let saved = 0;
+    root.querySelectorAll<HTMLElement>('[data-sub]').forEach((row) => {
+      const id = row.dataset.sub!;
+      const monthly = Number(row.dataset.monthly);
+      const isCut = cut.has(id);
+      total += monthly;
+      if (isCut) saved += monthly * 12;
+      row.classList.toggle('sub--cut', isCut);
+      row.querySelector('[data-keep]')!.setAttribute('aria-pressed', String(!isCut));
+      row.querySelector('[data-cut]')!.setAttribute('aria-pressed', String(isCut));
+    });
+    root.querySelector('[data-total-monthly]')!.textContent = inr(total);
+    root.querySelector('[data-total-yearly]')!.textContent = inr(total * 12);
+    root.querySelector('[data-saved-yearly]')!.textContent = inr(saved);
+    root.querySelector('[data-cut-count]')!.textContent = `${cut.size} ${cut.size === 1 ? 'thing' : 'things'}`;
+    root.querySelector<HTMLElement>('[data-guide-link]')!.toggleAttribute('aria-disabled', cut.size === 0);
+  }
+
+  root.querySelectorAll<HTMLElement>('[data-sub]').forEach((row) => {
+    const id = row.dataset.sub!;
+    row.querySelector('[data-keep]')!.addEventListener('click', () => {
+      cut.delete(id);
+      writeLocal('scan:cut', [...cut]);
+      renderResults();
+    });
+    row.querySelector('[data-cut]')!.addEventListener('click', () => {
+      cut.add(id);
+      writeLocal('scan:cut', [...cut]);
+      renderResults();
+    });
+  });
+
+  root.querySelector('[data-reset]')!.addEventListener('click', () => {
+    setFile(null);
+    setPhase('upload');
+  });
+
+  // Coming back from the cancel guide (?results) shows the results again
+  if (new URLSearchParams(window.location.search).has('results')) {
+    setPhase('results');
+    renderResults();
+  }
+</script>
+
+<style>
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .muted {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.45;
+    color: var(--ink-muted);
+    font-weight: 500;
+  }
+
+  .scan {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    min-width: 0;
+  }
+
+  .head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .head__text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .eyebrow {
+    font-weight: 700;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 40px;
+    letter-spacing: -0.03em;
+  }
+
+  .phases {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .phase {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 99px;
+    background: var(--white);
+    border: 2px solid var(--line);
+    font-weight: 600;
+  }
+
+  .phase[aria-current='step'] {
+    background: var(--mango);
+    border-color: var(--ink);
+    font-weight: 800;
+  }
+
+  .card {
+    padding: 28px;
+    border-radius: 28px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 6px 0 var(--ink);
+  }
+
+  .split {
+    display: grid;
+    gap: 24px;
+    align-items: start;
+  }
+
+  .split[hidden],
+  .scanning[hidden] {
+    display: none;
+  }
+
+  .split--upload {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  }
+
+  .split--results {
+    grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
+  }
+
+  /* Upload */
+  .upload {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .drop {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 48px 24px;
+    border-radius: 26px;
+    background: #fffbf2;
+    border: 3px dashed #8a5800;
+    text-align: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .drop:hover,
+  .drop--over {
+    background: var(--cream);
+  }
+
+  /* The real file input is hidden; show its focus ring on the drop zone */
+  #statement:focus-visible + .drop {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+  }
+
+  .drop__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    border-radius: 20px;
+    background: var(--mango);
+    border: 2.5px solid var(--ink);
+  }
+
+  .drop__title {
+    font-weight: 800;
+    font-size: 17px;
+  }
+
+  .error {
+    margin: 0;
+    color: var(--danger);
+    font-weight: 700;
+  }
+
+  .error[hidden],
+  .file[hidden] {
+    display: none;
+  }
+
+  .file {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 18px;
+    background: #e2f8ef;
+    border: 2px solid #0a6b4d;
+  }
+
+  .file__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .file__name {
+    font-weight: 700;
+    overflow-wrap: anywhere;
+  }
+
+  .file__remove {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: transparent;
+    border: none;
+    color: var(--ink);
+    cursor: pointer;
+  }
+
+  .group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .group__label {
+    font-weight: 700;
+  }
+
+  .field {
+    padding: 4px 4px 4px 14px;
+  }
+
+  .field__show {
+    min-width: 60px;
+    height: 44px;
+    border-radius: 12px;
+    background: var(--paper-deep);
+    border: none;
+    color: var(--ink);
+    font-weight: 700;
+    font-size: 16px;
+    cursor: pointer;
+  }
+
+  .upload-side,
+  .results-side {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .talk {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+  }
+
+  .talk__bubble {
+    margin: 0 0 20px;
+    padding: 14px 18px;
+    border-radius: 22px 22px 22px 6px;
+    background: var(--white);
+    border: 2px solid var(--ink);
+    line-height: 1.45;
+  }
+
+  .trust {
+    margin: 0;
+    padding: 14px 16px;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border-radius: 18px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+  }
+
+  .trust li {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-weight: 600;
+  }
+
+  .trust svg {
+    flex: none;
+  }
+
+  .looks {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 20px;
+    border-radius: 24px;
+    background: var(--paper-deep);
+  }
+
+  .looks__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 20px;
+  }
+
+  .start {
+    min-height: 60px;
+    border-radius: 20px;
+    font-size: 19px;
+  }
+
+  /* Scanning */
+  .scanning {
+    display: grid;
+    grid-template-columns: 320px minmax(0, 1fr);
+    gap: 48px;
+    align-items: center;
+    padding: 48px;
+    border-radius: 32px;
+  }
+
+  .scanning__art {
+    position: relative;
+    width: 300px;
+    height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #ffe7b0;
+    border: 3px solid var(--ink);
+  }
+
+  .sweep {
+    position: absolute;
+    left: 90px;
+    top: 70px;
+    animation: sweep 2.2s ease-in-out infinite;
+  }
+
+  @keyframes sweep {
+    0%,
+    100% {
+      transform: translate(-26px, 8px) rotate(-10deg);
+    }
+    25% {
+      transform: translate(18px, -14px) rotate(6deg);
+    }
+    50% {
+      transform: translate(30px, 12px) rotate(12deg);
+    }
+    75% {
+      transform: translate(-10px, 22px) rotate(-4deg);
+    }
+  }
+
+  .scanning__text {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    min-width: 0;
+  }
+
+  .scanning__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 32px;
+    letter-spacing: -0.02em;
+  }
+
+  .scanning__status {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+
+  .prog {
+    height: 16px;
+    border-radius: 99px;
+    background: #f1e7d3;
+    border: 2.5px solid var(--ink);
+    overflow: hidden;
+  }
+
+  .prog__fill {
+    height: 100%;
+    width: 40%;
+    background: var(--mango);
+    animation: prog 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  @keyframes prog {
+    0% {
+      width: 6%;
+    }
+    70% {
+      width: 92%;
+    }
+    100% {
+      width: 100%;
+    }
+  }
+
+  .skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .sk {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 16px;
+    background: var(--white);
+    border: 2px solid var(--line);
+  }
+
+  .shimmer {
+    display: block;
+    background-image: linear-gradient(90deg, #efe6d3 0%, #f9f3e7 50%, #efe6d3 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s linear infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: 100% 0;
+    }
+    100% {
+      background-position: -100% 0;
+    }
+  }
+
+  .sk__icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+  }
+
+  .sk__lines {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .sk__line {
+    height: 12px;
+    border-radius: 6px;
+  }
+
+  .sk__line--short {
+    height: 10px;
+    width: 40%;
+  }
+
+  .sk__amt {
+    width: 54px;
+    height: 14px;
+    border-radius: 6px;
+  }
+
+  .lock {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-weight: 600;
+  }
+
+  /* Results */
+  .subs {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .sub {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 16px;
+    border-radius: 20px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+    transition: border-color 0.2s;
+  }
+
+  .sub--cut {
+    border-color: var(--coral);
+  }
+
+  .sub__info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .sub__initial {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 13px;
+    background: var(--paper-deep);
+    font-family: var(--font-display);
+    font-weight: 800;
+  }
+
+  .sub__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .sub__label {
+    font-weight: 800;
+  }
+
+  .sub__note {
+    color: var(--ink-muted);
+    font-weight: 500;
+  }
+
+  .sub__note--flag {
+    color: var(--danger);
+    font-weight: 700;
+  }
+
+  .sub__amt {
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .sub__per {
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+
+  .sub__choice {
+    display: grid;
+    grid-template-columns: repeat(2, 110px);
+    gap: 6px;
+  }
+
+  .choice {
+    min-height: 44px;
+    border-radius: 14px;
+    background: transparent;
+    border: 2px solid var(--ink);
+    color: var(--ink);
+    font-weight: 800;
+    font-size: 16px;
+    cursor: pointer;
+  }
+
+  .choice--keep[aria-pressed='true'] {
+    background: var(--mint);
+  }
+
+  .choice--cut[aria-pressed='true'] {
+    background: var(--coral);
+  }
+
+  .results-side {
+    position: sticky;
+    top: 32px;
+  }
+
+  .total {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 20px;
+    border-radius: 24px;
+    background: var(--danger-bg);
+    border: 2.5px solid var(--ink);
+  }
+
+  .total__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .total__monthly {
+    font-weight: 800;
+    font-size: 30px;
+    letter-spacing: -0.03em;
+  }
+
+  .total__per {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0;
+  }
+
+  .total__yearly {
+    font-weight: 600;
+    color: var(--danger);
+  }
+
+  .saving {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 24px;
+    border-radius: 26px;
+    background: var(--ink);
+    color: var(--paper);
+    border: 3px solid var(--ink);
+    box-shadow: 0 6px 0 var(--ink);
+  }
+
+  .saving__label,
+  .saving__note {
+    font-weight: 600;
+    color: #cfc8da;
+    line-height: 1.45;
+  }
+
+  .saving__amount {
+    font-weight: 800;
+    font-size: 48px;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    color: var(--mint);
+  }
+
+  .saving__per {
+    font-size: 16px;
+    letter-spacing: 0;
+    color: var(--paper);
+  }
+
+  .saving__cta {
+    min-height: 56px;
+    font-weight: 800;
+    box-shadow: 0 5px 0 #000;
+  }
+
+  .saving__cta[aria-disabled] {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  @media (max-width: 1023px) {
+    .split--upload,
+    .split--results {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .results-side {
+      position: static;
+    }
+
+    .scanning {
+      grid-template-columns: minmax(0, 1fr);
+      justify-items: center;
+      gap: 28px;
+      padding: 32px;
+    }
+  }
+
+  @media (max-width: 639px) {
+    .card {
+      padding: 20px;
+    }
+
+    .drop {
+      padding: 32px 16px;
+    }
+
+    .scanning {
+      padding: 24px 18px;
+    }
+
+    .scanning__art {
+      width: 220px;
+      height: 220px;
+    }
+
+    .scanning__art :global(.handy) {
+      width: 130px !important;
+      height: 130px !important;
+    }
+
+    .sweep {
+      left: 60px;
+      top: 50px;
+      width: 90px;
+      height: 90px;
+    }
+
+    .scanning__title {
+      font-size: 26px;
+    }
+
+    .sub {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 12px;
+    }
+
+    .sub__choice {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+</style>

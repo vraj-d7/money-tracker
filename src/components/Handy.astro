@@ -1,0 +1,158 @@
+---
+// Handy, the coin mascot. Moods and when to use them are on the brand page.
+import type { HandyMood } from '../lib/handy';
+
+interface Props {
+  mood?: HandyMood;
+  size?: number;
+  /** Set when Handy is only decoration next to text that already says the same thing. */
+  decorative?: boolean;
+}
+
+const { mood = 'happy', size = 120, decorative = false } = Astro.props;
+
+const names: Record<HandyMood, string> = {
+  happy: 'smiling',
+  cheer: 'cheering with arms up',
+  gasp: 'gasping',
+  chill: 'relaxed',
+  chai: 'sipping chai',
+  sus: 'raising an eyebrow',
+};
+
+const armsUp = mood === 'cheer';
+const armsHips = mood === 'sus';
+const armsDown = !armsUp && !armsHips;
+const eyesOpen = mood === 'happy' || mood === 'sus';
+const eyesBig = mood === 'gasp';
+const eyesClosed = mood === 'chill' || mood === 'chai';
+const eyesStar = mood === 'cheer';
+---
+
+<span class="handy" style={`width: ${size}px; height: ${size}px`}>
+  <svg
+    viewBox="0 0 120 120"
+    width="100%"
+    height="100%"
+    style="overflow: visible"
+    {...decorative ? { 'aria-hidden': 'true' } : { role: 'img', 'aria-label': `Handy the coin, ${names[mood]}` }}
+  >
+    <ellipse cx="60" cy="114" rx="26" ry="4" fill="#15131C" fill-opacity="0.16" />
+    <path d="M50 98 L48 109" stroke="#15131C" stroke-width="4.5" stroke-linecap="round" fill="none" />
+    <path d="M70 98 L72 109" stroke="#15131C" stroke-width="4.5" stroke-linecap="round" fill="none" />
+    {
+      armsDown && (
+        <g>
+          <path d="M22 66 Q12 72 11 83" stroke="#15131C" stroke-width="4.5" stroke-linecap="round" fill="none" />
+          <path d="M98 66 Q108 72 109 83" stroke="#15131C" stroke-width="4.5" stroke-linecap="round" fill="none" />
+        </g>
+      )
+    }
+    {
+      armsUp && (
+        <g>
+          <path d="M24 52 Q12 42 10 28" stroke="#15131C" stroke-width="4.5" stroke-linecap="round" fill="none" />
+          <path d="M96 52 Q108 42 110 28" stroke="#15131C" stroke-width="4.5" stroke-linecap="round" fill="none" />
+        </g>
+      )
+    }
+    {
+      armsHips && (
+        <g>
+          <path d="M22 62 Q8 66 16 80 Q20 82 24 78" stroke="#15131C" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+          <path d="M98 62 Q112 66 104 80 Q100 82 96 78" stroke="#15131C" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+        </g>
+      )
+    }
+    <circle cx="60" cy="60" r="40" fill="#FFB21E" stroke="#15131C" stroke-width="3.2" />
+    <circle cx="60" cy="60" r="34" fill="none" stroke="#D88A00" stroke-width="2" stroke-dasharray="2 4.6" stroke-linecap="round" />
+    <path d="M34 43 A30 30 0 0 1 50 28" stroke="#FFE3A3" stroke-width="5" stroke-linecap="round" fill="none" />
+    <ellipse cx="39" cy="70" rx="6.5" ry="3.8" fill="#FF7EC8" fill-opacity="0.6" />
+    <ellipse cx="81" cy="70" rx="6.5" ry="3.8" fill="#FF7EC8" fill-opacity="0.6" />
+
+    {
+      eyesOpen && (
+        <g>
+          <ellipse cx="47" cy="56" rx="4.3" ry="5.8" fill="#15131C" />
+          <circle cx="48.6" cy="53.8" r="1.6" fill="#FFFFFF" />
+          <ellipse cx="73" cy="56" rx="4.3" ry="5.8" fill="#15131C" />
+          <circle cx="74.6" cy="53.8" r="1.6" fill="#FFFFFF" />
+        </g>
+      )
+    }
+    {
+      eyesBig && (
+        <g>
+          <circle cx="47" cy="55" r="7.5" fill="#FFFFFF" stroke="#15131C" stroke-width="2.6" />
+          <circle cx="47" cy="56" r="3.8" fill="#15131C" />
+          <circle cx="73" cy="55" r="7.5" fill="#FFFFFF" stroke="#15131C" stroke-width="2.6" />
+          <circle cx="73" cy="56" r="3.8" fill="#15131C" />
+        </g>
+      )
+    }
+    {
+      eyesClosed && (
+        <g>
+          <path d="M41 57 Q47 51 53 57" stroke="#15131C" stroke-width="3.2" stroke-linecap="round" fill="none" />
+          <path d="M67 57 Q73 51 79 57" stroke="#15131C" stroke-width="3.2" stroke-linecap="round" fill="none" />
+        </g>
+      )
+    }
+    {
+      eyesStar && (
+        <g>
+          <path d="M47 47 L49.2 53 L55 55 L49.2 57 L47 63 L44.8 57 L39 55 L44.8 53 Z" fill="#15131C" />
+          <path d="M73 47 L75.2 53 L81 55 L75.2 57 L73 63 L70.8 57 L65 55 L70.8 53 Z" fill="#15131C" />
+        </g>
+      )
+    }
+    {
+      mood === 'sus' && (
+        <g>
+          <path d="M40 46 L53 48" stroke="#15131C" stroke-width="3.2" stroke-linecap="round" fill="none" />
+          <path d="M67 44 Q73 37 80 41" stroke="#15131C" stroke-width="3.2" stroke-linecap="round" fill="none" />
+        </g>
+      )
+    }
+
+    {mood === 'happy' && <path d="M50 70 Q60 80 70 70" stroke="#15131C" stroke-width="3.4" stroke-linecap="round" fill="none" />}
+    {
+      mood === 'cheer' && (
+        <g>
+          <path d="M47 68 L73 68 Q73 83 60 83 Q47 83 47 68 Z" fill="#15131C" />
+          <path d="M52 77 Q60 72 68 77 Q65 82 60 82 Q55 82 52 77 Z" fill="#FF6B5B" />
+        </g>
+      )
+    }
+    {mood === 'gasp' && <ellipse cx="60" cy="75" rx="5.5" ry="7" fill="#15131C" />}
+    {eyesClosed && <path d="M54 72 Q60 77 66 72" stroke="#15131C" stroke-width="3.2" stroke-linecap="round" fill="none" />}
+    {mood === 'sus' && <path d="M52 75 L68 73" stroke="#15131C" stroke-width="3.4" stroke-linecap="round" fill="none" />}
+
+    {
+      mood === 'chai' && (
+        <g>
+          <path d="M97 58 Q94 53 97 49 Q100 45 97 41" stroke="#15131C" stroke-opacity="0.45" stroke-width="2" stroke-linecap="round" fill="none" />
+          <path d="M104 60 Q101 55 104 51" stroke="#15131C" stroke-opacity="0.45" stroke-width="2" stroke-linecap="round" fill="none" />
+          <path d="M89 64 L113 64 L110 84 Q109 88 105 88 L97 88 Q93 88 92 84 Z" fill="#FAF6EE" stroke="#15131C" stroke-width="2.6" stroke-linejoin="round" />
+          <path d="M90.5 70 L111.5 70" stroke="#C9772B" stroke-width="4" />
+        </g>
+      )
+    }
+    {mood === 'gasp' && <path d="M90 30 Q95 38 90 43 Q85 38 90 30 Z" fill="#5AB8FF" stroke="#15131C" stroke-width="1.6" />}
+    {
+      mood === 'cheer' && (
+        <g>
+          <path d="M14 14 L16 20 L22 22 L16 24 L14 30 L12 24 L6 22 L12 20 Z" fill="#FFB21E" stroke="#15131C" stroke-width="1.6" stroke-linejoin="round" />
+          <path d="M104 6 L105.5 10 L109.5 11.5 L105.5 13 L104 17 L102.5 13 L98.5 11.5 L102.5 10 Z" fill="#2ED3A0" stroke="#15131C" stroke-width="1.4" stroke-linejoin="round" />
+        </g>
+      )
+    }
+  </svg>
+</span>
+
+<style>
+  .handy {
+    display: inline-block;
+    line-height: 0;
+  }
+</style>

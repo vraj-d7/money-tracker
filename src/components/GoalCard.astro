@@ -1,0 +1,174 @@
+---
+// One savings goal. The plan page also clones this markup (from a <template>) to draw goals added in the browser.
+import { GOAL_ICONS, type GoalIcon } from '../lib/goal-icons';
+import { inr } from '../lib/format';
+
+interface Props {
+  id: string;
+  label: string;
+  sub: string;
+  icon: GoalIcon;
+  target: number;
+  saved: number;
+}
+
+const { id, label, sub, icon, target, saved } = Astro.props;
+const done = saved >= target;
+const pct = target > 0 ? Math.min(100, (saved / target) * 100).toFixed(1) + '%' : '0%';
+---
+
+<div class:list={['goal', { 'goal--done': done }]} data-goal-id={id}>
+  <div class="goal__top">
+    <span class="goal__icon" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path data-icon d={GOAL_ICONS[icon].d}></path>
+      </svg>
+    </span>
+    <div class="goal__text">
+      <span class="goal__label" data-label>{label}</span>
+      <span class="goal__sub" data-sub>{done ? 'Goal reached. Treat yourself (a little).' : sub}</span>
+    </div>
+    <span class="goal__done" data-done hidden={!done}>Done!</span>
+  </div>
+  <div class="goal__progress">
+    <div class="goal__track" role="img" data-track aria-label={`${label}: ${inr(saved)} of ${inr(target)}`}>
+      <div class="goal__bar" data-bar style={`width: ${pct}`}></div>
+    </div>
+    <div class="num goal__nums">
+      <span class="goal__saved" data-saved>{inr(saved)}</span>
+      <span class="goal__target">of <span data-target>{inr(target)}</span></span>
+    </div>
+  </div>
+  <button type="button" class="btn goal__add" data-add disabled={done}>
+    {done ? 'Goal complete' : 'Add ₹1,000'}
+  </button>
+</div>
+
+<style>
+  .goal {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 22px;
+    border-radius: 26px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 6px 0 var(--ink);
+  }
+
+  .goal--done {
+    border-color: var(--mint);
+  }
+
+  .goal__top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .goal__icon {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 15px;
+    background: var(--mint);
+    border: 2.5px solid var(--ink);
+    box-sizing: border-box;
+  }
+
+  .goal__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .goal__label {
+    font-weight: 800;
+    font-size: 16px;
+    overflow-wrap: anywhere;
+  }
+
+  .goal__sub {
+    font-size: 16px;
+    color: var(--ink-muted);
+  }
+
+  .goal__done {
+    flex: none;
+    padding: 4px 10px;
+    border-radius: 99px;
+    background: var(--mint);
+    border: 2px solid var(--ink);
+    font-size: 16px;
+    font-weight: 800;
+  }
+
+  .goal__done[hidden] {
+    display: none;
+  }
+
+  .goal__progress {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .goal__track {
+    height: 16px;
+    border-radius: 99px;
+    background: #f1e7d3;
+    border: 2px solid var(--ink);
+    overflow: hidden;
+  }
+
+  .goal__bar {
+    height: 100%;
+    background: var(--mint);
+    transition: width 0.5s cubic-bezier(0.3, 1.3, 0.5, 1);
+  }
+
+  .goal__nums {
+    display: flex;
+    justify-content: space-between;
+    font-size: 16px;
+  }
+
+  .goal__saved {
+    font-weight: 800;
+  }
+
+  .goal__target {
+    color: var(--ink-muted);
+  }
+
+  .goal__add {
+    margin-top: auto;
+    min-height: 48px;
+    border-radius: 15px;
+    background: var(--mango);
+    font-weight: 800;
+  }
+
+  .goal__add:hover {
+    background: var(--white);
+  }
+
+  .goal__add:disabled {
+    background: var(--paper-deep);
+    color: var(--ink-muted);
+    cursor: default;
+    transform: none;
+  }
+
+  @media (max-width: 639px) {
+    .goal {
+      padding: 16px;
+      border-radius: 24px;
+    }
+  }
+</style>

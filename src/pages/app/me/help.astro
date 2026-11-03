@@ -1,0 +1,175 @@
+---
+import AppShell from '../../../layouts/AppShell.astro';
+import Handy from '../../../components/Handy.astro';
+import { routes } from '../../../lib/routes';
+
+const faqs = [
+  ['Is Inhandy safe? Do you see my bank login?', 'No. We never ask for your net-banking password. You upload a statement PDF, we read it once, and delete it right after the scan.'],
+  ['How accurate is the in-hand estimate?', 'It assumes basic is 50% of CTC, standard PF and professional tax. Add your real numbers in Salary and tax details and it gets close to your payslip.'],
+  ['Is this financial advice?', 'No. Inhandy explains and estimates. For big decisions, talk to a SEBI-registered adviser or a chartered accountant.'],
+  ['How do I cancel the Coach plan?', 'Me → Your plan → Cancel my plan. One click, no calls. You keep it until the end of the week you paid for.'],
+  ['Can Inhandy cancel subscriptions for me?', 'Not yet. We find them and walk you through cancelling each one, including the UPI mandate.'],
+  ['What does each coach mode do?', 'Hype celebrates, Honest sticks to facts, Mom roasts you with love. Same numbers, different tone. Switch any time.'],
+];
+---
+
+<AppShell title="Help and FAQs" active="me">
+  <header class="head">
+    <a href={routes.me} class="back">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+      Back to Me
+    </a>
+    <h1>Help and FAQs</h1>
+    <p class="muted">Quick answers. Still stuck? Write to us; a human replies within a day.</p>
+  </header>
+
+  <section class="faqs" aria-label="Questions">
+    {
+      faqs.map(([q, a], i) => (
+        <div class:list={['faq', { 'faq--open': i === 0 }]} data-faq>
+          <button type="button" class="rowlink faq__q" aria-expanded={i === 0 ? 'true' : 'false'} aria-controls={`faq-${i}`}>
+            <span>{q}</span>
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+          <p id={`faq-${i}`} class="faq__a" hidden={i !== 0}>
+            {a}
+          </p>
+        </div>
+      ))
+    }
+  </section>
+
+  <aside class="side">
+    <Handy mood="happy" size={64} decorative />
+    <h2 class="side__title">Talk to a human</h2>
+    <p class="side__text">Email help@inhandy.app or use the contact form. Mon–Sat, 10 AM–7 PM.</p>
+    <a href={`${routes.legal}?tab=contact`} class="btn">Contact form</a>
+  </aside>
+</AppShell>
+
+<script>
+  const faqs = [...document.querySelectorAll<HTMLElement>('[data-faq]')];
+  faqs.forEach((f) =>
+    f.querySelector('button')!.addEventListener('click', () => {
+      const opening = !f.classList.contains('faq--open');
+      faqs.forEach((x) => {
+        const on = x === f && opening;
+        x.classList.toggle('faq--open', on);
+        x.querySelector('button')!.setAttribute('aria-expanded', String(on));
+        x.querySelector<HTMLElement>('.faq__a')!.hidden = !on;
+      });
+    }),
+  );
+</script>
+
+<style>
+  .muted {
+    margin: 0;
+    font-size: 16px;
+    color: var(--ink-muted);
+  }
+
+  .head {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .back {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--violet);
+  }
+
+  h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 40px;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+  }
+
+  .faqs {
+    grid-column: span 8;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .faq {
+    border-radius: 20px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+  }
+
+  .faq__q {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 60px;
+    padding: 12px 18px;
+    border: none;
+    border-radius: 18px;
+    background: transparent;
+    color: var(--ink);
+    text-align: left;
+    font-weight: 800;
+    font-size: 16px;
+    cursor: pointer;
+  }
+
+  .faq__q span {
+    flex: 1;
+  }
+
+  .faq__q svg {
+    flex: none;
+    transition: transform 0.2s;
+  }
+
+  .faq--open .faq__q svg {
+    transform: rotate(180deg);
+  }
+
+  .faq__a {
+    margin: 0;
+    padding: 0 18px 16px;
+    line-height: 1.55;
+    color: var(--ink-muted);
+    animation: pop-in 0.35s cubic-bezier(0.3, 1.4, 0.5, 1);
+  }
+
+  .side {
+    grid-column: span 4;
+    align-self: start;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 24px;
+    border-radius: 28px;
+    background: var(--cream);
+    border: 2.5px solid var(--ink);
+  }
+
+  .side__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 22px;
+  }
+
+  .side__text {
+    margin: 0;
+    line-height: 1.5;
+  }
+</style>

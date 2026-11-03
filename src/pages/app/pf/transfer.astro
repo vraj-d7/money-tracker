@@ -1,0 +1,163 @@
+---
+import AppShell from '../../../layouts/AppShell.astro';
+import Checklist from '../../../components/Checklist.astro';
+import { routes } from '../../../lib/routes';
+import { PF_TRANSFER_STEPS } from '../../../data/demo-tools';
+
+const defaultDone = [0, 1];
+const keep = ['UAN (on your payslip)', 'Aadhaar linked to your mobile', 'PAN', 'Bank account + IFSC', 'Old employer’s name and dates'];
+---
+
+<AppShell title="Move your PF" active="pf">
+  <header class="head">
+    <a href={routes.pf} class="back">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+      Back to PF corner
+    </a>
+    <h1>Move your PF to your new job</h1>
+    <p class="muted">Takes about 10 minutes online, then 2–4 weeks for the money to move. Tick each step as you go.</p>
+  </header>
+
+  <section class="steps" aria-label="Steps">
+    <Checklist storageKey="pf-transfer" steps={PF_TRANSFER_STEPS} defaultDone={defaultDone} label="PF transfer steps" />
+  </section>
+
+  <aside class="side">
+    <section class="progress" aria-label="Progress">
+      <span class="num progress__count"><span data-checklist-count="pf-transfer">{defaultDone.length}</span> of {PF_TRANSFER_STEPS.length} done</span>
+      <div class="progress__bar" role="progressbar" aria-label="Transfer steps done" aria-valuemin="0" aria-valuemax={PF_TRANSFER_STEPS.length} aria-valuenow={defaultDone.length}>
+        <div data-checklist-bar="pf-transfer" style={`width: ${(defaultDone.length / PF_TRANSFER_STEPS.length) * 100}%`}></div>
+      </div>
+    </section>
+    <section class="keep" aria-labelledby="keep-h">
+      <h2 id="keep-h" class="keep__title">Keep these handy</h2>
+      <ul class="keep__list">
+        {keep.map((k) => <li>{k}</li>)}
+      </ul>
+    </section>
+  </aside>
+</AppShell>
+
+<style>
+  .muted {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--ink-muted);
+  }
+
+  .head {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .back {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--violet);
+  }
+
+  h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 40px;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+  }
+
+  .steps {
+    grid-column: span 8;
+  }
+
+  .side {
+    grid-column: span 4;
+    align-self: start;
+    position: sticky;
+    top: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .progress,
+  .keep {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 24px;
+    border-radius: 28px;
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 6px 0 var(--ink);
+  }
+
+  .progress {
+    background: #ffe7b0;
+  }
+
+  .progress__count {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 28px;
+  }
+
+  .progress__bar {
+    height: 14px;
+    border-radius: 99px;
+    background: rgba(21, 19, 28, 0.15);
+    border: 2px solid var(--ink);
+    overflow: hidden;
+  }
+
+  .progress__bar div {
+    height: 100%;
+    background: var(--mango);
+    transition: width 0.4s cubic-bezier(0.3, 1.3, 0.5, 1);
+  }
+
+  .keep {
+    background: var(--white);
+    gap: 8px;
+  }
+
+  .keep__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 22px;
+  }
+
+  .keep__list {
+    margin: 0;
+    padding-left: 20px;
+    line-height: 1.7;
+  }
+
+  /* Tablet and phone: progress first, then the steps, then the "keep handy" list */
+  @media (max-width: 1023px) {
+    .side {
+      display: contents;
+    }
+
+    .progress {
+      grid-column: 1 / -1;
+      order: 1;
+    }
+
+    .steps {
+      order: 2;
+    }
+
+    .keep {
+      grid-column: 1 / -1;
+      order: 3;
+    }
+  }
+</style>

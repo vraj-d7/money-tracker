@@ -1,0 +1,282 @@
+---
+import SheetPage from '../../../layouts/SheetPage.astro';
+import Handy from '../../../components/Handy.astro';
+import { routes } from '../../../lib/routes';
+import { inr } from '../../../lib/format';
+import { GOAL_ICONS, type GoalIcon } from '../../../lib/goal-icons';
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// "By when" choices, counted from the November plan (as in the design)
+const whenOptions = [3, 6, 9, 12, 18, 24].map((n) => {
+  const d = new Date(2026, 10 + n, 1);
+  return { months: n, label: `${MONTHS[d.getMonth()]} ${d.getFullYear()}` };
+});
+
+const start = { name: 'New laptop', icon: 'phone' as GoalIcon, amount: 60000, months: 6 };
+const monthly = (amt: number, months: number) => Math.ceil(amt / months / 100) * 100;
+const startWhen = whenOptions.find((w) => w.months === start.months)!;
+---
+
+<SheetPage title="New goal" active="plan" closeHref={routes.plan} width={560}>
+  <div class="intro">
+    <h1 id="sheet-title">New goal</h1>
+    <p class="muted">Name it, price it, pick a date. Handy does the monthly maths.</p>
+  </div>
+
+  <form class="goal-form" data-goal-form>
+    <div class="group">
+      <label for="g-name" class="group__label">What are you saving for?</label>
+      <div class="field"><input id="g-name" name="name" type="text" value={start.name} placeholder="e.g. New laptop" required /></div>
+    </div>
+
+    <fieldset class="group">
+      <legend class="group__label">Pick an icon</legend>
+      <div class="choices">
+        {
+          (Object.keys(GOAL_ICONS) as GoalIcon[]).map((id) => (
+            <button type="button" class="choice choice--icon" data-icon={id} aria-pressed={id === start.icon ? 'true' : 'false'} aria-label={GOAL_ICONS[id].label}>
+              <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d={GOAL_ICONS[id].d} />
+              </svg>
+            </button>
+          ))
+        }
+      </div>
+    </fieldset>
+
+    <div class="group">
+      <label for="g-amt" class="group__label">Target amount</label>
+      <div class="field">
+        <span class="field__prefix">₹</span>
+        <input id="g-amt" class="num" name="amount" type="text" inputmode="numeric" value={start.amount.toLocaleString('en-IN')} />
+      </div>
+    </div>
+
+    <fieldset class="group">
+      <legend class="group__label">By when</legend>
+      <div class="choices">
+        {
+          whenOptions.map((w) => (
+            <button type="button" class="choice choice--pill" data-months={w.months} data-label={w.label} aria-pressed={w.months === start.months ? 'true' : 'false'}>
+              {w.label}
+            </button>
+          ))
+        }
+      </div>
+    </fieldset>
+
+    <div class="summary" role="status">
+      <Handy mood="cheer" size={56} decorative />
+      <p class="num">
+        <b class="summary__big">Save <span data-monthly>{inr(monthly(start.amount, start.months))}</span>/month</b><br />
+        to reach <span data-amount>{inr(start.amount)}</span> by <span data-when>{startWhen.label}</span>. Funded from your Fun jar first.
+      </p>
+    </div>
+
+    <div class="actions">
+      <button type="submit" class="btn btn--mango btn--lg actions__create">Create goal</button>
+      <a href={routes.plan} class="btn">Cancel</a>
+    </div>
+  </form>
+</SheetPage>
+
+<script>
+  import { inr } from '../../../lib/format';
+  import { routes } from '../../../lib/routes';
+  import type { GoalIcon } from '../../../lib/goal-icons';
+  import { loadPlan, savePlan } from '../../../scripts/plan-store';
+
+  const form = document.querySelector<HTMLFormElement>('[data-goal-form]')!;
+  const nameInput = form.querySelector<HTMLInputElement>('#g-name')!;
+  const amtInput = form.querySelector<HTMLInputElement>('#g-amt')!;
+
+  let icon = form.querySelector<HTMLElement>('[data-icon][aria-pressed="true"]')!.dataset.icon as GoalIcon;
+  let months = Number(form.querySelector<HTMLElement>('[data-months][aria-pressed="true"]')!.dataset.months);
+  let whenLabel = form.querySelector<HTMLElement>('[data-months][aria-pressed="true"]')!.dataset.label!;
+  let amount = parseInt(amtInput.value.replace(/[^0-9]/g, ''), 10) || 0;
+
+  function render() {
+    form.querySelector('[data-monthly]')!.textContent = inr(Math.ceil(amount / months / 100) * 100);
+    form.querySelector('[data-amount]')!.textContent = inr(amount);
+    form.querySelector('[data-when]')!.textContent = whenLabel;
+  }
+
+  // Single-choice button groups
+  function pick(selector: string, btn: HTMLElement) {
+    form.querySelectorAll(selector).forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+  }
+
+  form.querySelectorAll<HTMLElement>('[data-icon]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      icon = btn.dataset.icon as GoalIcon;
+      pick('[data-icon]', btn);
+    }),
+  );
+
+  form.querySelectorAll<HTMLElement>('[data-months]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      months = Number(btn.dataset.months);
+      whenLabel = btn.dataset.label!;
+      pick('[data-months]', btn);
+      render();
+    }),
+  );
+
+  // Keep the amount formatted with Indian commas as you type
+  amtInput.addEventListener('input', () => {
+    amount = parseInt(amtInput.value.replace(/[^0-9]/g, ''), 10) || 0;
+    amtInput.value = amount ? amount.toLocaleString('en-IN') : '';
+    render();
+  });
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const label = nameInput.value.trim();
+    if (!label) {
+      nameInput.focus();
+      return;
+    }
+    if (amount <= 0) {
+      amtInput.focus();
+      return;
+    }
+    const state = loadPlan();
+    state.goals.push({
+      id: `goal-${Date.now()}`,
+      label,
+      sub: `${inr(Math.ceil(amount / months / 100) * 100)}/month · by ${whenLabel}`,
+      icon,
+      target: amount,
+      saved: 0,
+    });
+    savePlan(state);
+    window.location.href = routes.plan;
+  });
+</script>
+
+<style>
+  .intro {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-right: 48px;
+  }
+
+  h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 32px;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+  }
+
+  .muted {
+    margin: 0;
+    font-size: 16px;
+    color: var(--ink-muted);
+  }
+
+  .goal-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    min-width: 0;
+  }
+
+  .group__label {
+    padding: 0;
+    margin-bottom: 2px;
+    font-weight: 700;
+    font-size: 16px;
+  }
+
+  fieldset .group__label {
+    margin-bottom: 8px;
+  }
+
+  .field__prefix {
+    font-weight: 800;
+  }
+
+  .choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .choice {
+    border: 2.5px solid var(--ink);
+    background: var(--white);
+    color: var(--ink);
+    cursor: pointer;
+  }
+
+  .choice[aria-pressed='true'] {
+    background: var(--mango);
+    box-shadow: 0 3px 0 var(--ink);
+  }
+
+  .choice--icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .choice--pill {
+    min-height: 44px;
+    padding: 0 14px;
+    border-radius: 99px;
+    font-weight: 700;
+    font-size: 16px;
+  }
+
+  .summary {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    border-radius: 18px;
+    background: #e2f8ef;
+    border: 2.5px solid var(--ink);
+  }
+
+  .summary p {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.45;
+  }
+
+  .summary__big {
+    font-size: 20px;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .actions__create {
+    flex: 1;
+  }
+
+  @media (max-width: 639px) {
+    h1 {
+      font-size: 26px;
+    }
+  }
+</style>

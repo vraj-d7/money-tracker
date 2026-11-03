@@ -1,0 +1,935 @@
+---
+import AppShell from '../../layouts/AppShell.astro';
+import Handy from '../../components/Handy.astro';
+import { routes } from '../../lib/routes';
+import { inr } from '../../lib/format';
+import {
+  CTC_STEPS,
+  FLOW_ROWS,
+  calcSalary,
+  compareRegimes,
+  regimeLine,
+  stepIndexOf,
+  taxExplainer,
+  type Regime,
+} from '../../lib/salary';
+
+// First render: ₹12L CTC, new regime, income tax row open (the client script takes over from here)
+const startLakhs = 12;
+const startRegime: Regime = 'new';
+const startOpen = 'tax';
+
+const b = calcSalary(startLakhs, startRegime);
+const cmp = compareRegimes(startLakhs);
+const idx = stepIndexOf(startLakhs);
+const maxIdx = CTC_STEPS.length - 1;
+const sliderPct = ((idx / maxIdx) * 100).toFixed(1) + '%';
+const barPct = (v: number) => Math.max(0, Math.min(100, (Math.abs(v) / b.ctc) * 100)).toFixed(1) + '%';
+const amt = (v: number) => (v < 0 ? '−' : '') + inr(Math.abs(v));
+const mood = startRegime === cmp.winner ? (b.tax === 0 ? 'cheer' : 'happy') : 'gasp';
+const shareHref = `${routes.share}?card=salary&inhand=${Math.round(b.inhand / 12)}`;
+
+// Where each tick label sits on the slider track
+const ticks = [2, 10, 20, 50, 100].map((l) => ({
+  label: l === 100 ? '₹1Cr' : `₹${l}L`,
+  left: ((stepIndexOf(l) / maxIdx) * 100).toFixed(1) + '%',
+}));
+---
+
+<AppShell title="Salary explained" active="salary">
+  <header class="head">
+    <div class="head__text">
+      <h1>Your salary, explained</h1>
+      <p class="muted">Click any line to see what it means.</p>
+    </div>
+    <a href={shareHref} class="btn head__share" data-share-link>
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"></path><path d="M12 3v12M7 8l5-5 5 5"></path></svg>
+      Share my salary card
+    </a>
+  </header>
+
+  <section class="ctc" aria-label="Your CTC" data-salary data-start-idx={idx} data-start-regime={startRegime} data-start-open={startOpen}>
+    <div class="ctc__value">
+      <label for="ctc-range" class="eyebrow">Your CTC</label>
+      <span class="num ctc__amount" aria-live="polite"><span data-ctc>{inr(b.ctc)}</span><span class="ctc__per"> /year</span></span>
+    </div>
+    <div class="ctc__slider">
+      <input
+        id="ctc-range"
+        class="rng"
+        type="range"
+        min="0"
+        max={maxIdx}
+        step="1"
+        value={idx}
+        aria-valuetext={`${inr(b.ctc)} per year`}
+        style={`--p: ${sliderPct}`}
+      />
+      <div class="ctc__ticks" aria-hidden="true">
+        {ticks.map((t) => <span style={`left: ${t.left}`}>{t.label}</span>)}
+      </div>
+    </div>
+    <div class="ctc__steppers">
+      <button type="button" class="btn ctc__step" data-step="-1" aria-label="Decrease CTC (₹2L minimum)">−</button>
+      <button type="button" class="btn ctc__step" data-step="1" aria-label="Increase CTC (₹1Cr maximum)">+</button>
+    </div>
+  </section>
+
+  <section class="card flow" aria-labelledby="flow-h">
+    <h2 id="flow-h" class="card__title flow__title">From CTC to your bank, per year</h2>
+    {
+      FLOW_ROWS.map((r) => {
+        const v = r.value(b);
+        const open = r.id === startOpen;
+        return (
+          <div class:list={['flow-row', { 'flow-row--total': r.total }]} data-row={r.id}>
+            <button type="button" class="flow-row__btn" aria-expanded={open ? 'true' : 'false'} aria-controls={`explain-${r.id}`}>
+              <span class="flow-row__sign" aria-hidden="true" style={`background: ${r.color}`}>
+                {r.sign}
+              </span>
+              <span class="flow-row__label">{r.label}</span>
+              <span class="flow-row__track" aria-hidden="true">
+                <span class="flow-row__bar" style={`width: ${barPct(v)}; background: ${r.color}`} />
+              </span>
+              <span class:list={['num', 'flow-row__amt', { 'flow-row__amt--tax': r.id === 'tax' }]}>{amt(v)}</span>
+              <svg class="flow-row__chev" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+            <p id={`explain-${r.id}`} class="flow-row__explain" hidden={!open}>
+              {r.id === 'tax' ? taxExplainer(startRegime) : r.explain}
+            </p>
+          </div>
+        );
+      })
+    }
+    <p class="flow__fine muted">
+      Estimate. Assumes basic = 50% of CTC, PF at 12% of basic and ₹2,400 professional tax (varies by state). Old regime
+      counts your PF under 80C only; add HRA and other deductions in Settings for a sharper answer. Not financial advice.
+    </p>
+  </section>
+
+  <div class="side">
+    <section class="inhand" aria-label="Your in-hand pay">
+      <div class="inhand__text">
+        <span class="inhand__label">Lands in your account</span>
+        <span class="num inhand__amount" data-inhand>{inr(b.inhand / 12)}</span>
+        <span class="muted">every month, <span data-regime-name>{startRegime} regime</span></span>
+      </div>
+      <div class="inhand__handy" data-handy={mood}>
+        <span data-mood="happy"><Handy mood="happy" size={100} /></span>
+        <span data-mood="cheer"><Handy mood="cheer" size={100} /></span>
+        <span data-mood="gasp"><Handy mood="gasp" size={100} /></span>
+      </div>
+    </section>
+
+    <section class="card regime" aria-labelledby="reg-h">
+      <div class="card__top">
+        <h2 id="reg-h" class="card__title">Tax regime</h2>
+        <span class="muted">Tap to compare</span>
+      </div>
+      <div class="regime__options" role="group" aria-label="Tax regime">
+        {
+          (['new', 'old'] as const).map((id) => (
+            <button type="button" class="regime__opt" data-regime={id} aria-pressed={id === startRegime ? 'true' : 'false'}>
+              <span class="regime__name">{id === 'new' ? 'New regime' : 'Old regime'}</span>
+              <span class="num regime__monthly">
+                <span data-monthly>{inr(cmp[id].inhand / 12)}</span>
+                <span class="regime__per">/mo</span>
+              </span>
+              <span class="winner" data-winner hidden={cmp.winner !== id}>
+                <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0z"></path><path d="M12 13v4M8 20h8"></path></svg>
+                Winner
+              </span>
+            </button>
+          ))
+        }
+      </div>
+      <p class="regime__line" data-regime-line>{regimeLine(cmp.winner, cmp.monthlyGap, inr)}</p>
+    </section>
+
+    <div class="actions">
+      <a href={routes.offer} class="btn btn--mango btn--lg btn--block">
+        Compare an offer
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+      </a>
+      <a href={routes.plan} class="btn btn--block actions__plan">Plan my salary day</a>
+      <a href={shareHref} class="btn btn--block actions__share" data-share-link>Share “My first salary, explained”</a>
+    </div>
+  </div>
+</AppShell>
+
+<script>
+  import { inr } from '../../lib/format';
+  import { routes } from '../../lib/routes';
+  import {
+    CTC_STEPS,
+    FLOW_ROWS,
+    calcSalary,
+    compareRegimes,
+    regimeLine,
+    taxExplainer,
+    type Regime,
+  } from '../../lib/salary';
+
+  const root = document.querySelector<HTMLElement>('[data-salary]');
+  if (root) {
+    const $ = <T extends Element>(sel: string) => document.querySelector<T>(sel);
+    const $$ = <T extends Element>(sel: string) => [...document.querySelectorAll<T>(sel)];
+
+    const range = $<HTMLInputElement>('#ctc-range')!;
+    const handyBox = $<HTMLElement>('.inhand__handy')!;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    let idx = Number(root.dataset.startIdx);
+    let regime = root.dataset.startRegime as Regime;
+    let open: string | null = root.dataset.startOpen ?? null;
+    let shownMonthly = calcSalary(CTC_STEPS[idx], regime).inhand / 12;
+    let raf = 0;
+
+    const signed = (v: number) => (v < 0 ? '−' : '') + inr(Math.abs(v));
+
+    // Count the in-hand number from where it is to the new value
+    function animateInhand(target: number) {
+      const el = $<HTMLElement>('[data-inhand]')!;
+      cancelAnimationFrame(raf);
+      if (reduceMotion) {
+        shownMonthly = target;
+        el.textContent = inr(target);
+        return;
+      }
+      const from = shownMonthly;
+      const t0 = performance.now();
+      const step = (now: number) => {
+        const k = Math.min(1, (now - t0) / 450);
+        shownMonthly = from + (target - from) * (1 - Math.pow(1 - k, 3));
+        el.textContent = inr(shownMonthly);
+        if (k < 1) raf = requestAnimationFrame(step);
+      };
+      raf = requestAnimationFrame(step);
+    }
+
+    function render(regimeChanged = false) {
+      const lakhs = CTC_STEPS[idx];
+      const b = calcSalary(lakhs, regime);
+      const cmp = compareRegimes(lakhs);
+
+      // CTC + slider
+      $('[data-ctc]')!.textContent = inr(b.ctc);
+      range.value = String(idx);
+      range.setAttribute('aria-valuetext', `${inr(b.ctc)} per year`);
+      range.style.setProperty('--p', ((idx / (CTC_STEPS.length - 1)) * 100).toFixed(1) + '%');
+
+      // Breakdown rows
+      for (const r of FLOW_ROWS) {
+        const row = $<HTMLElement>(`.flow-row[data-row="${r.id}"]`)!;
+        const v = r.value(b);
+        row.querySelector<HTMLElement>('.flow-row__bar')!.style.width =
+          Math.max(0, Math.min(100, (Math.abs(v) / b.ctc) * 100)).toFixed(1) + '%';
+        row.querySelector('.flow-row__amt')!.textContent = signed(v);
+        const isOpen = open === r.id;
+        row.querySelector('.flow-row__btn')!.setAttribute('aria-expanded', String(isOpen));
+        row.querySelector<HTMLElement>('.flow-row__explain')!.hidden = !isOpen;
+      }
+      $('#explain-tax')!.textContent = taxExplainer(regime);
+
+      // Regime cards
+      for (const btn of $$<HTMLElement>('[data-regime]')) {
+        const id = btn.dataset.regime as Regime;
+        btn.setAttribute('aria-pressed', String(id === regime));
+        btn.querySelector('[data-monthly]')!.textContent = inr(cmp[id].inhand / 12);
+        btn.querySelector<HTMLElement>('[data-winner]')!.hidden = cmp.winner !== id;
+      }
+      $('[data-regime-line]')!.textContent = regimeLine(cmp.winner, cmp.monthlyGap, inr);
+      $('[data-regime-name]')!.textContent = `${regime} regime`;
+
+      // In-hand + Handy's reaction
+      animateInhand(b.inhand / 12);
+      $$<HTMLAnchorElement>('[data-share-link]').forEach((a) => (a.href = `${routes.share}?card=salary&inhand=${Math.round(b.inhand / 12)}`));
+      handyBox.dataset.handy = regime === cmp.winner ? (b.tax === 0 ? 'cheer' : 'happy') : 'gasp';
+      if (regimeChanged && !reduceMotion) {
+        handyBox.classList.remove('bob');
+        void handyBox.offsetWidth; // restart the animation
+        handyBox.classList.add('bob');
+      }
+    }
+
+    range.addEventListener('input', () => {
+      idx = Number(range.value);
+      render();
+    });
+
+    for (const btn of $$<HTMLButtonElement>('[data-step]')) {
+      btn.addEventListener('click', () => {
+        idx = Math.max(0, Math.min(CTC_STEPS.length - 1, idx + Number(btn.dataset.step)));
+        render();
+      });
+    }
+
+    for (const btn of $$<HTMLButtonElement>('[data-regime]')) {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.regime as Regime;
+        if (id === regime) return;
+        regime = id;
+        render(true);
+      });
+    }
+
+    for (const row of $$<HTMLElement>('.flow-row')) {
+      row.querySelector('.flow-row__btn')!.addEventListener('click', () => {
+        open = open === row.dataset.row ? null : row.dataset.row!;
+        render();
+      });
+    }
+  }
+</script>
+
+<style>
+  .muted {
+    margin: 0;
+    font-size: 16px;
+    color: var(--ink-muted);
+  }
+
+  .eyebrow {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* Header */
+  .head {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .head__text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 40px;
+    letter-spacing: -0.03em;
+  }
+
+  /* CTC bar */
+  .ctc {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 32px;
+    padding: 22px 28px;
+    border-radius: 28px;
+    background: var(--mango);
+    border: 3px solid var(--ink);
+    box-shadow: 0 7px 0 var(--ink);
+  }
+
+  .ctc__value {
+    display: flex;
+    flex-direction: column;
+    min-width: 220px;
+  }
+
+  .ctc__amount {
+    font-weight: 800;
+    font-size: 44px;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+  }
+
+  .ctc__per {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+
+  .ctc__slider {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .ctc__ticks {
+    position: relative;
+    height: 20px;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .ctc__ticks span {
+    position: absolute;
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+
+  .ctc__ticks span:first-child {
+    transform: none;
+  }
+
+  .ctc__ticks span:last-child {
+    transform: translateX(-100%);
+  }
+
+  .ctc__steppers {
+    display: flex;
+    gap: 8px;
+  }
+
+  .ctc__step {
+    width: 52px;
+    height: 52px;
+    padding: 0;
+    font-size: 24px;
+    font-weight: 800;
+  }
+
+  /* Slider */
+  .rng {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 44px;
+    background: transparent;
+    margin: 0;
+    cursor: pointer;
+  }
+
+  .rng::-webkit-slider-runnable-track {
+    height: 14px;
+    border-radius: 99px;
+    background: linear-gradient(to right, var(--ink) 0, var(--ink) var(--p), rgba(21, 19, 28, 0.14) var(--p));
+    border: 2px solid var(--ink);
+  }
+
+  .rng::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 32px;
+    height: 32px;
+    margin-top: -11px;
+    border-radius: 50%;
+    background: var(--white);
+    border: 3px solid var(--ink);
+    box-shadow: 0 4px 0 var(--ink);
+    transition: transform 0.25s cubic-bezier(0.34, 1.4, 0.5, 1);
+  }
+
+  .rng::-moz-range-track {
+    height: 14px;
+    border-radius: 99px;
+    background: rgba(21, 19, 28, 0.14);
+    border: 2px solid var(--ink);
+  }
+
+  .rng::-moz-range-progress {
+    height: 14px;
+    border-radius: 99px;
+    background: var(--ink);
+  }
+
+  .rng::-moz-range-thumb {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--white);
+    border: 3px solid var(--ink);
+  }
+
+  .rng:hover::-webkit-slider-thumb,
+  .rng:focus-visible::-webkit-slider-thumb,
+  .rng:active::-webkit-slider-thumb {
+    transform: scale(1.25);
+  }
+
+  .rng:focus-visible {
+    outline: 3px solid var(--ink);
+    outline-offset: 4px;
+    border-radius: 12px;
+  }
+
+  /* Cards */
+  .card {
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    border-radius: 28px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 6px 0 var(--ink);
+  }
+
+  .card__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .card__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 22px;
+  }
+
+  /* Breakdown */
+  .flow {
+    grid-column: span 7;
+    align-self: start;
+    gap: 4px;
+  }
+
+  .flow__title {
+    margin: 0 0 10px 6px;
+  }
+
+  .flow-row {
+    display: flex;
+    flex-direction: column;
+    border-radius: 16px;
+  }
+
+  .flow-row--total {
+    background: var(--paper-deep);
+  }
+
+  .flow-row__btn {
+    display: grid;
+    grid-template-columns: 32px 180px minmax(0, 1fr) 120px 20px;
+    grid-template-areas: 'sign label track amt chev';
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    min-height: 56px;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 16px;
+    color: var(--ink);
+    text-align: left;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.2s var(--ease);
+  }
+
+  .flow-row__btn:hover {
+    background: var(--paper-deep);
+  }
+
+  .flow-row__sign {
+    grid-area: sign;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    border: 2px solid var(--ink);
+    box-sizing: border-box;
+    font-weight: 800;
+  }
+
+  .flow-row__label {
+    grid-area: label;
+    font-weight: 600;
+  }
+
+  .flow-row--total .flow-row__label {
+    font-weight: 800;
+  }
+
+  .flow-row__track {
+    grid-area: track;
+    display: block;
+    height: 12px;
+    border-radius: 99px;
+    background: #f1e7d3;
+    overflow: hidden;
+  }
+
+  .flow-row__bar {
+    display: block;
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.45s cubic-bezier(0.3, 1.3, 0.5, 1);
+  }
+
+  .flow-row__amt {
+    grid-area: amt;
+    font-weight: 800;
+    text-align: right;
+  }
+
+  .flow-row--total .flow-row__amt {
+    font-size: 19px;
+  }
+
+  .flow-row__amt--tax {
+    color: var(--danger);
+  }
+
+  .flow-row__chev {
+    grid-area: chev;
+    opacity: 0.7;
+    transition: transform 0.2s;
+  }
+
+  [aria-expanded='true'] .flow-row__chev {
+    transform: rotate(180deg);
+  }
+
+  .flow-row__explain {
+    margin: 0 12px 12px 58px;
+    padding: 12px 16px;
+    border-radius: 14px;
+    background: #eee9ff;
+    font-size: 16px;
+    line-height: 1.5;
+    animation: open-in 0.3s cubic-bezier(0.3, 1.4, 0.5, 1);
+  }
+
+  @keyframes open-in {
+    0% {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+    100% {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .flow__fine {
+    margin: 14px 6px 0;
+    line-height: 1.5;
+  }
+
+  /* Right column */
+  .side {
+    grid-column: span 5;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    align-self: start;
+    position: sticky;
+    top: 32px;
+  }
+
+  .inhand {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 28px;
+    border-radius: 28px;
+    background: #e2f8ef;
+    border: 3px solid var(--ink);
+    box-shadow: 0 7px 0 var(--ink);
+  }
+
+  .inhand__text {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .inhand__label {
+    font-size: 16px;
+    font-weight: 700;
+    color: #0a6b4d;
+  }
+
+  .inhand__amount {
+    font-weight: 800;
+    font-size: 60px;
+    letter-spacing: -0.045em;
+    line-height: 1;
+  }
+
+  .inhand__handy {
+    flex: none;
+    line-height: 0;
+  }
+
+  .inhand__handy > span {
+    display: none;
+  }
+
+  .inhand__handy[data-handy='happy'] > [data-mood='happy'],
+  .inhand__handy[data-handy='cheer'] > [data-mood='cheer'],
+  .inhand__handy[data-handy='gasp'] > [data-mood='gasp'] {
+    display: block;
+  }
+
+  .bob {
+    animation: bob 0.5s cubic-bezier(0.3, 1.6, 0.5, 1);
+  }
+
+  @keyframes bob {
+    0% {
+      transform: scale(0.86) rotate(-9deg);
+    }
+    60% {
+      transform: scale(1.08) rotate(3deg);
+    }
+    100% {
+      transform: none;
+    }
+  }
+
+  .regime {
+    gap: 12px;
+  }
+
+  .regime__options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .regime__opt {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-height: 108px;
+    padding: 16px;
+    border-radius: 20px;
+    background: var(--paper-deep);
+    border: 2.5px solid var(--ink);
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+
+  .regime__opt[aria-pressed='true'] {
+    background: var(--white);
+    border: 3px solid var(--mango);
+    box-shadow:
+      0 5px 0 var(--ink),
+      0 0 0 5px rgba(255, 178, 30, 0.3);
+  }
+
+  .regime__name {
+    font-weight: 800;
+    font-size: 16px;
+  }
+
+  .regime__monthly {
+    font-weight: 800;
+    font-size: 26px;
+    letter-spacing: -0.03em;
+  }
+
+  .regime__per {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0;
+    color: var(--ink-muted);
+  }
+
+  .winner {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 99px;
+    background: var(--mint);
+    border: 2px solid var(--ink);
+    font-size: 16px;
+    font-weight: 800;
+  }
+
+  .winner[hidden] {
+    display: none;
+  }
+
+  .regime__line {
+    margin: 0;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: #e2f8ef;
+    color: #0a6b4d;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .actions .btn {
+    min-height: 58px;
+    text-align: center;
+  }
+
+  .actions__share {
+    display: none;
+  }
+
+  /* Below the 1440px design width: slider drops under the CTC and the two columns stack */
+  @media (max-width: 1279px) {
+    .ctc {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .ctc__slider {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+
+    .flow,
+    .side {
+      grid-column: 1 / -1;
+    }
+
+    .side {
+      position: static;
+    }
+
+    .actions {
+      flex-direction: row;
+    }
+
+    .actions .btn {
+      flex: 1;
+    }
+  }
+
+  @media (max-width: 1023px) {
+    .actions {
+      flex-direction: column;
+    }
+  }
+
+  /* Phone, following designs/Salary.dc.html: CTC, regime, breakdown, in-hand, buttons */
+  @media (max-width: 639px) {
+    .head__share,
+    .ctc__slider,
+    .actions__plan {
+      display: none;
+    }
+
+    .actions__share {
+      display: inline-flex;
+    }
+
+    .side {
+      display: contents;
+    }
+
+    /* With the wrapper dissolved, its cards sit straight on the 12-column grid */
+    .side > * {
+      grid-column: 1 / -1;
+    }
+
+    .ctc {
+      order: 1;
+      gap: 12px;
+      padding: 16px 18px;
+      border-radius: 24px;
+      box-shadow: 0 6px 0 var(--ink);
+    }
+
+    .ctc__value {
+      min-width: 0;
+    }
+
+    .ctc__amount {
+      font-size: 34px;
+    }
+
+    .ctc__step {
+      width: 48px;
+      height: 48px;
+      background: var(--paper);
+    }
+
+    .regime {
+      order: 2;
+      padding: 0;
+      gap: 10px;
+      background: none;
+      border: none;
+      box-shadow: none;
+    }
+
+    .card__title {
+      font-size: 18px;
+    }
+
+    .regime__opt {
+      min-height: 96px;
+      padding: 14px;
+    }
+
+    .regime__monthly {
+      font-size: 22px;
+    }
+
+    .flow {
+      order: 3;
+      padding: 16px;
+      border-radius: 26px;
+    }
+
+    .flow__title {
+      margin: 0 0 6px 4px;
+    }
+
+    .flow-row__btn {
+      grid-template-columns: 28px minmax(0, 1fr) auto 16px;
+      grid-template-areas:
+        'sign label amt chev'
+        'track track track track';
+      gap: 8px 10px;
+      padding: 10px;
+    }
+
+    .flow-row__sign {
+      width: 28px;
+      height: 28px;
+    }
+
+    .flow-row__track {
+      height: 8px;
+    }
+
+    .flow-row__explain {
+      margin: 0 10px 12px;
+      padding: 12px 14px;
+    }
+
+    .inhand {
+      order: 4;
+      padding: 20px;
+      border-radius: 26px;
+      box-shadow: 0 6px 0 var(--ink);
+    }
+
+    .inhand__amount {
+      font-size: 46px;
+    }
+
+    .inhand__handy :global(.handy) {
+      width: 84px !important;
+      height: 84px !important;
+    }
+
+    .actions {
+      order: 5;
+    }
+  }
+</style>

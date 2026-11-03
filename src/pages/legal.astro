@@ -1,0 +1,392 @@
+---
+// Terms, privacy, data deletion and contact, as tabs. Open a tab directly with ?tab=privacy|delete|contact.
+// The legal text is the design's template: final wording must come from a lawyer before launch.
+import Base from '../layouts/Base.astro';
+import Logo from '../components/Logo.astro';
+import { routes } from '../lib/routes';
+
+const docs = {
+  terms: {
+    title: 'Terms of use',
+    sections: [
+      ['Who we are', '[Company legal name], [registered address]. Inhandy is a money-education app, not a bank, broker or adviser.'],
+      ['Using Inhandy', '[What users may and may not do; age 18+; one account per person.]'],
+      ['The Coach plan', '₹19 a week via UPI autopay, cancel any time. [Refund and billing terms.]'],
+      ['Not advice', 'Estimates and explanations only. [Liability limits; talk to a SEBI-registered adviser or CA for decisions.]'],
+    ],
+  },
+  privacy: {
+    title: 'Privacy policy',
+    sections: [
+      ['What we collect', 'Mobile number, name, salary details you enter, and statement PDFs you upload. [Full list.]'],
+      ['Statements', 'Read once to find patterns, then deleted. We keep only the results (merchant, amount, date). [Retention period.]'],
+      ['Who sees it', 'Nobody outside Inhandy. We don’t sell data or share it with lenders or advertisers. [Processors list.]'],
+      ['Your rights', 'Access, correct, download or delete your data any time from Me, under India’s DPDP Act. [Grievance officer contact.]'],
+    ],
+  },
+};
+
+const tabs = [
+  ['terms', 'Terms of use'],
+  ['privacy', 'Privacy policy'],
+  ['delete', 'Delete my data'],
+  ['contact', 'Contact us'],
+] as const;
+---
+
+<Base title="Terms, privacy and contact · Inhandy">
+  <div class="legal paper-dots">
+    <nav class="top" aria-label="Main">
+      <a href={routes.landing} class="top__logo" aria-label="Inhandy home"><Logo size={36} /></a>
+      <a href={routes.auth} class="btn">Log in</a>
+    </nav>
+
+    <main class="body" data-legal>
+      <div class="tabs" role="tablist" aria-label="Pages">
+        {
+          tabs.map(([id, label], i) => (
+            <button type="button" role="tab" class="tab" id={`tab-${id}`} aria-controls={`panel-${id}`} aria-selected={i === 0 ? 'true' : 'false'} data-tab={id}>
+              {label}
+            </button>
+          ))
+        }
+      </div>
+
+      <div class="panels">
+        {
+          (Object.keys(docs) as (keyof typeof docs)[]).map((id, i) => (
+            <article class="panel" role="tabpanel" id={`panel-${id}`} aria-labelledby={`tab-${id}`} hidden={i !== 0}>
+              <h1>{docs[id].title}</h1>
+              <p class="num muted">Last updated: [DATE]</p>
+              <p class="note">Template layout. Final wording to come from your lawyer before launch.</p>
+              {docs[id].sections.map(([h, p]) => (
+                <section class="sec">
+                  <h2 class="sec__title">{h}</h2>
+                  <p class="muted">{p}</p>
+                </section>
+              ))}
+            </article>
+          ))
+        }
+
+        <article class="panel" role="tabpanel" id="panel-delete" aria-labelledby="tab-delete" hidden>
+          <h1>Delete my data</h1>
+          <p class="text">
+            You can delete everything Inhandy holds about you, any time. Logged in? Do it yourself from Me → Delete my account. Can’t log in? Send
+            this form from the email or number on your account and we’ll delete it within 7 days.
+          </p>
+          <form class="form" data-delete-form novalidate>
+            <div class="group">
+              <label for="dl-id" class="group__label">Email or mobile on your account</label>
+              <div class="field"><input id="dl-id" type="text" placeholder="you@example.com or 98765 43210" /></div>
+            </div>
+            <div class="row">
+              <button type="submit" class="btn btn--mango btn--lg">Request deletion</button>
+              <a href={routes.deleteAccount} class="link">I can log in: delete it myself</a>
+            </div>
+            <p class="status" role="status" data-delete-status></p>
+          </form>
+        </article>
+
+        <article class="panel" role="tabpanel" id="panel-contact" aria-labelledby="tab-contact" hidden>
+          <h1>Contact us</h1>
+          <p class="text">Questions, bugs or feedback. A human replies within one working day. Email: help@inhandy.app</p>
+          <form class="form" data-contact-form novalidate>
+            <div class="group">
+              <label for="ct-mail" class="group__label">Your email</label>
+              <div class="field"><input id="ct-mail" type="email" placeholder="you@example.com" autocomplete="email" /></div>
+            </div>
+            <div class="group">
+              <label for="ct-msg" class="group__label">Message</label>
+              <textarea id="ct-msg" class="textarea" rows="6" placeholder="Tell us what’s up"></textarea>
+            </div>
+            <button type="submit" class="btn btn--mango btn--lg">Send message</button>
+            <p class="status" role="status" data-contact-status></p>
+          </form>
+        </article>
+      </div>
+    </main>
+  </div>
+</Base>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-legal]')!;
+  const tabs = [...root.querySelectorAll<HTMLButtonElement>('[data-tab]')];
+
+  function show(id: string) {
+    tabs.forEach((t) => t.setAttribute('aria-selected', String(t.dataset.tab === id)));
+    root.querySelectorAll<HTMLElement>('[role="tabpanel"]').forEach((p) => (p.hidden = p.id !== `panel-${id}`));
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', id);
+    history.replaceState(null, '', url);
+  }
+
+  tabs.forEach((t, i) => {
+    t.addEventListener('click', () => show(t.dataset.tab!));
+    // Arrow keys move between tabs
+    t.addEventListener('keydown', (e) => {
+      const step = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : 0;
+      if (!step) return;
+      e.preventDefault();
+      const next = tabs[(i + step + tabs.length) % tabs.length];
+      next.focus();
+      show(next.dataset.tab!);
+    });
+  });
+
+  const start = new URLSearchParams(window.location.search).get('tab');
+  if (start && tabs.some((t) => t.dataset.tab === start)) show(start);
+
+  // No server yet: both forms hand off to the user's own email app
+  const mailto = (subject: string, body: string) =>
+    (window.location.href = `mailto:help@inhandy.app?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+
+  root.querySelector<HTMLFormElement>('[data-delete-form]')!.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const who = root.querySelector<HTMLInputElement>('#dl-id')!;
+    const status = root.querySelector('[data-delete-status]')!;
+    if (!who.value.trim()) {
+      status.textContent = 'Add the email or mobile number on your account.';
+      who.focus();
+      return;
+    }
+    status.textContent = 'Opening your email app with the request…';
+    mailto('Delete my Inhandy data', `Please delete all data for the account: ${who.value.trim()}`);
+  });
+
+  root.querySelector<HTMLFormElement>('[data-contact-form]')!.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const msg = root.querySelector<HTMLTextAreaElement>('#ct-msg')!;
+    const from = root.querySelector<HTMLInputElement>('#ct-mail')!.value.trim();
+    const status = root.querySelector('[data-contact-status]')!;
+    if (!msg.value.trim()) {
+      status.textContent = 'Write a message first.';
+      msg.focus();
+      return;
+    }
+    status.textContent = 'Opening your email app…';
+    mailto('Inhandy feedback', `${msg.value.trim()}${from ? `\n\nReply to: ${from}` : ''}`);
+  });
+</script>
+
+<style>
+  .legal {
+    min-height: 100vh;
+  }
+
+  .top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    max-width: 1176px;
+    margin: 0 auto;
+    padding: 24px 32px;
+  }
+
+  .top__logo {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    text-decoration: none;
+  }
+
+  .body {
+    max-width: 1176px;
+    margin: 0 auto;
+    padding: 16px 32px 64px;
+    box-sizing: border-box;
+    display: flex;
+    gap: 32px;
+    align-items: flex-start;
+  }
+
+  .tabs {
+    flex: none;
+    width: 240px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .tab {
+    min-height: 48px;
+    padding: 0 16px;
+    border-radius: 16px;
+    background: transparent;
+    border: 2.5px solid transparent;
+    color: var(--ink);
+    font-weight: 600;
+    font-size: 16px;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .tab:hover {
+    background: var(--paper-deep);
+  }
+
+  .tab[aria-selected='true'] {
+    background: var(--mango);
+    border-color: var(--ink);
+    font-weight: 800;
+  }
+
+  .panels {
+    flex: 1;
+    min-width: 0;
+    max-width: 760px;
+  }
+
+  .panel {
+    padding: 24px;
+    border-radius: 28px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 6px 0 var(--ink);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .panel[hidden] {
+    display: none;
+  }
+
+  h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 40px;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+  }
+
+  .muted {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--ink-muted);
+  }
+
+  .text {
+    margin: 0;
+    line-height: 1.6;
+  }
+
+  .note {
+    margin: 0;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: var(--cream);
+    font-weight: 700;
+  }
+
+  .sec {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .sec__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 20px;
+  }
+
+  .form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .group__label {
+    font-weight: 700;
+  }
+
+  .textarea {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+    color: var(--ink);
+    font-size: 16px;
+    line-height: 1.5;
+    resize: vertical;
+  }
+
+  .textarea:focus {
+    border-color: var(--violet);
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .form > .btn {
+    align-self: flex-start;
+  }
+
+  .link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--violet);
+    font-weight: 700;
+  }
+
+  .status {
+    margin: 0;
+    min-height: 24px;
+    font-weight: 700;
+    color: #0a6b4d;
+  }
+
+  @media (max-width: 639px) {
+    .top {
+      padding: 16px;
+    }
+
+    .body {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 16px;
+      padding: 8px 16px 40px;
+    }
+
+    .tabs {
+      width: auto;
+      flex-direction: row;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .tab {
+      flex: none;
+    }
+
+    .panel {
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 30px;
+    }
+
+    .form > .btn {
+      align-self: stretch;
+    }
+  }
+</style>

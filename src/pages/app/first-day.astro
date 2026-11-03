@@ -1,0 +1,417 @@
+---
+// Home on day one: what a new user sees right after onboarding, before any spends exist.
+import AppShell from '../../layouts/AppShell.astro';
+import Handy from '../../components/Handy.astro';
+import { routes } from '../../lib/routes';
+import { inr } from '../../lib/format';
+import { calcSalary } from '../../lib/salary';
+import { DEFAULT_PROFILE } from '../../scripts/profile-store';
+
+const monthly = calcSalary(DEFAULT_PROFILE.ctc, 'new').inhand / 12;
+
+const tasks = [
+  { label: 'Explain my salary', sub: 'Done in onboarding', href: routes.salary, done: true, cta: '' },
+  { label: 'Set my payday', sub: '7th of every month', href: routes.paydaySettings, done: true, cta: '', payday: true },
+  { label: 'Plan salary day', sub: 'Split it into jars before you spend', href: routes.planEdit, done: false, cta: 'Start' },
+  { label: 'Scan a statement', sub: 'Find forgotten autopays', href: routes.scan, done: false, cta: 'Start' },
+  { label: 'First Sunday check-in', sub: 'Arrives this Sunday, 9 AM', href: routes.sunday, done: false, cta: 'Preview' },
+];
+const doneCount = tasks.filter((t) => t.done).length;
+---
+
+<AppShell title="Welcome" active="home">
+  <header class="head">
+    <div class="head__text">
+      <span class="muted" data-today>Monday, 2 November</span>
+      <h1>Welcome, <span data-name>{DEFAULT_PROFILE.name}</span>!</h1>
+    </div>
+    <a href={routes.notifications} class="btn icon-btn" aria-label="Notifications, none yet">
+      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0"></path></svg>
+    </a>
+  </header>
+
+  <section class="payday" aria-label="Days to payday">
+    <Handy mood="cheer" size={120} decorative />
+    <div class="payday__text">
+      <span class="eyebrow">Your first payday with Inhandy</span>
+      <span class="payday__big" data-days>5 days to go</span>
+      <span class="num payday__meta"><span data-payday-date>Sat, 7 Nov</span> · <b data-expected>{inr(monthly)}</b> expected</span>
+    </div>
+  </section>
+
+  <section class="card setup" aria-labelledby="setup-h">
+    <div class="card__top">
+      <h2 id="setup-h" class="card__title">Get set up</h2>
+      <span class="num setup__count">{doneCount} of {tasks.length}</span>
+    </div>
+    <div class="setup__bar" role="progressbar" aria-label="Setup progress" aria-valuemin="0" aria-valuemax={tasks.length} aria-valuenow={doneCount}>
+      <div style={`width: ${(doneCount / tasks.length) * 100}%`}></div>
+    </div>
+    <ul class="tasks">
+      {
+        tasks.map((t, i) => (
+          <li>
+            <a href={t.href} class:list={['rowlink', 'task', { 'task--done': t.done }]}>
+              <span class="task__box" aria-hidden="true">
+                {t.done ? '✓' : i + 1}
+              </span>
+              <span class="task__text">
+                <span class="task__label">
+                  {t.label}
+                  {t.done && <span class="visually-hidden"> (done)</span>}
+                </span>
+                <span class="task__sub" data-payday-sub={t.payday ? '' : undefined}>
+                  {t.sub}
+                </span>
+              </span>
+              {t.cta && <span class="task__cta">{t.cta}</span>}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  <section class="empty" aria-label="This week">
+    <Handy mood="chill" size={80} decorative />
+    <h2 class="card__title">Spends show up here</h2>
+    <p class="muted">Scan one statement and Handy sorts your week into food, travel, fun and more.</p>
+    <a href={routes.scan} class="btn btn--mango btn--lg">Scan a statement</a>
+  </section>
+
+  <section class="salary" aria-label="Your salary">
+    <span class="salary__label">Lands in your account</span>
+    <span class="num salary__amount" data-inhand>{inr(monthly)}</span>
+    <span class="muted">every month, new regime</span>
+    <a href={routes.salary} class="link">See the full breakdown →</a>
+  </section>
+
+  <section class="card ask" aria-labelledby="ask-first">
+    <div class="ask__top">
+      <Handy mood="chai" size={48} decorative />
+      <h2 id="ask-first" class="card__title">Ask me anything</h2>
+    </div>
+    <p class="muted">New to all this? Start with one of these.</p>
+    <a href={`${routes.coach}?q=${encodeURIComponent('What is PF and why is it cut?')}`} class="rowlink ask__q">What is PF and why is it cut?</a>
+    <a href={`${routes.coach}?q=${encodeURIComponent('How much should I save?')}`} class="rowlink ask__q">How much should I save?</a>
+  </section>
+</AppShell>
+
+<script>
+  import { inr } from '../../lib/format';
+  import { calcSalary } from '../../lib/salary';
+  import { daysUntil, loadProfile, nextPayday } from '../../scripts/profile-store';
+
+  const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const ord = (n: number) => n + (n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th');
+
+  // Fill in what onboarding saved, against today's real date
+  const p = loadProfile();
+  const today = new Date();
+  const pay = nextPayday(p.payday, today);
+  const n = daysUntil(pay, today);
+  const monthly = inr(calcSalary(p.ctc, 'new').inhand / 12);
+
+  document.querySelector('[data-today]')!.textContent = `${DAYS[today.getDay()]}, ${today.getDate()} ${MONTHS[today.getMonth()]}`;
+  document.querySelector('[data-name]')!.textContent = p.name || 'there';
+  document.querySelector('[data-days]')!.textContent = n === 0 ? 'It’s today!' : n === 1 ? '1 day to go' : `${n} days to go`;
+  document.querySelector('[data-payday-date]')!.textContent =
+    `${DAYS[pay.getDay()].slice(0, 3)}, ${pay.getDate()} ${MONTHS[pay.getMonth()].slice(0, 3)}`;
+  document.querySelector('[data-expected]')!.textContent = monthly;
+  document.querySelector('[data-inhand]')!.textContent = monthly;
+  document.querySelector('[data-payday-sub]')!.textContent =
+    p.payday === 'last' ? 'Last working day of the month' : `${ord(p.payday)} of every month`;
+</script>
+
+<style>
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .muted {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--ink-muted);
+  }
+
+  .head {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .head__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 40px;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+  }
+
+  .icon-btn {
+    width: 52px;
+    height: 52px;
+    padding: 0;
+    flex: none;
+  }
+
+  .eyebrow {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .card {
+    padding: 24px;
+    border-radius: 28px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 6px 0 var(--ink);
+  }
+
+  .card__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .card__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 22px;
+  }
+
+  .link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-weight: 800;
+    color: var(--violet);
+    text-decoration: none;
+  }
+
+  .payday {
+    grid-column: span 7;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 28px;
+    border-radius: 32px;
+    background: var(--mango);
+    border: 3px solid var(--ink);
+    box-shadow: 0 8px 0 var(--ink);
+  }
+
+  .payday__text {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .payday__big {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 36px;
+    line-height: 1.05;
+  }
+
+  .payday__meta {
+    font-size: 18px;
+  }
+
+  .setup {
+    grid-column: span 5;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .setup__count {
+    font-weight: 800;
+  }
+
+  .setup__bar {
+    height: 12px;
+    margin: 6px 0 8px;
+    border-radius: 99px;
+    background: #f1e7d3;
+    border: 2px solid var(--ink);
+    overflow: hidden;
+  }
+
+  .setup__bar div {
+    height: 100%;
+    background: var(--mint);
+  }
+
+  .tasks {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .task {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 56px;
+    padding: 6px 8px;
+    border-radius: 14px;
+    text-decoration: none;
+  }
+
+  .task__box {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+    box-sizing: border-box;
+    font-weight: 800;
+    font-size: 16px;
+  }
+
+  .task--done .task__box {
+    background: var(--mint);
+  }
+
+  .task__text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .task__label {
+    font-weight: 700;
+  }
+
+  .task--done .task__label {
+    text-decoration: line-through;
+  }
+
+  .task__sub {
+    color: var(--ink-muted);
+  }
+
+  .task__cta {
+    font-weight: 800;
+    color: var(--violet);
+  }
+
+  .empty {
+    grid-column: span 4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 28px;
+    border-radius: 28px;
+    border: 3px dashed #8a5800;
+    text-align: center;
+  }
+
+  .salary {
+    grid-column: span 4;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 24px;
+    border-radius: 28px;
+    background: #e2f8ef;
+    border: 2.5px solid var(--ink);
+  }
+
+  .salary__label {
+    font-weight: 800;
+    color: #0a6b4d;
+  }
+
+  .salary__amount {
+    font-weight: 800;
+    font-size: 44px;
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+
+  .ask {
+    grid-column: span 4;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .ask__top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .ask__q {
+    display: flex;
+    align-items: center;
+    min-height: 48px;
+    padding: 0 14px;
+    border-radius: 14px;
+    background: var(--paper-deep);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  /* Narrow laptops: payday + setup full width, the three small cards share a row */
+  @media (max-width: 1279px) {
+    .payday,
+    .setup {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (max-width: 639px) {
+    .head h1 {
+      font-size: 30px !important;
+    }
+
+    .payday {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 20px;
+    }
+
+    .payday :global(.handy) {
+      width: 80px !important;
+      height: 80px !important;
+    }
+
+    .payday__big {
+      font-size: 30px;
+    }
+
+    .card,
+    .salary,
+    .empty {
+      padding: 20px;
+    }
+  }
+</style>

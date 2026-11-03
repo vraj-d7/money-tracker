@@ -1,0 +1,19 @@
+---
+// No real login session exists yet, so logging out just takes you to the login page; saved data stays.
+import SheetPage from '../../../layouts/SheetPage.astro';
+import ConfirmDialog from '../../../components/ConfirmDialog.astro';
+import { routes } from '../../../lib/routes';
+---
+
+<SheetPage title="Log out" active="me" closeHref={routes.me} width={520}>
+  <ConfirmDialog
+    title="Log out of Inhandy?"
+    text="Your plan, jars and goals stay saved. Log back in any time with your mobile number."
+    icon="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"
+  >
+    <div class="confirm__actions">
+      <a href={routes.auth} class="btn btn--mango btn--lg confirm__primary">Log out</a>
+      <a href={routes.me} class="btn">Cancel</a>
+    </div>
+  </ConfirmDialog>
+</SheetPage>

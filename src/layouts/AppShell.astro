@@ -1,0 +1,113 @@
+---
+// Logged-in app frame: sidebar on desktop, icon rail on tablet, bottom tabs on phone.
+// Page content goes in the default slot and sits on a 12-column grid,
+// unless `full` is set: then the page gets the whole area with no padding (e.g. the coach chat).
+import Base from './Base.astro';
+import AppNav from '../components/AppNav.astro';
+import TabBar from '../components/TabBar.astro';
+import type { AppSection } from '../lib/routes';
+
+interface Props {
+  title: string;
+  active: AppSection;
+  full?: boolean;
+}
+
+const { title, active, full = false } = Astro.props;
+---
+
+<Base title={`${title} · Inhandy`}>
+  <div class="shell paper-dots">
+    <div class="shell-nav">
+      <AppNav active={active} />
+    </div>
+
+    <main class:list={['shell-main', { 'shell-main--full': full }]}>
+      <slot />
+    </main>
+
+    <div class="shell-tabs">
+      <TabBar active={active} />
+    </div>
+  </div>
+
+  <div id="toast-region" class="toast-region" aria-live="polite"></div>
+</Base>
+
+<style>
+  .shell {
+    width: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: 264px minmax(0, 1fr);
+    color: var(--ink);
+  }
+
+  .shell-main {
+    width: 100%;
+    max-width: 1176px;
+    margin: 0 auto;
+    box-sizing: border-box;
+    padding: 32px 48px 48px;
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 24px;
+    align-content: start;
+  }
+
+  /* Double class so it also beats the tablet/phone padding below */
+  .shell-main.shell-main--full {
+    max-width: none;
+    padding: 0;
+    display: block;
+  }
+
+  .shell-tabs {
+    display: none;
+  }
+
+  @media (max-width: 1023px) {
+    .shell {
+      grid-template-columns: 88px minmax(0, 1fr);
+    }
+
+    .shell-main {
+      padding: 28px 28px 40px;
+    }
+
+    .shell-main > :global(*) {
+      grid-column: 1 / -1 !important;
+    }
+  }
+
+  @media (max-width: 639px) {
+    .shell {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .shell-nav {
+      display: none;
+    }
+
+    .shell-tabs {
+      display: block;
+      position: sticky;
+      bottom: 0;
+      z-index: 5;
+    }
+
+    .shell-main {
+      padding: 20px 16px 32px;
+    }
+
+    .shell-main :global(h1) {
+      font-size: 30px !important;
+    }
+
+    .toast-region {
+      bottom: 110px;
+    }
+  }
+</style>

@@ -1,0 +1,602 @@
+---
+// Onboarding: salary → payday → coach vibe. Answers are saved in this browser (scripts/profile-store.ts).
+import HandySplit from '../layouts/HandySplit.astro';
+import Handy from '../components/Handy.astro';
+import { routes } from '../lib/routes';
+import { CTC_STEPS, stepIndexOf } from '../lib/salary';
+import type { HandyMood } from '../lib/handy';
+
+const startCtc = 12;
+const ctcIdx = stepIndexOf(startCtc);
+const maxIdx = CTC_STEPS.length - 1;
+const cities = ['Bengaluru', 'Mumbai', 'Delhi NCR', 'Pune', 'Hyderabad', 'Chennai', 'Other'];
+const steps = ['Your salary', 'Your payday', 'Your coach'];
+const modes: { id: string; label: string; mood: HandyMood; sample: string }[] = [
+  { id: 'hype', label: 'Hype', mood: 'cheer', sample: '“₹600 under plan?! You’re a legend!”' },
+  { id: 'honest', label: 'Honest', mood: 'happy', sample: '“₹600 under plan. Food was 26% of spend.”' },
+  { id: 'mom', label: 'Mom', mood: 'sus', sample: '“Beta, ₹840 on delivery? Ghar ka khana kya bura hai?”' },
+];
+---
+
+<HandySplit title="Welcome" bubble="No bank password. Just a number, promise." moods={['happy', 'chai', 'cheer', 'sus']} handySize={200}>
+  <ol slot="aside-foot" class="steps" aria-label="Steps">
+    {
+      steps.map((s, i) => (
+        <li class="steps__item" data-step-item={i} aria-current={i === 0 ? 'step' : undefined}>
+          <span class="num steps__dot" data-step-dot>
+            {i + 1}
+          </span>
+          {s}
+        </li>
+      ))
+    }
+  </ol>
+
+  <div class="ob" data-onboarding>
+    <header class="ob__bar">
+      <button type="button" class="ob__back" aria-label="Back" data-back disabled>
+        <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+      </button>
+      <div class="ob__progress" role="progressbar" aria-label="Onboarding progress" aria-valuemin="1" aria-valuemax="3" aria-valuenow="1" data-progress>
+        {[0, 1, 2].map((i) => <span class="ob__seg"><span class="ob__seg-fill" data-seg={i} style={`width: ${i === 0 ? '100%' : '0%'}`} /></span>)}
+      </div>
+      <a href={routes.firstDay} class="ob__skip">Skip</a>
+    </header>
+
+    <div class="ob__body">
+      <span class="num ob__count">Step <span data-step-num>1</span> of 3</span>
+
+      <section class="ob__step" data-panel="0">
+        <h1>Let’s start with your salary</h1>
+        <div class="ctc-card">
+          <div class="ctc-card__top">
+            <label for="ob-ctc">Your CTC</label>
+            <span class="num ctc-card__value" data-ctc>₹{startCtc}L</span>
+          </div>
+          <input id="ob-ctc" class="rng" type="range" min="0" max={maxIdx} step="1" value={ctcIdx} aria-valuetext={`₹${startCtc}L`} style={`--p: ${((ctcIdx / maxIdx) * 100).toFixed(1)}%`} />
+          <p class="muted">Find it on your offer letter. Anywhere from ₹2L to ₹1Cr a year.</p>
+        </div>
+        <fieldset class="group">
+          <legend>Which city do you work in?</legend>
+          <div class="chips">
+            {
+              cities.map((c) => (
+                <button type="button" class="chip" data-city={c} aria-pressed={c === 'Bengaluru' ? 'true' : 'false'}>
+                  {c}
+                </button>
+              ))
+            }
+          </div>
+          <p class="muted">We use this for rent and professional tax estimates.</p>
+        </fieldset>
+      </section>
+
+      <section class="ob__step" data-panel="1" hidden>
+        <h1>When does salary aa jaati hai?</h1>
+        <div class="days" role="group" aria-label="Salary day of the month">
+          {
+            Array.from({ length: 31 }, (_, i) => (
+              <button type="button" class="num day" data-day={i + 1} aria-pressed={i + 1 === 7 ? 'true' : 'false'} aria-label={`Day ${i + 1}`}>
+                {i + 1}
+              </button>
+            ))
+          }
+        </div>
+        <button type="button" class="last-day" data-day="last" aria-pressed="false">Last working day of the month</button>
+        <p class="num next" data-next-payday>Next payday: 7 Nov. Countdown starts now.</p>
+      </section>
+
+      <section class="ob__step" data-panel="2" hidden>
+        <h1>Pick your coach’s vibe</h1>
+        <div class="modes" role="group" aria-label="Coach mode">
+          {
+            modes.map((m) => (
+              <button type="button" class="mode" data-mode={m.id} data-mode-mood={m.mood} aria-pressed={m.id === 'honest' ? 'true' : 'false'}>
+                <Handy mood={m.mood} size={72} decorative />
+                <span class="mode__text">
+                  <span class="mode__label">{m.label}</span>
+                  <span class="mode__sample">{m.sample}</span>
+                </span>
+              </button>
+            ))
+          }
+        </div>
+        <p class="muted">You can switch modes any time from the chat.</p>
+      </section>
+
+      <div class="ob__actions">
+        <button type="button" class="btn btn--mango btn--lg ob__next" data-next>Continue</button>
+      </div>
+    </div>
+  </div>
+</HandySplit>
+
+<script>
+  import { routes } from '../lib/routes';
+  import { CTC_STEPS } from '../lib/salary';
+  import { daysUntil, nextPayday, saveProfile, type CoachMode, type Profile } from '../scripts/profile-store';
+
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const BUBBLES = [
+    'No bank password. Just a number, promise.',
+    'I’ll count down to payday with you.',
+    'Pick how I talk to you. No judgement. Mostly.',
+  ];
+
+  const root = document.querySelector<HTMLElement>('[data-onboarding]')!;
+  const ctcInput = root.querySelector<HTMLInputElement>('#ob-ctc')!;
+  const nextBtn = root.querySelector<HTMLButtonElement>('[data-next]')!;
+  const backBtn = root.querySelector<HTMLButtonElement>('[data-back]')!;
+  const bubble = document.querySelector('[data-bubble]');
+  const handyBox = document.querySelector<HTMLElement>('[data-handy-box]');
+
+  const answers: Omit<Profile, 'name'> = { ctc: 12, city: 'Bengaluru', payday: 7, coachMode: 'honest' };
+  let step = 0;
+
+  const ctcLabel = (l: number) => (l >= 100 ? '₹1Cr' : `₹${l}L`);
+
+  function pressOnly(selector: string, btn: Element) {
+    root.querySelectorAll(selector).forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+  }
+
+  function moodFor(s: number) {
+    if (s === 0) return 'happy';
+    if (s === 1) return 'chai';
+    return answers.coachMode === 'mom' ? 'sus' : answers.coachMode === 'hype' ? 'cheer' : 'happy';
+  }
+
+  function renderPayday() {
+    const d = nextPayday(answers.payday);
+    const n = daysUntil(d);
+    root.querySelector('[data-next-payday]')!.textContent =
+      `Next payday: ${d.getDate()} ${MONTHS[d.getMonth()]} (${n === 0 ? 'today' : n === 1 ? '1 day' : `${n} days`}). Countdown starts now.`;
+  }
+
+  function render() {
+    root.querySelectorAll<HTMLElement>('[data-panel]').forEach((p) => {
+      const on = Number(p.dataset.panel) === step;
+      p.hidden = !on;
+      if (on) {
+        p.classList.remove('step-in');
+        void p.offsetWidth;
+        p.classList.add('step-in');
+      }
+    });
+    root.querySelector('[data-step-num]')!.textContent = String(step + 1);
+    root.querySelector('[data-progress]')!.setAttribute('aria-valuenow', String(step + 1));
+    root.querySelectorAll<HTMLElement>('[data-seg]').forEach((s) => (s.style.width = Number(s.dataset.seg) <= step ? '100%' : '0%'));
+    backBtn.disabled = step === 0;
+    nextBtn.textContent = step === 2 ? 'Chalo, let’s go!' : 'Continue';
+
+    document.querySelectorAll<HTMLElement>('[data-step-item]').forEach((li) => {
+      const i = Number(li.dataset.stepItem);
+      if (i === step) li.setAttribute('aria-current', 'step');
+      else li.removeAttribute('aria-current');
+      li.classList.toggle('is-done', i < step);
+      li.querySelector('[data-step-dot]')!.textContent = i < step ? '✓' : String(i + 1);
+    });
+
+    if (bubble) bubble.textContent = BUBBLES[step];
+    if (handyBox) handyBox.dataset.handy = moodFor(step);
+  }
+
+  ctcInput.addEventListener('input', () => {
+    const idx = Number(ctcInput.value);
+    answers.ctc = CTC_STEPS[idx];
+    root.querySelector('[data-ctc]')!.textContent = ctcLabel(answers.ctc);
+    ctcInput.setAttribute('aria-valuetext', ctcLabel(answers.ctc));
+    ctcInput.style.setProperty('--p', ((idx / (CTC_STEPS.length - 1)) * 100).toFixed(1) + '%');
+  });
+
+  root.querySelectorAll<HTMLElement>('[data-city]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      answers.city = btn.dataset.city!;
+      pressOnly('[data-city]', btn);
+    }),
+  );
+
+  root.querySelectorAll<HTMLElement>('[data-day]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      answers.payday = btn.dataset.day === 'last' ? 'last' : Number(btn.dataset.day);
+      pressOnly('[data-day]', btn);
+      renderPayday();
+    }),
+  );
+
+  root.querySelectorAll<HTMLElement>('[data-mode]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      answers.coachMode = btn.dataset.mode as CoachMode;
+      pressOnly('[data-mode]', btn);
+      if (handyBox) handyBox.dataset.handy = moodFor(step);
+    }),
+  );
+
+  backBtn.addEventListener('click', () => {
+    step = Math.max(0, step - 1);
+    render();
+  });
+
+  nextBtn.addEventListener('click', () => {
+    if (step < 2) {
+      step++;
+      render();
+      return;
+    }
+    saveProfile(answers);
+    window.location.href = routes.firstDay;
+  });
+
+  renderPayday();
+  render();
+</script>
+
+<style>
+  .steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .steps__item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .steps__item[aria-current='step'] {
+    font-weight: 800;
+  }
+
+  .steps__dot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 2.5px solid var(--ink);
+    box-sizing: border-box;
+    font-weight: 800;
+    font-size: 16px;
+  }
+
+  .steps__item[aria-current='step'] .steps__dot {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .steps__item.is-done .steps__dot {
+    background: var(--white);
+  }
+
+  .ob {
+    display: flex;
+    flex-direction: column;
+    padding: 40px 72px 48px;
+    /* Steps slide in from the right; don't let that push the page sideways */
+    overflow-x: clip;
+  }
+
+  .ob__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    max-width: 640px;
+    width: 100%;
+  }
+
+  .ob__back {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+    color: var(--ink);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .ob__back:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  .ob__progress {
+    flex: 1;
+    max-width: 320px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .ob__seg {
+    height: 10px;
+    border-radius: 99px;
+    background: #f1e7d3;
+    border: 2px solid var(--ink);
+    overflow: hidden;
+  }
+
+  .ob__seg-fill {
+    display: block;
+    height: 100%;
+    background: var(--mango);
+    transition: width 0.4s cubic-bezier(0.3, 1.3, 0.5, 1);
+  }
+
+  .ob__skip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 6px;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .ob__body {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    max-width: 640px;
+    width: 100%;
+    padding-top: 48px;
+  }
+
+  .ob__count {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .ob__step {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .ob__step[hidden] {
+    display: none;
+  }
+
+  .step-in {
+    animation: step-in 0.35s cubic-bezier(0.3, 1.4, 0.5, 1);
+  }
+
+  @keyframes step-in {
+    0% {
+      opacity: 0;
+      transform: translateX(24px);
+    }
+    100% {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 52px;
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+
+  .muted {
+    margin: 0;
+    font-size: 16px;
+    color: var(--ink-muted);
+  }
+
+  .ctc-card {
+    padding: 18px 20px 12px;
+    border-radius: 24px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 6px 0 var(--ink);
+  }
+
+  .ctc-card__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .ctc-card__top label {
+    font-weight: 600;
+  }
+
+  .ctc-card__value {
+    font-weight: 800;
+    font-size: 44px;
+    letter-spacing: -0.03em;
+  }
+
+  .group {
+    margin: 0;
+    padding: 0;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .group legend {
+    padding: 0;
+    margin-bottom: 10px;
+    font-weight: 700;
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .chip,
+  .day,
+  .last-day {
+    background: var(--white);
+    color: var(--ink);
+    border: 2.5px solid var(--ink);
+    font-weight: 700;
+    font-size: 16px;
+    cursor: pointer;
+  }
+
+  .chip[aria-pressed='true'],
+  .day[aria-pressed='true'],
+  .last-day[aria-pressed='true'] {
+    background: var(--mango);
+    box-shadow: 0 4px 0 var(--ink);
+  }
+
+  .chip {
+    min-height: 44px;
+    padding: 8px 16px;
+    border-radius: 99px;
+  }
+
+  .days {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .day {
+    height: 56px;
+    padding: 0;
+    border-width: 2px;
+    border-radius: 16px;
+    font-weight: 800;
+  }
+
+  .last-day {
+    min-height: 48px;
+    border-radius: 16px;
+  }
+
+  .next {
+    margin: 0;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: #ffe7b0;
+    color: #8a5800;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .modes {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .mode {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    text-align: left;
+    padding: 18px;
+    border-radius: 24px;
+    background: var(--paper-deep);
+    color: var(--ink);
+    border: 2.5px solid var(--ink);
+    cursor: pointer;
+  }
+
+  .mode[aria-pressed='true'] {
+    background: var(--white);
+    border: 3px solid var(--mango);
+    box-shadow:
+      0 5px 0 var(--ink),
+      0 0 0 5px rgba(255, 178, 30, 0.3);
+  }
+
+  .mode__text {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .mode__label {
+    font-weight: 800;
+    font-size: 17px;
+  }
+
+  .mode__sample {
+    font-size: 16px;
+    line-height: 1.4;
+    color: var(--ink-muted);
+  }
+
+  .ob__actions {
+    display: flex;
+    gap: 12px;
+  }
+
+  .ob__next {
+    min-height: 60px;
+    padding: 0 40px;
+    border-radius: 20px;
+    font-size: 19px;
+  }
+
+  @media (max-width: 1023px) {
+    .ob {
+      padding: 28px 32px 40px;
+    }
+  }
+
+  @media (max-width: 639px) {
+    .ob {
+      padding: 20px 16px 28px;
+    }
+
+    .ob__body {
+      padding-top: 28px;
+      gap: 20px;
+    }
+
+    h1 {
+      font-size: 34px;
+    }
+
+    .ctc-card__value {
+      font-size: 34px;
+    }
+
+    .days {
+      gap: 5px;
+    }
+
+    .day {
+      height: 44px;
+      border-radius: 12px;
+    }
+
+    .modes {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .mode {
+      flex-direction: row;
+      align-items: center;
+    }
+
+    .ob__next {
+      width: 100%;
+    }
+  }
+</style>

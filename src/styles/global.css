@@ -1,0 +1,311 @@
+/* Brand tokens and shared UI classes, taken from the Inhandy design canvas (designs/) */
+:root {
+  --ink: #15131c;
+  --ink-muted: #5b5563;
+  --paper: #faf6ee;
+  --paper-deep: #f4eddf;
+  --cream: #fff1cf;
+  --white: #ffffff;
+  --mango: #ffb21e;
+  --violet: #5a43c0;
+  --focus: #b9a6ff;
+  --line: #e2d8c4;
+  --mint: #2ed3a0;
+  --coral: #ff6b5b;
+  --danger-bg: #ffe4e0;
+  --danger: #b3362a;
+  --font-display: 'Bricolage Grotesque', sans-serif;
+  --font-body: Inter, system-ui, sans-serif;
+  --ease: cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Dotted paper background used behind app screens */
+.paper-dots {
+  background-color: var(--paper);
+  background-image: radial-gradient(rgba(21, 19, 28, 0.06) 1px, transparent 1.3px);
+  background-size: 4px 4px;
+}
+
+/* Chunky "press" button: solid shadow that squashes on click */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 0 20px;
+  box-sizing: border-box;
+  border-radius: 16px;
+  border: 2.5px solid var(--ink);
+  background: var(--white);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 16px;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 5px 0 var(--ink);
+  transition:
+    transform 0.2s var(--ease),
+    box-shadow 0.2s var(--ease),
+    background-color 0.2s var(--ease),
+    color 0.2s var(--ease);
+}
+
+.btn:hover {
+  background: var(--mango);
+}
+
+.btn:active {
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 var(--ink);
+}
+
+.btn--mango {
+  background: var(--mango);
+}
+
+.btn--mango:hover {
+  background: var(--white);
+}
+
+.btn--ink {
+  background: var(--ink);
+  color: var(--white);
+}
+
+.btn--ink:hover {
+  background: var(--white);
+  color: var(--ink);
+}
+
+.btn--lg {
+  min-height: 56px;
+  padding: 0 24px;
+  border-width: 3px;
+  border-radius: 18px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 18px;
+}
+
+.btn--block {
+  width: 100%;
+}
+
+/* Text input wrapper that highlights while focused */
+.field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px 4px 16px;
+  border-radius: 16px;
+  background: var(--white);
+  border: 2.5px solid var(--ink);
+  transition: border-color 0.2s;
+}
+
+.field:focus-within {
+  border-color: var(--violet);
+}
+
+.field input {
+  flex: 1;
+  min-width: 0;
+  min-height: 48px;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 16px;
+  outline: none;
+}
+
+/* Chunky range slider. --p = filled %, --c = fill colour */
+.rng {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 44px;
+  background: transparent;
+  margin: 0;
+  cursor: pointer;
+}
+
+.rng::-webkit-slider-runnable-track {
+  height: 14px;
+  border-radius: 99px;
+  background: linear-gradient(to right, var(--c, var(--mango)) 0, var(--c, var(--mango)) var(--p), #f1e7d3 var(--p));
+  border: 2px solid var(--ink);
+}
+
+.rng::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 32px;
+  height: 32px;
+  margin-top: -11px;
+  border-radius: 50%;
+  background: var(--mango);
+  border: 3px solid var(--ink);
+  box-shadow: 0 4px 0 var(--ink);
+  transition: transform 0.25s cubic-bezier(0.34, 1.4, 0.5, 1);
+}
+
+.rng::-moz-range-track {
+  height: 14px;
+  border-radius: 99px;
+  background: #f1e7d3;
+  border: 2px solid var(--ink);
+}
+
+.rng::-moz-range-progress {
+  height: 14px;
+  border-radius: 99px;
+  background: var(--c, var(--mango));
+}
+
+.rng::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--mango);
+  border: 3px solid var(--ink);
+}
+
+.rng:hover::-webkit-slider-thumb,
+.rng:focus-visible::-webkit-slider-thumb,
+.rng:active::-webkit-slider-thumb {
+  transform: scale(1.25);
+}
+
+.rowlink {
+  transition: background-color 0.2s var(--ease);
+}
+
+.rowlink:hover {
+  background: var(--paper-deep);
+}
+
+.pop-in {
+  animation: pop-in 0.35s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+
+@keyframes pop-in {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Where showToast() puts toasts: bottom centre of the screen */
+.toast-region {
+  position: fixed;
+  left: 50%;
+  bottom: 32px;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+}
+
+/* Toast (see components/Toast.astro and scripts/toast.ts) */
+.toast {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 420px;
+  box-sizing: border-box;
+  padding: 12px 14px 12px 16px;
+  border-radius: 18px;
+  background: var(--ink);
+  color: var(--paper);
+  border: 2.5px solid var(--ink);
+  box-shadow: 0 6px 0 rgba(21, 19, 28, 0.25);
+}
+
+.toast__icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  color: var(--ink);
+}
+
+.toast__icon--success {
+  background: var(--mint);
+}
+
+.toast__icon--error {
+  background: var(--coral);
+}
+
+.toast__icon--info {
+  background: var(--mango);
+}
+
+.toast__text {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.toast__action {
+  flex: none;
+  min-height: 44px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--mango);
+  font-weight: 800;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

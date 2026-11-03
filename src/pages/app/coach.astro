@@ -1,0 +1,706 @@
+---
+import AppShell from '../../layouts/AppShell.astro';
+import Handy from '../../components/Handy.astro';
+import SpendChart from '../../components/coach/SpendChart.astro';
+import AffordCard from '../../components/coach/AffordCard.astro';
+import { inr } from '../../lib/format';
+import { COACH_MODES, REPLIES, coachData } from '../../lib/coach';
+
+// The opening conversation from the design, in the default voice (the script re-voices it to the saved mode)
+const startMode = 'honest';
+const opening = [
+  { q: 'Where did my salary go this month?', intent: 'where' as const },
+  { q: 'Can I afford a ₹12,000 phone?', intent: 'afford' as const },
+];
+const spentPct = Math.round((coachData.spent / coachData.inhand) * 100);
+---
+
+<AppShell title="Coach" active="coach" full>
+  <div class="coach" data-coach data-mode={startMode}>
+    <section class="chat" aria-label="Chat with Handy">
+      <header class="chat__head">
+        <div class="chat__who">
+          <span class="chat__handy" data-head-mood={startMode}>
+            {
+              COACH_MODES.map((m) => (
+                <span data-mood-for={m.id}>
+                  <Handy mood={m.mood} size={52} decorative />
+                </span>
+              ))
+            }
+          </span>
+          <span class="chat__name">
+            <h1>Handy</h1>
+            <span class="muted">your money coach</span>
+          </span>
+        </div>
+        <div class="modes" role="group" aria-label="Coach mode">
+          {
+            COACH_MODES.map((m) => (
+              <button type="button" class="modes__btn" data-mode-btn={m.id} aria-pressed={m.id === startMode ? 'true' : 'false'}>
+                {m.label}
+              </button>
+            ))
+          }
+        </div>
+      </header>
+
+      <div class="log" role="log" aria-label="Conversation" tabindex="0" data-log-scroll>
+        <div class="log__inner" data-log>
+          <span class="log__date">Today</span>
+          {
+            opening.map((o) => (
+              <>
+                <p class="msg msg--me">{o.q}</p>
+                <div class="reply" data-intent={o.intent}>
+                  <p class="msg msg--handy" data-reply-text>
+                    {REPLIES[o.intent].text[startMode]}
+                  </p>
+                  {o.intent === 'where' && <SpendChart />}
+                  {o.intent === 'afford' && <AffordCard />}
+                </div>
+              </>
+            ))
+          }
+        </div>
+      </div>
+
+      <footer class="composer">
+        <div class="composer__inner">
+          <div class="chips">
+            {
+              coachData.chips.map((c) => (
+                <button type="button" class="chip" data-chip>
+                  {c}
+                </button>
+              ))
+            }
+          </div>
+          <form class="composer__field" data-composer>
+            <label for="coach-in" class="visually-hidden">Message your coach</label>
+            <input id="coach-in" type="text" placeholder="Ask anything about your money" autocomplete="off" />
+            <button type="submit" class="btn composer__send" aria-label="Send">
+              <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+            </button>
+          </form>
+          <p class="composer__note">Coach gives general guidance, not financial advice.</p>
+        </div>
+      </footer>
+    </section>
+
+    <aside class="side" aria-label="Your numbers">
+      <h2 class="side__title">What Handy can see</h2>
+
+      <section class="side__payday" aria-label="Days to payday">
+        <span class="num side__days">{coachData.daysToPayday}</span>
+        <span class="side__payday-text">
+          <span class="side__payday-label">days to payday</span>
+          <span class="num">{coachData.payday} · {inr(coachData.inhand)}</span>
+        </span>
+      </section>
+
+      <section class="card" aria-label="Left this month">
+        <span class="card__label">Left this month</span>
+        <span class="num side__left">{inr(coachData.left)}</span>
+        <div class="side__bar" role="img" aria-label={`${inr(coachData.spent)} spent, ${spentPct}% of in-hand`}>
+          <div style={`width: ${spentPct}%`}></div>
+        </div>
+        <p class="side__ok">Rent, home and SIP already paid</p>
+      </section>
+
+      <section class="card" aria-label="Jars">
+        <span class="card__label">Your jars</span>
+        {
+          coachData.jars.map((j) => (
+            <div class="jar">
+              <span class="jar__swatch" aria-hidden="true" style={`background: ${j.color}`} />
+              <span class="jar__label">{j.label}</span>
+              <span class="num jar__amt">{inr(j.amount)}</span>
+            </div>
+          ))
+        }
+      </section>
+
+      <p class="muted side__foot">Handy only reads the statements you upload. Delete them anytime in Settings.</p>
+    </aside>
+  </div>
+
+  <template id="tpl-me"><p class="msg msg--me"></p></template>
+  <template id="tpl-reply">
+    <div class="reply pop-in"><p class="msg msg--handy" data-reply-text></p></div>
+  </template>
+  <template id="tpl-typing">
+    <div class="typing" aria-label="Handy is typing"><span></span><span></span><span></span></div>
+  </template>
+  <template id="tpl-spend-chart"><SpendChart /></template>
+  <template id="tpl-afford-card"><AffordCard /></template>
+</AppShell>
+
+<script>
+  import { REPLIES, matchIntent, type CoachMode, type Intent } from '../../lib/coach';
+  import { loadProfile, saveProfile } from '../../scripts/profile-store';
+
+  const root = document.querySelector<HTMLElement>('[data-coach]')!;
+  const log = root.querySelector<HTMLElement>('[data-log]')!;
+  const scroller = root.querySelector<HTMLElement>('[data-log-scroll]')!;
+  const form = root.querySelector<HTMLFormElement>('[data-composer]')!;
+  const input = form.querySelector<HTMLInputElement>('input')!;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const tpl = (id: string) =>
+    (document.querySelector<HTMLTemplateElement>(`#${id}`)!.content.firstElementChild as HTMLElement).cloneNode(true) as HTMLElement;
+
+  let mode = root.dataset.mode as CoachMode;
+
+  function setMode(next: CoachMode, save = true) {
+    mode = next;
+    root.dataset.mode = next;
+    root.querySelector<HTMLElement>('[data-head-mood]')!.dataset.headMood = next;
+    root.querySelectorAll<HTMLElement>('[data-mode-btn]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.modeBtn === next)));
+    // Every Handy reply so far switches to the new voice
+    log.querySelectorAll<HTMLElement>('[data-intent]').forEach((r) => {
+      r.querySelector('[data-reply-text]')!.textContent = REPLIES[r.dataset.intent as Intent].text[next];
+      if (!reduceMotion) {
+        r.classList.remove('pop-in');
+        void r.offsetWidth;
+        r.classList.add('pop-in');
+      }
+    });
+    if (save) saveProfile({ coachMode: next });
+  }
+
+  function scrollToEnd() {
+    const behavior: ScrollBehavior = reduceMotion ? 'auto' : 'smooth';
+    // Desktop scrolls the log box; on phones the log grows and the page itself scrolls
+    if (scroller.scrollHeight > scroller.clientHeight) {
+      scroller.scrollTo({ top: scroller.scrollHeight, behavior });
+    } else {
+      window.scrollTo({ top: document.documentElement.scrollHeight, behavior });
+    }
+  }
+
+  function ask(question: string) {
+    const text = question.trim();
+    if (!text) return;
+    const me = tpl('tpl-me');
+    me.textContent = text;
+    log.append(me);
+
+    const typing = tpl('tpl-typing');
+    log.append(typing);
+    scrollToEnd();
+
+    window.setTimeout(
+      () => {
+        typing.remove();
+        const intent = matchIntent(text);
+        const reply = tpl('tpl-reply');
+        reply.dataset.intent = intent;
+        reply.querySelector('[data-reply-text]')!.textContent = REPLIES[intent].text[mode];
+        const attach = REPLIES[intent].attach;
+        if (attach) reply.append(tpl(attach === 'spend-chart' ? 'tpl-spend-chart' : 'tpl-afford-card'));
+        log.append(reply);
+        scrollToEnd();
+      },
+      reduceMotion ? 0 : 700,
+    );
+  }
+
+  root.querySelectorAll<HTMLElement>('[data-mode-btn]').forEach((b) =>
+    b.addEventListener('click', () => {
+      if (b.dataset.modeBtn !== mode) setMode(b.dataset.modeBtn as CoachMode);
+    }),
+  );
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    ask(input.value);
+    input.value = '';
+  });
+
+  root.querySelectorAll<HTMLButtonElement>('[data-chip]').forEach((c) => c.addEventListener('click', () => ask(c.textContent ?? '')));
+
+  // Start in the voice picked during onboarding
+  const saved = loadProfile().coachMode;
+  if (saved !== mode) setMode(saved, false);
+
+  // A question sent from Home (?q=...) is asked straight away
+  const q = new URLSearchParams(window.location.search).get('q');
+  if (q) {
+    history.replaceState(null, '', window.location.pathname);
+    ask(q);
+  } else {
+    // Open on the latest messages, like any chat
+    scroller.scrollTop = scroller.scrollHeight;
+  }
+</script>
+
+<style>
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .muted {
+    margin: 0;
+    font-size: 16px;
+    color: var(--ink-muted);
+  }
+
+  .coach {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 380px;
+    height: 100vh;
+    height: 100dvh;
+    background: #f6f0e3;
+  }
+
+  /* Chat column */
+  .chat {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .chat__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 32px;
+    background: var(--white);
+    border-bottom: 2.5px solid var(--ink);
+  }
+
+  .chat__who {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .chat__handy {
+    line-height: 0;
+  }
+
+  .chat__handy > span {
+    display: none;
+  }
+
+  .chat__handy[data-head-mood='hype'] > [data-mood-for='hype'],
+  .chat__handy[data-head-mood='honest'] > [data-mood-for='honest'],
+  .chat__handy[data-head-mood='mom'] > [data-mood-for='mom'] {
+    display: block;
+  }
+
+  .chat__name {
+    display: flex;
+    flex-direction: column;
+  }
+
+  h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 24px;
+  }
+
+  .modes {
+    display: grid;
+    grid-template-columns: repeat(3, 112px);
+    gap: 4px;
+    padding: 4px;
+    border-radius: 18px;
+    background: var(--paper-deep);
+    border: 2px solid var(--ink);
+  }
+
+  .modes__btn {
+    min-height: 44px;
+    border-radius: 14px;
+    background: transparent;
+    border: 2px solid transparent;
+    color: var(--ink);
+    font-weight: 800;
+    font-size: 16px;
+    cursor: pointer;
+  }
+
+  .modes__btn[aria-pressed='true'] {
+    background: var(--mango);
+    border-color: var(--ink);
+    box-shadow: 0 3px 0 var(--ink);
+  }
+
+  .log {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .log__inner {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 28px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .log__date {
+    align-self: center;
+    padding: 4px 12px;
+    border-radius: 99px;
+    background: var(--paper-deep);
+    font-weight: 700;
+    color: var(--ink-muted);
+  }
+
+  .msg {
+    margin: 0;
+    padding: 14px 18px;
+    border: 2px solid var(--ink);
+    font-size: 16px;
+    overflow-wrap: anywhere;
+  }
+
+  .msg--me {
+    align-self: flex-end;
+    max-width: 70%;
+    border-radius: 22px 22px 6px 22px;
+    background: var(--focus);
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .reply {
+    align-self: flex-start;
+    width: 84%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .msg--handy {
+    border-radius: 22px 22px 22px 6px;
+    background: var(--white);
+    line-height: 1.5;
+  }
+
+  .typing {
+    align-self: flex-start;
+    display: inline-flex;
+    gap: 6px;
+    padding: 16px 18px;
+    border-radius: 22px 22px 22px 6px;
+    background: var(--white);
+    border: 2px solid var(--ink);
+  }
+
+  .typing span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ink-muted);
+    animation: blink 1s infinite ease-in-out;
+  }
+
+  .typing span:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+
+  .typing span:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+
+  @keyframes blink {
+    0%,
+    80%,
+    100% {
+      opacity: 0.25;
+      transform: translateY(0);
+    }
+    40% {
+      opacity: 1;
+      transform: translateY(-3px);
+    }
+  }
+
+  .composer {
+    padding: 16px 32px 20px;
+    background: var(--white);
+    border-top: 2.5px solid var(--ink);
+  }
+
+  .composer__inner {
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .chip {
+    min-height: 44px;
+    padding: 8px 14px;
+    border-radius: 99px;
+    background: transparent;
+    border: 2px solid var(--violet);
+    color: var(--violet);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s var(--ease);
+  }
+
+  .chip:hover {
+    background: #eee9ff;
+  }
+
+  .composer__field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 5px 5px 16px;
+    border-radius: 20px;
+    background: var(--paper-deep);
+    border: 2.5px solid var(--focus);
+  }
+
+  .composer__field:focus-within {
+    border-color: var(--violet);
+  }
+
+  .composer__field input {
+    flex: 1;
+    min-width: 0;
+    min-height: 46px;
+    border: none;
+    background: transparent;
+    color: var(--ink);
+    font-size: 16px;
+    outline: none;
+  }
+
+  .composer__send {
+    flex: none;
+    width: 48px;
+    height: 48px;
+    min-height: 48px;
+    padding: 0;
+    border-radius: 15px;
+    background: var(--focus);
+    box-shadow: 0 4px 0 var(--ink);
+  }
+
+  .composer__note {
+    margin: 10px 0 0;
+    text-align: center;
+    color: var(--ink-muted);
+  }
+
+  /* Side panel */
+  .side {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 28px 24px;
+    background: var(--paper);
+    border-left: 2.5px solid var(--ink);
+    overflow-y: auto;
+  }
+
+  .side__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 22px;
+  }
+
+  .side__payday {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px;
+    border-radius: 24px;
+    background: var(--mango);
+    border: 3px solid var(--ink);
+    box-shadow: 0 6px 0 var(--ink);
+  }
+
+  .side__days {
+    font-weight: 800;
+    font-size: 52px;
+    line-height: 1;
+    letter-spacing: -0.04em;
+  }
+
+  .side__payday-text {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .side__payday-label {
+    font-weight: 800;
+    font-size: 18px;
+  }
+
+  .card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 18px;
+    border-radius: 24px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 5px 0 var(--ink);
+  }
+
+  .card__label {
+    font-weight: 700;
+    color: var(--ink-muted);
+  }
+
+  .side__left {
+    font-weight: 800;
+    font-size: 36px;
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+
+  .side__bar {
+    height: 14px;
+    border-radius: 99px;
+    background: #f1e7d3;
+    border: 2px solid var(--ink);
+    overflow: hidden;
+  }
+
+  .side__bar div {
+    height: 100%;
+    background: var(--mango);
+  }
+
+  .side__ok {
+    margin: 0;
+    padding: 8px 10px;
+    border-radius: 12px;
+    background: #e2f8ef;
+    color: #0a6b4d;
+    font-weight: 700;
+  }
+
+  .jar {
+    display: grid;
+    grid-template-columns: 14px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-top: 2px dashed var(--line);
+  }
+
+  .jar__swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    border: 2px solid var(--ink);
+    box-sizing: border-box;
+  }
+
+  .jar__label {
+    font-weight: 600;
+  }
+
+  .jar__amt {
+    font-weight: 800;
+  }
+
+  .side__foot {
+    margin-top: auto;
+    line-height: 1.5;
+  }
+
+  /* Tablet: the side panel goes, chat takes the width */
+  @media (max-width: 1023px) {
+    .coach {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .side {
+      display: none;
+    }
+
+    .chat__head {
+      flex-wrap: wrap;
+      padding: 14px 20px;
+    }
+
+    .log__inner {
+      padding: 24px 20px;
+    }
+
+    .composer {
+      padding: 14px 20px 18px;
+    }
+  }
+
+  /* Phone: the page scrolls instead of the log; the composer sticks above the tab bar */
+  @media (max-width: 639px) {
+    .coach {
+      height: auto;
+      min-height: calc(100dvh - 86px);
+    }
+
+    .log {
+      overflow: visible;
+    }
+
+    .log__inner {
+      padding: 20px 16px;
+    }
+
+    .modes {
+      width: 100%;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .msg--me {
+      max-width: 85%;
+    }
+
+    .reply {
+      width: 100%;
+    }
+
+    .composer {
+      position: sticky;
+      /* Height of the phone tab bar, so the composer sits right on top of it */
+      bottom: calc(91px + env(safe-area-inset-bottom, 0px));
+      z-index: 4;
+      padding: 12px 16px 14px;
+    }
+
+    .chips {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      margin-bottom: 10px;
+      padding-bottom: 2px;
+    }
+
+    .chip {
+      flex: none;
+    }
+
+    .composer__note {
+      display: none;
+    }
+  }
+</style>

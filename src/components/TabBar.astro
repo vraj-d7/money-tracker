@@ -1,0 +1,74 @@
+---
+// Phone bottom tab bar. The app shell shows it under 640px instead of the sidebar.
+import { routes, type AppSection } from '../lib/routes';
+
+interface Props {
+  active?: AppSection;
+}
+
+const { active = 'home' } = Astro.props;
+
+const tabs: { id: AppSection; label: string; href: string; d: string }[] = [
+  { id: 'home', label: 'Home', href: routes.home, d: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z' },
+  { id: 'salary', label: 'Salary', href: routes.salary, d: 'M7 5h10M7 9h10M7 5c4 0 5 2 5 4s-1 4-5 4l8 7' },
+  { id: 'coach', label: 'Coach', href: routes.coach, d: 'M4 5h16v11H9l-5 4z' },
+  { id: 'plan', label: 'Plan', href: routes.plan, d: 'M8 3h8v3H8zM6 6h12v13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2zM6 13h12' },
+  { id: 'me', label: 'Me', href: routes.me, d: 'M12 4a4 4 0 1 1 0 8a4 4 0 1 1 0-8zM4 21a8 8 0 0 1 16 0' },
+];
+---
+
+<nav class="tabbar" aria-label="App">
+  {
+    tabs.map((tb) => {
+      const on = tb.id === active;
+      return (
+        <a href={tb.href} class:list={['tab', { 'tab--on': on }]} aria-current={on ? 'page' : undefined}>
+          <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d={tb.d} />
+          </svg>
+          {tb.label}
+        </a>
+      );
+    })
+  }
+</nav>
+
+<style>
+  .tabbar {
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 8px calc(22px + env(safe-area-inset-bottom, 0px));
+    background: var(--white);
+    border-top: 2.5px solid var(--ink);
+    line-height: 1.2;
+  }
+
+  .tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    min-width: 60px;
+    min-height: 48px;
+    padding: 6px 4px;
+    box-sizing: border-box;
+    border-radius: 16px;
+    color: var(--ink-muted);
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 600;
+    transition: background-color 0.2s var(--ease);
+  }
+
+  .tab:not([aria-current]):hover {
+    background: var(--paper-deep);
+  }
+
+  .tab--on {
+    background: var(--mango);
+    color: var(--ink);
+    font-weight: 800;
+  }
+</style>

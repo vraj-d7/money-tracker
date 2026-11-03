@@ -1,0 +1,133 @@
+---
+// Continue with email: asks for an address, then shows "check your inbox".
+// No backend yet, so no email is actually sent.
+import SheetPage from '../../layouts/SheetPage.astro';
+import Handy from '../../components/Handy.astro';
+import { routes } from '../../lib/routes';
+---
+
+<SheetPage title="Continue with email" active="home" closeHref={routes.auth} width={520}>
+  <form class="panel pop-in" data-email-form novalidate>
+    <h1 id="sheet-title">Continue with email</h1>
+    <p class="muted">We’ll email you a one-tap sign-in link. No password to remember.</p>
+    <div class="group">
+      <label for="em-mail" class="group__label">Email</label>
+      <div class="field"><input id="em-mail" type="email" placeholder="you@example.com" autocomplete="email" aria-describedby="em-error" /></div>
+      <p class="error" id="em-error" data-error hidden>Enter a valid email address.</p>
+    </div>
+    <button type="submit" class="btn btn--mango btn--lg btn--block">Email me a link</button>
+    <a href={routes.auth} class="switch">Use my mobile number instead</a>
+  </form>
+
+  <div class="panel panel--sent pop-in" role="status" data-sent hidden>
+    <Handy mood="cheer" size={110} decorative />
+    <h2 class="sent__title">Check your inbox</h2>
+    <p class="muted">
+      We sent a sign-in link to <b class="ink" data-sent-to></b>. It works for 15 minutes. Can’t find it? Check spam or promotions.
+    </p>
+    <button type="button" class="btn" data-again>Use a different email</button>
+  </div>
+</SheetPage>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>('[data-email-form]')!;
+  const sent = document.querySelector<HTMLElement>('[data-sent]')!;
+  const input = form.querySelector<HTMLInputElement>('#em-mail')!;
+  const error = form.querySelector<HTMLElement>('[data-error]')!;
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const mail = input.value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) {
+      error.hidden = false;
+      input.focus();
+      return;
+    }
+    error.hidden = true;
+    sent.querySelector('[data-sent-to]')!.textContent = mail;
+    form.hidden = true;
+    sent.hidden = false;
+  });
+
+  sent.querySelector('[data-again]')!.addEventListener('click', () => {
+    sent.hidden = true;
+    form.hidden = false;
+    input.focus();
+  });
+</script>
+
+<style>
+  .panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .panel[hidden] {
+    display: none;
+  }
+
+  .panel--sent {
+    align-items: center;
+    gap: 14px;
+    text-align: center;
+  }
+
+  h1,
+  .sent__title {
+    margin: 0;
+    padding-right: 40px;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 32px;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+  }
+
+  .sent__title {
+    padding-right: 0;
+    font-size: 30px;
+  }
+
+  .muted {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--ink-muted);
+  }
+
+  .ink {
+    color: var(--ink);
+    overflow-wrap: anywhere;
+  }
+
+  .group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .group__label {
+    font-weight: 700;
+    font-size: 16px;
+  }
+
+  .error {
+    margin: 0;
+    color: var(--danger);
+    font-weight: 700;
+  }
+
+  .error[hidden] {
+    display: none;
+  }
+
+  .switch {
+    align-self: center;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--violet);
+    font-weight: 700;
+  }
+</style>

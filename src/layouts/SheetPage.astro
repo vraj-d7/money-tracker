@@ -1,0 +1,167 @@
+---
+// A full page that shows one dialog over a dimmed app, like the Edit plan / New goal designs.
+// On phones the dialog becomes a bottom sheet. Close and Esc go back to `closeHref`.
+import Base from './Base.astro';
+import AppNav from '../components/AppNav.astro';
+import type { AppSection } from '../lib/routes';
+
+interface Props {
+  title: string;
+  active: AppSection;
+  closeHref: string;
+  /** Dialog width on desktop, in px */
+  width?: number;
+}
+
+const { title, active, closeHref, width = 600 } = Astro.props;
+---
+
+<Base title={`${title} · Inhandy`}>
+  <div class="sheet-page">
+    <div class="backdrop" aria-hidden="true" inert>
+      <div class="backdrop__nav"><AppNav active={active} /></div>
+      <div class="backdrop__body">
+        <span class="ghost ghost--title"></span>
+        <span class="ghost ghost--big"></span>
+        <span class="ghost ghost--mid"></span>
+      </div>
+    </div>
+
+    <div class="sheet-wrap">
+      <div class="sheet pop-in" role="dialog" aria-modal="true" aria-labelledby="sheet-title" style={`width: ${width}px`}>
+        <a href={closeHref} class="sheet__close" aria-label="Close" data-sheet-close>
+          <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+        </a>
+        <div class="sheet__body">
+          <slot />
+        </div>
+      </div>
+    </div>
+  </div>
+</Base>
+
+<script>
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    const close = document.querySelector<HTMLAnchorElement>('[data-sheet-close]');
+    if (close) window.location.href = close.href;
+  });
+</script>
+
+<style>
+  .sheet-page {
+    position: relative;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    grid-template-columns: 264px minmax(0, 1fr);
+    overflow: hidden;
+  }
+
+  .backdrop__body {
+    padding: 40px 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .ghost {
+    display: block;
+    border-radius: 28px;
+    background: #f1e7d3;
+  }
+
+  .ghost--title {
+    height: 48px;
+    width: 40%;
+    border-radius: 12px;
+  }
+
+  .ghost--big {
+    height: 260px;
+  }
+
+  .ghost--mid {
+    height: 200px;
+  }
+
+  .sheet-wrap {
+    position: relative;
+    min-height: 100vh;
+    min-height: 100dvh;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+    background: rgba(21, 19, 28, 0.72);
+  }
+
+  .sheet {
+    position: relative;
+    max-width: 100%;
+    box-sizing: border-box;
+    border-radius: 32px;
+    background: var(--paper);
+    border: 3px solid var(--ink);
+    box-shadow: 0 10px 0 #000;
+    overflow: hidden;
+  }
+
+  .sheet__close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    color: var(--ink);
+  }
+
+  .sheet__close:hover {
+    background: var(--paper-deep);
+  }
+
+  .sheet__body {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 32px;
+  }
+
+  @media (max-width: 1023px) {
+    .backdrop {
+      grid-template-columns: 88px minmax(0, 1fr);
+    }
+  }
+
+  @media (max-width: 639px) {
+    .backdrop {
+      display: none;
+    }
+
+    .sheet-wrap {
+      align-items: flex-end;
+      padding: 0;
+    }
+
+    .sheet {
+      width: 100% !important;
+      border-radius: 28px 28px 0 0;
+      border-bottom: none;
+    }
+
+    .sheet__body {
+      padding: 24px 20px 28px;
+    }
+  }
+</style>

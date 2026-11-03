@@ -1,0 +1,163 @@
+---
+// Internal reference page: every shared brand component in one place.
+import Base from '../layouts/Base.astro';
+import Logo from '../components/Logo.astro';
+import Handy from '../components/Handy.astro';
+import type { HandyMood } from '../lib/handy';
+import Toast from '../components/Toast.astro';
+import TabBar from '../components/TabBar.astro';
+
+const moods: { id: HandyMood; title: string; when: string }[] = [
+  { id: 'happy', title: 'Happy', when: 'Default, payday, on-track' },
+  { id: 'cheer', title: 'Cheer', when: 'Goal reached, zero tax, sub killed' },
+  { id: 'gasp', title: 'Gasp', when: 'Forgotten subscription, overspend' },
+  { id: 'chill', title: 'Chill', when: 'Low-stakes tips, empty states' },
+  { id: 'chai', title: 'Chai', when: 'Sunday check-in' },
+  { id: 'sus', title: 'Sus', when: 'Mom mode roasts' },
+];
+---
+
+<Base title="Brand and components · Inhandy">
+  <main class="brand paper-dots">
+    <h1>Brand and components</h1>
+
+    <section>
+      <h2>Logo</h2>
+      <div class="row">
+        <Logo variant="lockup" size={48} />
+        <Logo variant="mark" size={48} />
+        <Logo variant="wordmark" size={48} />
+        <Logo variant="icon" size={48} />
+        <span class="dark"><Logo variant="lockup" size={48} tone="paper" /></span>
+      </div>
+    </section>
+
+    <section>
+      <h2>Handy, your loose-change sidekick</h2>
+      <div class="moods">
+        {
+          moods.map((m) => (
+            <div class="mood">
+              <Handy mood={m.id} size={96} />
+              <span class="mood__title">{m.title}</span>
+              <span class="mood__when">{m.when}</span>
+            </div>
+          ))
+        }
+      </div>
+    </section>
+
+    <section>
+      <h2>Buttons</h2>
+      <div class="row">
+        <button type="button" class="btn btn--mango btn--lg">Primary</button>
+        <button type="button" class="btn">Secondary</button>
+        <button type="button" class="btn btn--ink">Dark</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Toasts</h2>
+      <div class="stack">
+        <Toast kind="success" text="Copied to clipboard" action="Undo" />
+        <Toast kind="error" text="Couldn’t read that statement" action="Retry" />
+        <Toast kind="info" text="Salary day is in 3 days" />
+      </div>
+    </section>
+
+    <section>
+      <h2>Phone tab bar</h2>
+      <div class="tabbar-demo"><TabBar active="home" /></div>
+    </section>
+  </main>
+</Base>
+
+<style>
+  .brand {
+    min-height: 100vh;
+    box-sizing: border-box;
+    padding: 48px 16px;
+  }
+
+  .brand > * {
+    max-width: 1000px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  h1 {
+    margin-top: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 40px;
+    letter-spacing: -0.03em;
+  }
+
+  h2 {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 24px;
+    letter-spacing: -0.02em;
+  }
+
+  section {
+    margin-bottom: 40px;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .dark {
+    display: inline-flex;
+    padding: 12px 16px;
+    border-radius: 16px;
+    background: var(--ink);
+  }
+
+  .moods {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 16px;
+  }
+
+  .mood {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 8px;
+    border-radius: 22px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 5px 0 var(--ink);
+  }
+
+  .mood__title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 17px;
+  }
+
+  .mood__when {
+    font-size: 16px;
+    line-height: 1.35;
+    color: var(--ink-muted);
+    text-align: center;
+  }
+
+  .stack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .tabbar-demo {
+    max-width: 420px;
+    margin: 0;
+  }
+</style>

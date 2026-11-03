@@ -1,0 +1,131 @@
+---
+// Sign-up style page: a mango panel with Handy talking on the left, the form on the right.
+// Under 1024px the panel hides and the form takes the full width.
+import Base from './Base.astro';
+import Logo from '../components/Logo.astro';
+import Handy from '../components/Handy.astro';
+import { routes } from '../lib/routes';
+import type { HandyMood } from '../lib/handy';
+
+interface Props {
+  title: string;
+  bubble: string;
+  /** Every mood the page may switch to; the first is shown at load. Switch with data-handy on [data-handy-box]. */
+  moods: HandyMood[];
+  handySize?: number;
+}
+
+const { title, bubble, moods, handySize = 190 } = Astro.props;
+---
+
+<Base title={`${title} · Inhandy`}>
+  <div class="split paper-dots">
+    <aside class="split__aside">
+      <a href={routes.landing} class="split__logo" aria-label="Inhandy home"><Logo size={44} /></a>
+      <div class="split__talk">
+        <p class="bubble" data-bubble>{bubble}</p>
+        <div class="split__handy" data-handy-box data-handy={moods[0]}>
+          {
+            moods.map((m) => (
+              <span data-mood={m}>
+                <Handy mood={m} size={handySize} />
+              </span>
+            ))
+          }
+        </div>
+      </div>
+      <slot name="aside-foot" />
+    </aside>
+
+    <main class="split__main">
+      <slot />
+    </main>
+  </div>
+</Base>
+
+<style>
+  .split {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  }
+
+  .split__aside {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    height: 100dvh;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    padding: 40px 56px;
+    background: var(--mango);
+    border-right: 3px solid var(--ink);
+    overflow: hidden;
+  }
+
+  .split__logo {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    text-decoration: none;
+  }
+
+  .split__talk {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .bubble {
+    margin: 0;
+    max-width: 380px;
+    padding: 16px 20px;
+    border-radius: 24px 24px 24px 6px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 6px 0 var(--ink);
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .split__handy {
+    line-height: 0;
+  }
+
+  .split__handy > span {
+    display: none;
+  }
+
+  .split__handy[data-handy='happy'] > [data-mood='happy'],
+  .split__handy[data-handy='cheer'] > [data-mood='cheer'],
+  .split__handy[data-handy='chai'] > [data-mood='chai'],
+  .split__handy[data-handy='sus'] > [data-mood='sus'],
+  .split__handy[data-handy='chill'] > [data-mood='chill'],
+  .split__handy[data-handy='gasp'] > [data-mood='gasp'] {
+    display: block;
+  }
+
+  .split__main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  @media (max-width: 1023px) {
+    .split {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .split__aside {
+      display: none;
+    }
+  }
+</style>

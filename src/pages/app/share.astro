@@ -1,0 +1,393 @@
+---
+// Share sheet for result cards. Which card is set by the URL:
+//   ?card=offer&winner=B&gap=4280   ·   ?card=salary&inhand=85395   ·   ?card=streak&weeks=6
+// Rupee amounts stay off the card unless the user switches them on.
+import SheetPage from '../../layouts/SheetPage.astro';
+import Handy from '../../components/Handy.astro';
+import Logo from '../../components/Logo.astro';
+import { routes } from '../../lib/routes';
+
+const targets = [
+  { id: 'story', label: 'Instagram story', d: 'M4 4h16v16H4zM12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM17 7h.01' },
+  { id: 'wa', label: 'WhatsApp', d: 'M4 5h16v11H9l-5 4z' },
+  { id: 'dl', label: 'Download image', d: 'M12 3v12M7 10l5 5 5-5M4 20h16' },
+  { id: 'link', label: 'Copy link', d: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1' },
+];
+---
+
+<SheetPage title="Share" active="home" closeHref={routes.offer} width={760}>
+  <div class="share" data-share>
+    <div class="preview">
+      <div class="card" role="img" data-card aria-label="Share card preview">
+        <span class="card__tag" data-card-tag>OFFER FACE-OFF</span>
+        <div class="card__middle">
+          <span class="card__title" data-card-title>Offer B won</span>
+          <span class="num card__amount" data-card-amount hidden>₹4,280/mo</span>
+          <span class="card__alt" data-card-alt>by a lot, every month</span>
+        </div>
+        <div class="card__foot">
+          <Logo size={24} tone="paper" />
+          <Handy mood="cheer" size={56} decorative />
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <h1 id="sheet-title">Share your result</h1>
+      <div class="toggle" data-toggle-row>
+        <span class="toggle__text">
+          <span id="sh-nums" class="toggle__label">Show the rupee amount</span>
+          <span class="muted">Off by default. Company names never show.</span>
+        </span>
+        <button type="button" role="switch" class="switch" aria-checked="false" aria-labelledby="sh-nums" data-switch>
+          <span class="switch__knob"></span>
+        </button>
+      </div>
+      <div class="targets">
+        {
+          targets.map((t) => (
+            <button type="button" class="btn target" data-target={t.id}>
+              <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d={t.d} />
+              </svg>
+              {t.label}
+            </button>
+          ))
+        }
+      </div>
+      <p class="status" role="status" aria-live="polite" data-status></p>
+    </div>
+  </div>
+</SheetPage>
+
+<script>
+  import { inr } from '../../lib/format';
+  import { routes } from '../../lib/routes';
+  import { drawShareCard, type ShareCard } from '../../scripts/share-card';
+
+  const root = document.querySelector<HTMLElement>('[data-share]')!;
+  const params = new URLSearchParams(window.location.search);
+  const kind = params.get('card') ?? 'offer';
+  const status = root.querySelector<HTMLElement>('[data-status]')!;
+  const sw = root.querySelector<HTMLButtonElement>('[data-switch]')!;
+  let showNums = false;
+
+  // Card content for each kind; `amount` only shows when the switch is on
+  const num = (k: string, fallback: number) => Number(params.get(k)) || fallback;
+  const cards: Record<string, ShareCard & { close: string; file: string; lockNumbers?: boolean }> = {
+    offer: {
+      tag: 'OFFER FACE-OFF',
+      title: `Offer ${params.get('winner') === 'A' ? 'A' : 'B'} won`,
+      amount: `${inr(num('gap', 4280))}/mo`,
+      alt: 'by a lot, every month',
+      close: routes.offer,
+      file: 'inhandy-offer-faceoff.png',
+    },
+    salary: {
+      tag: 'MY SALARY',
+      title: 'My first salary, explained',
+      amount: `${inr(num('inhand', 85395))}/mo in hand`,
+      alt: 'and I finally get it',
+      close: routes.salary,
+      file: 'inhandy-salary.png',
+    },
+    streak: {
+      tag: 'SUNDAY STREAK',
+      title: `${num('weeks', 6)} Sundays in a row`,
+      amount: '',
+      alt: 'checking in on my money',
+      close: routes.home,
+      file: 'inhandy-streak.png',
+      lockNumbers: true,
+    },
+  };
+  const card = cards[kind] ?? cards.offer;
+
+  // Point every way out of the sheet back to where the card came from
+  document.querySelectorAll<HTMLAnchorElement>('[data-sheet-close]').forEach((a) => (a.href = card.close));
+  root.querySelector<HTMLElement>('[data-toggle-row]')!.hidden = !!card.lockNumbers;
+
+  function render() {
+    root.querySelector('[data-card-tag]')!.textContent = card.tag;
+    root.querySelector('[data-card-title]')!.textContent = card.title;
+    root.querySelector('[data-card-amount]')!.textContent = card.amount;
+    root.querySelector<HTMLElement>('[data-card-amount]')!.hidden = !showNums;
+    root.querySelector<HTMLElement>('[data-card-alt]')!.hidden = showNums;
+    root.querySelector('[data-card]')!.setAttribute('aria-label', `Share card preview: ${card.title}${showNums ? `, ${card.amount}` : ''}`);
+    sw.setAttribute('aria-checked', String(showNums));
+  }
+
+  const say = (msg: string) => (status.textContent = msg);
+  const visibleCard = (): ShareCard => ({ ...card, amount: showNums ? card.amount : '' });
+  const shareText = () => `${card.title}${showNums && card.amount ? ` · ${card.amount}` : ''}. Made with Inhandy.`;
+
+  async function download() {
+    const blob = await drawShareCard(visibleCard());
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = card.file;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    return blob;
+  }
+
+  sw.addEventListener('click', () => {
+    showNums = !showNums;
+    render();
+  });
+
+  root.querySelectorAll<HTMLButtonElement>('[data-target]').forEach((btn) =>
+    btn.addEventListener('click', async () => {
+      try {
+        switch (btn.dataset.target) {
+          case 'story': {
+            const blob = await drawShareCard(visibleCard());
+            const file = new File([blob], card.file, { type: 'image/png' });
+            if (navigator.canShare?.({ files: [file] })) {
+              await navigator.share({ files: [file], text: shareText() });
+              say('Shared.');
+            } else {
+              await download();
+              say('Saved the story image. Add it to your story from your gallery.');
+            }
+            break;
+          }
+          case 'wa':
+            window.open(`https://wa.me/?text=${encodeURIComponent(shareText())}`, '_blank', 'noopener');
+            say('Opening WhatsApp…');
+            break;
+          case 'dl':
+            await download();
+            say(`Saved: ${card.file} (1080 × 1350)`);
+            break;
+          case 'link':
+            await navigator.clipboard.writeText(`${window.location.origin}/`);
+            say('Link copied. It points to Inhandy, not your numbers.');
+            break;
+        }
+      } catch (err) {
+        if ((err as DOMException)?.name !== 'AbortError') say('That didn’t work. Try Download image instead.');
+      }
+    }),
+  );
+
+  render();
+</script>
+
+<style>
+  .share {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    margin: -32px;
+  }
+
+  .preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 28px;
+    background: #e8e1d3;
+    border-right: 3px solid var(--ink);
+  }
+
+  .card {
+    position: relative;
+    overflow: hidden;
+    width: 240px;
+    aspect-ratio: 4 / 5;
+    box-sizing: border-box;
+    padding: 18px;
+    border-radius: 22px;
+    background: var(--ink);
+    color: var(--paper);
+    border: 2.5px solid var(--ink);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .card__tag {
+    align-self: flex-start;
+    padding: 3px 8px;
+    border-radius: 99px;
+    border: 2px solid var(--mango);
+    color: var(--mango);
+    font-size: 14px;
+    font-weight: 800;
+  }
+
+  .card__middle {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .card__title {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 26px;
+    line-height: 1.05;
+  }
+
+  .card__amount {
+    font-weight: 800;
+    font-size: 30px;
+    color: var(--mint);
+    letter-spacing: -0.04em;
+  }
+
+  .card__alt {
+    font-weight: 800;
+    font-size: 20px;
+    color: var(--mint);
+  }
+
+  .card__amount[hidden],
+  .card__alt[hidden] {
+    display: none;
+  }
+
+  .card__foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  .controls {
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  h1 {
+    margin: 0;
+    padding-right: 40px;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 30px;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+  }
+
+  .muted {
+    font-size: 16px;
+    color: var(--ink-muted);
+  }
+
+  .toggle {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 0;
+  }
+
+  .toggle[hidden] {
+    display: none;
+  }
+
+  .toggle__text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .toggle__label {
+    font-weight: 700;
+  }
+
+  .switch {
+    position: relative;
+    flex: none;
+    width: 54px;
+    height: 32px;
+    padding: 0;
+    border-radius: 99px;
+    background: #f1e7d3;
+    border: 2.5px solid var(--ink);
+    cursor: pointer;
+  }
+
+  /* Bigger hit area than the visible switch */
+  .switch::before {
+    content: '';
+    position: absolute;
+    inset: -8px -4px;
+  }
+
+  .switch[aria-checked='true'] {
+    background: var(--mint);
+  }
+
+  .switch__knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 23px;
+    height: 23px;
+    border-radius: 50%;
+    background: var(--white);
+    border: 2px solid var(--ink);
+    box-sizing: border-box;
+    transition: transform 0.2s var(--ease);
+  }
+
+  .switch[aria-checked='true'] .switch__knob {
+    transform: translateX(22px);
+  }
+
+  .targets {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .target {
+    justify-content: flex-start;
+    gap: 10px;
+    min-height: 56px;
+    padding: 0 14px;
+    text-align: left;
+  }
+
+  .status {
+    margin: 0;
+    min-height: 24px;
+    font-weight: 700;
+    color: #0a6b4d;
+  }
+
+  @media (max-width: 767px) {
+    .share {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .preview {
+      border-right: none;
+      border-bottom: 3px solid var(--ink);
+      padding: 20px;
+    }
+
+    .card {
+      width: 180px;
+    }
+
+    .card__title {
+      font-size: 20px;
+    }
+  }
+
+  @media (max-width: 639px) {
+    .share {
+      margin: -24px -20px -28px;
+    }
+
+    .controls {
+      padding: 20px 20px 28px;
+    }
+
+    .targets {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

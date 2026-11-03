@@ -1,0 +1,802 @@
+---
+import AppShell from '../../layouts/AppShell.astro';
+import Handy from '../../components/Handy.astro';
+import Logo from '../../components/Logo.astro';
+import { routes } from '../../lib/routes';
+import { inr } from '../../lib/format';
+import { OFFER_FIELDS, faceOff, fieldValueLabel, sideBySide, type Offer, type OfferId } from '../../lib/offer';
+
+// Starting offers from the design (the client script takes over from here)
+const start: Record<OfferId, Offer> = {
+  A: { fixed: 12, varPct: 15, bonus: 1 },
+  B: { fixed: 12.6, varPct: 5, bonus: 0 },
+};
+const companies: Record<OfferId, string> = { A: 'Startup · Bengaluru', B: 'MNC · Pune' };
+
+const f = faceOff(start.A, start.B, inr);
+const results = { A: f.a, B: f.b };
+const table = sideBySide(f.a, f.b);
+const pct = (v: number, min: number, max: number) => (((v - min) / (max - min)) * 100).toFixed(1) + '%';
+const shareHref = `${routes.share}?card=offer&winner=${f.winner}&gap=${Math.round(f.monthlyGap)}`;
+---
+
+<AppShell title="Offer face-off" active="offer">
+  <div class="offer-page" data-offers={JSON.stringify(start)}>
+    <header class="head">
+      <h1>Offer face-off</h1>
+      <p class="muted">Two offers walk into your inbox. Slide in the numbers; we do the tax maths.</p>
+    </header>
+
+    <div class="vs-grid">
+      {
+        (['A', 'B'] as const).map((id) => (
+          <>
+            {id === 'B' && (
+              <div class="vs" aria-hidden="true">
+                <span class="vs__line" />
+                <span class="vs__badge">VS</span>
+                <span class="vs__line" />
+              </div>
+            )}
+            <section
+              class:list={['offer', `offer--${id}`, { 'offer--win': f.winner === id }]}
+              aria-label={`Offer ${id}`}
+              data-offer={id}
+            >
+              <div class="offer__top">
+                <div class="offer__name">
+                  <span class="offer__chip">Offer {id}</span>
+                  <span class="offer__company">{companies[id]}</span>
+                </div>
+                <span class="trophy" data-winner hidden={f.winner !== id}>
+                  <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0z"></path><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 20h8"></path></svg>
+                  Winner
+                </span>
+              </div>
+              {OFFER_FIELDS.map((fd) => {
+                const v = start[id][fd.key];
+                return (
+                  <div class="field-row">
+                    <div class="field-row__top">
+                      <label for={`offer-${id}-${fd.key}`}>
+                        {fd.label} <span class="field-row__hint">{fd.hint}</span>
+                      </label>
+                      <span class="num field-row__val" data-val={fd.key}>
+                        {fieldValueLabel(fd.key, v, inr)}
+                      </span>
+                    </div>
+                    <input
+                      id={`offer-${id}-${fd.key}`}
+                      class="rng"
+                      type="range"
+                      min={fd.min}
+                      max={fd.max}
+                      step={fd.step}
+                      value={v}
+                      data-field={fd.key}
+                      style={`--p: ${pct(v, fd.min, fd.max)}`}
+                    />
+                  </div>
+                );
+              })}
+              <div class="offer__totals">
+                <div class="total">
+                  <span class="total__label">In-hand / month</span>
+                  <span class="num total__big" data-monthly>{inr(results[id].monthly)}</span>
+                </div>
+                <div class="total">
+                  <span class="total__label">Year-1 total</span>
+                  <span class="num total__mid" data-year1>{inr(results[id].year1)}</span>
+                </div>
+              </div>
+            </section>
+          </>
+        ))
+      }
+    </div>
+
+    <div class="split">
+      <div class="split__main">
+        <section class="verdict" aria-live="polite">
+          <p class="verdict__big" data-verdict>{f.verdict}</p>
+          <p class="verdict__sub" data-verdict-sub>{f.verdictSub}</p>
+        </section>
+
+        <section class="card table-card" aria-labelledby="tbl-h">
+          <h2 id="tbl-h" class="card__title">Side by side</h2>
+          <table class="num">
+            <thead>
+              <tr>
+                <th scope="col">Per year</th>
+                <th scope="col">Offer A</th>
+                <th scope="col">Offer B</th>
+              </tr>
+            </thead>
+            <tbody>
+              {
+                table.map((r, i) => (
+                  <tr class:list={{ 'is-bold': r.bold }} data-table-row={i}>
+                    <th scope="row">{r.label}</th>
+                    <td class:list={{ 'is-best': r.best === 'a' }} data-col="a">
+                      {inr(r.a)}
+                    </td>
+                    <td class:list={{ 'is-best': r.best === 'b' }} data-col="b">
+                      {inr(r.b)}
+                    </td>
+                  </tr>
+                ))
+              }
+            </tbody>
+          </table>
+          <p class="muted fine">Estimates use the new regime; variable pay counted at 100%. Not financial advice.</p>
+        </section>
+      </div>
+
+      <section class="result" aria-labelledby="card-h">
+        <h2 id="card-h" class="card__title">Your result card</h2>
+        <div class="share-card" role="img" aria-label={`Share card: Offer ${f.winner} won by ${inr(f.monthlyGap)} every month`} data-share-card>
+          <div class="share-card__glow" aria-hidden="true"></div>
+          <div class="share-card__top">
+            <Logo size={28} tone="paper" />
+            <span class="share-card__tag">OFFER FACE-OFF</span>
+          </div>
+          <div class="share-card__vs">
+            <span class="share-card__loser">Offer <span data-loser>{f.loser}</span></span>
+            <span class="share-card__vs-word">vs</span>
+            <span class="share-card__winner">Offer <span data-winner-name>{f.winner}</span></span>
+          </div>
+          <div class="share-card__bottom">
+            <div>
+              <p class="share-card__small">won by</p>
+              <p class="num share-card__gap" data-gap>{inr(f.monthlyGap)}</p>
+              <p class="share-card__per">every month, in-hand</p>
+            </div>
+            <Handy mood="cheer" size={90} decorative />
+          </div>
+        </div>
+        <div class="share-actions">
+          <a href={shareHref} class="btn btn--mango share-actions__btn" data-share-link>Story</a>
+          <a href={shareHref} class="btn share-actions__btn" data-share-link>Post</a>
+          <a href={shareHref} class="btn share-actions__btn" data-share-link>Download</a>
+        </div>
+        <p class="muted">Company names and salaries never appear on the card unless you add them.</p>
+      </section>
+    </div>
+  </div>
+</AppShell>
+
+<script>
+  import { inr } from '../../lib/format';
+  import { routes } from '../../lib/routes';
+  import { OFFER_FIELDS, faceOff, fieldValueLabel, sideBySide, type Offer, type OfferId } from '../../lib/offer';
+
+  const page = document.querySelector<HTMLElement>('[data-offers]');
+  if (page) {
+    const offers = JSON.parse(page.dataset.offers!) as Record<OfferId, Offer>;
+    const verdictBox = page.querySelector<HTMLElement>('.verdict')!;
+    let lastWinner: OfferId | null = null;
+
+    function render() {
+      const f = faceOff(offers.A, offers.B, inr);
+      const results = { A: f.a, B: f.b };
+
+      for (const id of ['A', 'B'] as const) {
+        const card = page!.querySelector<HTMLElement>(`[data-offer="${id}"]`)!;
+        const win = f.winner === id;
+        card.classList.toggle('offer--win', win);
+        card.querySelector<HTMLElement>('[data-winner]')!.hidden = !win;
+        card.querySelector('[data-monthly]')!.textContent = inr(results[id].monthly);
+        card.querySelector('[data-year1]')!.textContent = inr(results[id].year1);
+        for (const fd of OFFER_FIELDS) {
+          const v = offers[id][fd.key];
+          card.querySelector(`[data-val="${fd.key}"]`)!.textContent = fieldValueLabel(fd.key, v, inr);
+          card
+            .querySelector<HTMLInputElement>(`[data-field="${fd.key}"]`)!
+            .style.setProperty('--p', (((v - fd.min) / (fd.max - fd.min)) * 100).toFixed(1) + '%');
+        }
+      }
+
+      page!.querySelector('[data-verdict]')!.textContent = f.verdict;
+      page!.querySelector('[data-verdict-sub]')!.textContent = f.verdictSub;
+
+      sideBySide(f.a, f.b).forEach((r, i) => {
+        const tr = page!.querySelector(`[data-table-row="${i}"]`)!;
+        const a = tr.querySelector('[data-col="a"]')!;
+        const b = tr.querySelector('[data-col="b"]')!;
+        a.textContent = inr(r.a);
+        b.textContent = inr(r.b);
+        a.classList.toggle('is-best', r.best === 'a');
+        b.classList.toggle('is-best', r.best === 'b');
+      });
+
+      page!.querySelector('[data-loser]')!.textContent = f.loser;
+      page!.querySelector('[data-winner-name]')!.textContent = f.winner;
+      page!.querySelector('[data-gap]')!.textContent = inr(f.monthlyGap);
+      page!
+        .querySelectorAll<HTMLAnchorElement>('[data-share-link]')
+        .forEach((a) => (a.href = `${routes.share}?card=offer&winner=${f.winner}&gap=${Math.round(f.monthlyGap)}`));
+      page!
+        .querySelector('[data-share-card]')!
+        .setAttribute('aria-label', `Share card: Offer ${f.winner} won by ${inr(f.monthlyGap)} every month`);
+
+      // The verdict pops when the winner flips
+      if (lastWinner && lastWinner !== f.winner) {
+        verdictBox.classList.remove('pop-in');
+        void verdictBox.offsetWidth;
+        verdictBox.classList.add('pop-in');
+      }
+      lastWinner = f.winner;
+    }
+
+    page.querySelectorAll<HTMLInputElement>('input[data-field]').forEach((input) => {
+      const id = input.closest<HTMLElement>('[data-offer]')!.dataset.offer as OfferId;
+      input.addEventListener('input', () => {
+        offers[id][input.dataset.field as keyof Offer] = parseFloat(input.value);
+        render();
+      });
+    });
+
+    render();
+  }
+</script>
+
+<style>
+  .offer-page {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    min-width: 0;
+  }
+
+  .muted {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--ink-muted);
+  }
+
+  .head {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 40px;
+    letter-spacing: -0.03em;
+  }
+
+  /* Offers */
+  .vs-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 88px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+  }
+
+  .vs {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .vs__line {
+    display: none;
+    flex: 1;
+    height: 0;
+    border-top: 3px dashed var(--line);
+  }
+
+  .vs__badge {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    background: var(--mango);
+    border: 3px solid var(--ink);
+    box-shadow: 0 6px 0 var(--ink);
+    transform: rotate(-8deg);
+    box-sizing: border-box;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 30px;
+  }
+
+  .offer {
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 24px 24px 20px;
+    border-radius: 28px;
+    background: var(--white);
+    border: 3px solid var(--ink);
+    box-shadow: 0 7px 0 var(--ink);
+    transition:
+      box-shadow 0.3s,
+      border-color 0.3s;
+  }
+
+  .offer--win {
+    border-color: var(--mango);
+    box-shadow:
+      0 7px 0 var(--ink),
+      0 0 0 6px rgba(255, 178, 30, 0.3);
+  }
+
+  .offer__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    min-height: 36px;
+  }
+
+  .offer__name {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .offer__chip {
+    padding: 5px 14px;
+    border-radius: 99px;
+    background: var(--white);
+    border: 2px solid var(--ink);
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 18px;
+    white-space: nowrap;
+  }
+
+  .offer--B .offer__chip {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .offer__company {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+
+  .trophy {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: 99px;
+    background: var(--mango);
+    border: 2px solid var(--ink);
+    font-weight: 800;
+    font-size: 16px;
+    animation: pop-in 0.45s cubic-bezier(0.3, 1.6, 0.5, 1);
+  }
+
+  .trophy[hidden] {
+    display: none;
+  }
+
+  .field-row__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .field-row label {
+    font-weight: 600;
+    font-size: 16px;
+  }
+
+  .field-row__hint {
+    font-weight: 500;
+    color: var(--ink-muted);
+  }
+
+  .field-row__val {
+    font-weight: 800;
+    font-size: 18px;
+  }
+
+  .offer__totals {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  .total {
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: var(--paper-deep);
+    min-width: 0;
+  }
+
+  .total__label {
+    display: block;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+
+  .total__big {
+    display: block;
+    font-weight: 800;
+    font-size: 30px;
+    letter-spacing: -0.03em;
+  }
+
+  .total__mid {
+    display: block;
+    font-weight: 800;
+    font-size: 24px;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+  }
+
+  /* Verdict, table and share card */
+  .split {
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    gap: 24px;
+    align-items: start;
+  }
+
+  .split__main {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    min-width: 0;
+  }
+
+  .verdict {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 28px;
+    border-radius: 28px;
+    background: var(--cream);
+    border: 3px solid var(--ink);
+    box-shadow: 0 7px 0 var(--ink);
+  }
+
+  .verdict__big {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+  }
+
+  .verdict__sub {
+    margin: 0;
+    font-size: 18px;
+    line-height: 1.5;
+  }
+
+  .card {
+    padding: 24px;
+    border-radius: 28px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 6px 0 var(--ink);
+  }
+
+  .card__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 22px;
+  }
+
+  .table-card .card__title {
+    margin-bottom: 12px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 16px;
+  }
+
+  thead tr {
+    color: var(--ink-muted);
+  }
+
+  th,
+  td {
+    padding: 12px 0;
+    text-align: right;
+    font-weight: 600;
+  }
+
+  thead th {
+    padding: 10px 0;
+    font-weight: 800;
+    color: var(--ink);
+  }
+
+  thead th:first-child {
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+
+  th:first-child {
+    text-align: left;
+    padding-right: 12px;
+  }
+
+  tbody tr {
+    border-top: 2px dashed var(--line);
+  }
+
+  tr.is-bold th,
+  tr.is-bold td {
+    font-weight: 800;
+  }
+
+  td.is-best {
+    color: #0a6b4d;
+  }
+
+  .fine {
+    margin-top: 12px;
+  }
+
+  .result {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .share-card {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 4 / 5;
+    width: 100%;
+    max-width: 440px;
+    margin: 0 auto;
+    box-sizing: border-box;
+    padding: 28px;
+    border-radius: 28px;
+    background: var(--ink);
+    color: var(--paper);
+    border: 3px solid var(--ink);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .share-card__glow {
+    position: absolute;
+    right: -60px;
+    top: -60px;
+    width: 260px;
+    height: 260px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 178, 30, 0.35), rgba(255, 178, 30, 0) 70%);
+  }
+
+  .share-card__top,
+  .share-card__vs,
+  .share-card__bottom {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .share-card__top {
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .share-card__tag {
+    padding: 4px 10px;
+    border-radius: 99px;
+    border: 2px solid var(--mango);
+    color: var(--mango);
+    font-size: 16px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .share-card__vs {
+    justify-content: center;
+    gap: 14px;
+    font-family: var(--font-display);
+    font-weight: 800;
+  }
+
+  .share-card__loser {
+    padding: 10px 16px;
+    border-radius: 18px;
+    background: var(--paper);
+    color: var(--ink);
+    border: 2.5px solid var(--paper);
+    font-size: 22px;
+    opacity: 0.55;
+    transform: rotate(-4deg);
+    white-space: nowrap;
+  }
+
+  .share-card__vs-word {
+    font-size: 20px;
+    color: var(--mango);
+  }
+
+  .share-card__winner {
+    padding: 12px 18px;
+    border-radius: 18px;
+    background: var(--mango);
+    color: var(--ink);
+    border: 2.5px solid var(--paper);
+    font-size: 30px;
+    transform: rotate(3deg);
+    box-shadow: 0 6px 0 #9a6400;
+    white-space: nowrap;
+  }
+
+  .share-card__bottom {
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .share-card__small {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #cfc8da;
+  }
+
+  .share-card__gap {
+    margin: 0;
+    font-weight: 800;
+    font-size: 52px;
+    letter-spacing: -0.045em;
+    line-height: 1;
+    color: var(--mint);
+  }
+
+  .share-card__per {
+    margin: 2px 0 0;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .share-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .share-actions__btn {
+    padding: 0 8px;
+    font-weight: 800;
+  }
+
+  /* Narrow laptops: verdict/table and the result card stack */
+  @media (max-width: 1279px) {
+    .split {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  /* Tablet and phone: offers stack with a dashed VS divider between them */
+  @media (max-width: 1023px) {
+    .vs-grid {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 16px;
+    }
+
+    .vs {
+      gap: 12px;
+    }
+
+    .vs__line {
+      display: block;
+    }
+
+    .vs__badge {
+      width: 64px;
+      height: 64px;
+      font-size: 26px;
+      box-shadow: 0 5px 0 var(--ink);
+    }
+  }
+
+  /* Phone, following designs/Offer.dc.html (no side-by-side table) */
+  @media (max-width: 639px) {
+    .offer-page {
+      gap: 16px;
+    }
+
+    .offer {
+      gap: 6px;
+      padding: 18px 18px 14px;
+      border-radius: 26px;
+    }
+
+    .offer__chip {
+      font-size: 17px;
+    }
+
+    .trophy {
+      padding: 5px 10px;
+    }
+
+    .field-row__val {
+      font-size: 17px;
+    }
+
+    .offer__totals {
+      gap: 8px;
+    }
+
+    .total {
+      padding: 12px;
+    }
+
+    .total__big {
+      font-size: 24px;
+    }
+
+    .total__mid {
+      font-size: 19px;
+    }
+
+    .verdict {
+      gap: 8px;
+      padding: 18px;
+      border-radius: 24px;
+      box-shadow: 0 6px 0 var(--ink);
+    }
+
+    .verdict__big {
+      font-size: 23px;
+      line-height: 1.12;
+    }
+
+    .verdict__sub {
+      font-size: 16px;
+    }
+
+    .table-card {
+      display: none;
+    }
+
+    .card__title {
+      font-size: 19px;
+    }
+
+    .share-card {
+      padding: 22px;
+    }
+
+    .share-card__loser {
+      font-size: 18px;
+      padding: 8px 12px;
+    }
+
+    .share-card__winner {
+      font-size: 24px;
+      padding: 10px 14px;
+    }
+
+    .share-card__gap {
+      font-size: 42px;
+    }
+  }
+</style>

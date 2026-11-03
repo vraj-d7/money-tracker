@@ -1,0 +1,200 @@
+---
+import SheetPage from '../../../layouts/SheetPage.astro';
+import { routes } from '../../../lib/routes';
+import { inr } from '../../../lib/format';
+import { DEFAULT_JARS, MONTHLY_INHAND } from '../../../data/demo-plan';
+
+const freePct = 100 - DEFAULT_JARS.reduce((s, j) => s + j.pct, 0);
+---
+
+<SheetPage title="Edit plan" active="plan" closeHref={routes.plan}>
+  <div class="intro">
+    <h1 id="sheet-title">Edit your salary-day plan</h1>
+    <p class="num muted">Split {inr(MONTHLY_INHAND)} across your jars. What’s left is yours to spend.</p>
+  </div>
+
+  {
+    DEFAULT_JARS.map((j) => (
+      <div class="jar-row" data-jar={j.id}>
+        <div class="jar-row__top">
+          <label for={`jar-${j.id}`} class="jar-row__label">
+            <span class="swatch" aria-hidden="true" style={`background: ${j.color}`} />
+            {j.label}
+          </label>
+          <span class="num jar-row__val" data-val>
+            {j.pct}% · {inr((MONTHLY_INHAND * j.pct) / 100)}
+          </span>
+        </div>
+        <input
+          id={`jar-${j.id}`}
+          class="rng"
+          type="range"
+          min="0"
+          max="50"
+          step="1"
+          value={j.pct}
+          aria-valuetext={`${j.pct}%, ${inr((MONTHLY_INHAND * j.pct) / 100)}`}
+          style={`--p: ${((j.pct / 50) * 100).toFixed(1)}%; --c: ${j.color}`}
+        />
+      </div>
+    ))
+  }
+
+  <div class="free" role="status" data-free>
+    <span class="free__label" data-free-label>For daily spending (food, travel, bills)</span>
+    <span class="num free__amt" data-free-amt>{inr((MONTHLY_INHAND * freePct) / 100)}</span>
+  </div>
+
+  <div class="actions">
+    <button type="button" class="btn btn--mango btn--lg actions__save" data-save>Save plan</button>
+    <a href={routes.plan} class="btn">Cancel</a>
+  </div>
+</SheetPage>
+
+<script>
+  import { inr } from '../../../lib/format';
+  import { routes } from '../../../lib/routes';
+  import { DEFAULT_JARS, MONTHLY_INHAND } from '../../../data/demo-plan';
+  import { loadPlan, savePlan } from '../../../scripts/plan-store';
+
+  const state = loadPlan();
+  const save = document.querySelector<HTMLButtonElement>('[data-save]')!;
+
+  function render() {
+    let total = 0;
+    for (const j of DEFAULT_JARS) {
+      const pct = state.jars[j.id];
+      total += pct;
+      const row = document.querySelector<HTMLElement>(`[data-jar="${j.id}"]`)!;
+      const input = row.querySelector<HTMLInputElement>('input')!;
+      const amt = inr((MONTHLY_INHAND * pct) / 100);
+      input.value = String(pct);
+      input.style.setProperty('--p', ((pct / 50) * 100).toFixed(1) + '%');
+      input.setAttribute('aria-valuetext', `${pct}%, ${amt}`);
+      row.querySelector('[data-val]')!.textContent = `${pct}% · ${amt}`;
+    }
+    const over = total > 100;
+    const free = (MONTHLY_INHAND * (100 - total)) / 100;
+    document.querySelector<HTMLElement>('[data-free]')!.classList.toggle('free--over', over);
+    document.querySelector('[data-free-label]')!.textContent = over
+      ? `Over by ${total - 100}%. Lower a jar to save.`
+      : 'For daily spending (food, travel, bills)';
+    document.querySelector('[data-free-amt]')!.textContent = over ? '−' + inr(-free) : inr(free);
+    save.disabled = over;
+  }
+
+  for (const j of DEFAULT_JARS) {
+    document.querySelector<HTMLInputElement>(`#jar-${j.id}`)!.addEventListener('input', (e) => {
+      state.jars[j.id] = parseInt((e.target as HTMLInputElement).value, 10);
+      render();
+    });
+  }
+
+  save.addEventListener('click', () => {
+    savePlan(state);
+    window.location.href = routes.plan;
+  });
+
+  render();
+</script>
+
+<style>
+  .intro {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-right: 48px;
+  }
+
+  h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 32px;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+  }
+
+  .muted {
+    margin: 0;
+    font-size: 16px;
+    color: var(--ink-muted);
+  }
+
+  .jar-row__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .jar-row__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 16px;
+  }
+
+  .swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    border: 2px solid var(--ink);
+    box-sizing: border-box;
+  }
+
+  .jar-row__val {
+    font-weight: 800;
+    font-size: 16px;
+  }
+
+  .free {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: #e2f8ef;
+    color: #0a6b4d;
+  }
+
+  .free--over {
+    background: var(--danger-bg);
+    color: var(--danger);
+  }
+
+  .free__label {
+    font-weight: 800;
+    font-size: 16px;
+  }
+
+  .free__amt {
+    font-weight: 800;
+    font-size: 22px;
+    white-space: nowrap;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .actions__save {
+    flex: 1;
+  }
+
+  .actions__save:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  @media (max-width: 639px) {
+    h1 {
+      font-size: 26px;
+    }
+  }
+</style>

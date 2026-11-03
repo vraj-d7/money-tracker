@@ -1,0 +1,89 @@
+---
+import { inr } from '../../lib/format';
+import { coachData } from '../../lib/coach';
+
+const max = Math.max(...coachData.spend.map((s) => s.amount));
+---
+
+<figure class="spend">
+  <figcaption class="spend__cap">
+    <span class="spend__title">October spend</span>
+    <span class="num spend__total">{inr(coachData.spent)} of {inr(coachData.inhand)}</span>
+  </figcaption>
+  {
+    coachData.spend.map((s) => (
+      <div class="spend__row">
+        <span class="spend__label">{s.label}</span>
+        <span class="spend__track" aria-hidden="true">
+          <span class="spend__bar" style={`width: ${((s.amount / max) * 100).toFixed(1)}%; background: ${s.color}`} />
+        </span>
+        <span class="num spend__amt">{inr(s.amount)}</span>
+      </div>
+    ))
+  }
+</figure>
+
+<style>
+  .spend {
+    margin: 0;
+    padding: 18px;
+    border-radius: 22px;
+    background: var(--white);
+    border: 2px solid var(--ink);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .spend__cap {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+  }
+
+  .spend__title {
+    font-weight: 800;
+  }
+
+  .spend__total {
+    color: var(--ink-muted);
+  }
+
+  .spend__row {
+    display: grid;
+    grid-template-columns: 120px minmax(0, 1fr) 80px;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .spend__label {
+    font-weight: 600;
+  }
+
+  .spend__track {
+    height: 14px;
+    border-radius: 99px;
+    background: #f1e7d3;
+    overflow: hidden;
+  }
+
+  .spend__bar {
+    display: block;
+    height: 100%;
+    border-radius: 99px;
+  }
+
+  .spend__amt {
+    font-weight: 800;
+    text-align: right;
+  }
+
+  @media (max-width: 639px) {
+    .spend__row {
+      grid-template-columns: 100px minmax(0, 1fr) 72px;
+      gap: 8px;
+    }
+  }
+</style>

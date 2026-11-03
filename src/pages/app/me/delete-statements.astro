@@ -1,0 +1,33 @@
+---
+import SheetPage from '../../../layouts/SheetPage.astro';
+import ConfirmDialog from '../../../components/ConfirmDialog.astro';
+import { routes } from '../../../lib/routes';
+---
+
+<SheetPage title="Delete statements" active="me" closeHref={routes.me} width={520}>
+  <ConfirmDialog
+    title="Delete your statement history?"
+    text="This removes every scan result and the autopays we found. Your jars, goals and salary details stay. We already delete the PDFs right after each scan."
+    icon="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"
+    tone="warn"
+  >
+    <div class="confirm__actions">
+      <button type="button" class="btn btn--lg confirm__primary confirm__primary--danger" data-confirm>Delete history</button>
+      <a href={routes.me} class="btn">Cancel</a>
+    </div>
+  </ConfirmDialog>
+</SheetPage>
+
+<script>
+  import { routes } from '../../../lib/routes';
+
+  document.querySelector('[data-confirm]')!.addEventListener('click', () => {
+    // Scan picks and cancel progress are the "statement history" kept in this browser
+    try {
+      ['inhandy:scan:cut', 'inhandy:cancel:done'].forEach((k) => localStorage.removeItem(k));
+    } catch {
+      // Storage blocked: nothing was saved anyway
+    }
+    window.location.href = `${routes.me}?done=statements`;
+  });
+</script>

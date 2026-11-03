@@ -1,0 +1,73 @@
+---
+interface Props {
+  variant?: 'lockup' | 'mark' | 'wordmark' | 'icon';
+  size?: number;
+  tone?: 'ink' | 'paper';
+}
+
+const { variant = 'lockup', size = 40, tone = 'ink' } = Astro.props;
+
+const hasMark = variant === 'lockup' || variant === 'mark';
+const hasWord = variant === 'lockup' || variant === 'wordmark';
+const isIcon = variant === 'icon';
+const ink = tone === 'paper' ? 'var(--paper)' : 'var(--ink)';
+---
+
+<span
+  class="logo"
+  role="img"
+  aria-label="Inhandy"
+  style={`gap: ${Math.round(size * 0.24)}px; color: ${ink}`}
+>
+  {
+    isIcon && (
+      <span
+        aria-hidden="true"
+        class="logo__tile"
+        style={`width: ${size}px; height: ${size}px; border-radius: ${Math.round(size * 0.24)}px`}
+      >
+        <svg viewBox="0 0 64 64" width={Math.round(size * 0.78)} height={Math.round(size * 0.78)}>
+          <circle cx="32" cy="32" r="27" fill="#FFB21E" stroke="#FAF6EE" stroke-width="3.5" />
+          <circle cx="32" cy="32" r="21.5" fill="none" stroke="#C97F00" stroke-width="2" stroke-dasharray="1.5 4" stroke-linecap="round" />
+          <ellipse cx="24.5" cy="29" rx="3" ry="4" fill="#15131C" />
+          <ellipse cx="39.5" cy="29" rx="3" ry="4" fill="#15131C" />
+          <path d="M23 38.5 Q32 46 41 38.5" stroke="#15131C" stroke-width="3.6" stroke-linecap="round" fill="none" />
+        </svg>
+      </span>
+    )
+  }
+  {
+    hasMark && (
+      <svg aria-hidden="true" viewBox="0 0 64 64" width={size} height={size} style="flex: none">
+        <circle cx="32" cy="32" r="29" fill="#FFB21E" stroke="#15131C" stroke-width="4" />
+        <circle cx="32" cy="32" r="22.5" fill="none" stroke="#C97F00" stroke-width="2.2" stroke-dasharray="1.5 4.2" stroke-linecap="round" />
+        <path d="M17 22 A17 17 0 0 1 26 14" stroke="#FFE3A3" stroke-width="3.6" stroke-linecap="round" fill="none" />
+        <ellipse cx="24.5" cy="29.5" rx="3.2" ry="4.2" fill="#15131C" />
+        <ellipse cx="39.5" cy="29.5" rx="3.2" ry="4.2" fill="#15131C" />
+        <path d="M22.5 38.5 Q32 47 41.5 38.5" stroke="#15131C" stroke-width="3.8" stroke-linecap="round" fill="none" />
+      </svg>
+    )
+  }
+  {hasWord && <span class="logo-word" style={`font-size: ${Math.round(size * 0.66)}px`}>Inhandy</span>}
+</span>
+
+<style>
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+    font-family: var(--font-display);
+  }
+
+  .logo__tile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--ink);
+  }
+
+  .logo-word {
+    font-weight: 800;
+    letter-spacing: -0.035em;
+  }
+</style>

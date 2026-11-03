@@ -1,0 +1,59 @@
+---
+// Deleting the account wipes everything Inhandy saved in this browser (there's no server account yet).
+import SheetPage from '../../../layouts/SheetPage.astro';
+import ConfirmDialog from '../../../components/ConfirmDialog.astro';
+import { routes } from '../../../lib/routes';
+---
+
+<SheetPage title="Delete account" active="me" closeHref={routes.me} width={520}>
+  <ConfirmDialog
+    title="Delete your account for good?"
+    text="Everything goes: salary details, jars, goals, chats and scans. If you’re on the Coach plan, it’s cancelled and the UPI mandate revoked. This can’t be undone."
+    icon="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"
+    tone="danger"
+  >
+    <div class="group">
+      <label for="del-type" class="group__label">Type DELETE to confirm</label>
+      <div class="field"><input id="del-type" type="text" placeholder="DELETE" autocomplete="off" autocapitalize="characters" data-typed /></div>
+    </div>
+    <div class="confirm__actions">
+      <button type="button" class="btn btn--lg confirm__primary confirm__primary--danger" data-confirm disabled>Delete my account</button>
+      <a href={routes.me} class="btn">Cancel</a>
+    </div>
+  </ConfirmDialog>
+</SheetPage>
+
+<script>
+  import { routes } from '../../../lib/routes';
+
+  const typed = document.querySelector<HTMLInputElement>('[data-typed]')!;
+  const confirm = document.querySelector<HTMLButtonElement>('[data-confirm]')!;
+
+  typed.addEventListener('input', () => {
+    confirm.disabled = typed.value.trim().toUpperCase() !== 'DELETE';
+  });
+
+  confirm.addEventListener('click', () => {
+    if (confirm.disabled) return;
+    try {
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith('inhandy:'))
+        .forEach((k) => localStorage.removeItem(k));
+    } catch {
+      // Storage blocked: nothing was saved anyway
+    }
+    window.location.href = routes.landing;
+  });
+</script>
+
+<style>
+  .group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .group__label {
+    font-weight: 700;
+  }
+</style>

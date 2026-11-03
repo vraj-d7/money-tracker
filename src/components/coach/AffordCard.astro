@@ -1,0 +1,94 @@
+---
+import { inr } from '../../lib/format';
+import { coachData } from '../../lib/coach';
+
+const { price, funLeft } = coachData.afford;
+const pct = Math.min(100, Math.round((funLeft / price) * 100));
+const short = Math.max(0, price - funLeft);
+---
+
+<div class="afford">
+  <div class="afford__top">
+    <span class="afford__title">Can I afford this?</span>
+    <span class="afford__badge">
+      <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+      {short > 0 ? `Not yet · wait ${coachData.daysToPayday} days` : 'Yes, go for it'}
+    </span>
+  </div>
+  <div class="afford__bar" role="img" aria-label={`Fun money left ${inr(funLeft)} covers ${pct}% of the ${inr(price)} phone`}>
+    <div class="afford__fill" style={`width: ${pct}%`}></div>
+    <div class="afford__gap" style={`left: ${pct}%`}></div>
+  </div>
+  <div class="num afford__nums">
+    <span><b>{inr(funLeft)}</b> fun money left</span>
+    {short > 0 && <span class="afford__short">{inr(short)} short</span>}
+  </div>
+</div>
+
+<style>
+  .afford {
+    padding: 18px;
+    border-radius: 22px;
+    background: var(--white);
+    border: 2px solid var(--ink);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .afford__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .afford__title {
+    font-weight: 800;
+  }
+
+  .afford__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 99px;
+    background: #ffe7b0;
+    color: #8a5800;
+    font-weight: 800;
+  }
+
+  .afford__bar {
+    position: relative;
+    height: 22px;
+    border-radius: 99px;
+    background: #f1e7d3;
+    border: 2px solid var(--ink);
+    overflow: hidden;
+  }
+
+  .afford__fill {
+    height: 100%;
+    background: #ff7ec8;
+  }
+
+  .afford__gap {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    background: repeating-linear-gradient(45deg, transparent 0 6px, rgba(179, 54, 42, 0.35) 6px 9px);
+  }
+
+  .afford__nums {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .afford__short {
+    color: var(--danger);
+    font-weight: 700;
+  }
+</style>

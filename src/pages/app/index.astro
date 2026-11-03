@@ -1,0 +1,898 @@
+---
+import AppShell from '../../layouts/AppShell.astro';
+import Handy from '../../components/Handy.astro';
+import { demoUser } from '../../data/demo-user';
+import { demoHome as home } from '../../data/demo-home';
+import { routes } from '../../lib/routes';
+import { inr } from '../../lib/format';
+
+const firstName = demoUser.name.split(' ')[0];
+
+const RING = 314.16; // circumference of the r=50 payday ring
+const progress = (home.payday.cycleDays - home.payday.daysLeft) / home.payday.cycleDays;
+const ringOffset = (RING * (1 - progress)).toFixed(1);
+
+const { spent, plan } = home.week;
+const spentPct = Math.min(100, (spent / plan) * 100).toFixed(1);
+const underBy = plan - spent;
+
+const streakDone = home.streak.done.filter(Boolean).length;
+---
+
+<AppShell title="Home" active="home">
+  <header class="head">
+    <div class="head__who">
+      <span class="head__avatar" aria-hidden="true" data-initials>{demoUser.initials}</span>
+      <div class="head__text">
+        <span class="head__date head__date--long">{home.today.long}</span>
+        <span class="head__date head__date--short">{home.today.short}</span>
+        <h1>Hey <span data-first-name>{firstName}</span></h1>
+      </div>
+    </div>
+    <div class="head__actions">
+      <a href={routes.scan} class="btn head__scan">
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7 8l5-5 5 5M4 14v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"></path></svg>
+        Scan a statement
+      </a>
+      <a href={routes.notifications} class="icon-btn" aria-label={`Notifications, ${demoUser.newNotifications} new`}>
+        <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"></path></svg>
+        <span class="icon-btn__dot" aria-hidden="true"></span>
+      </a>
+    </div>
+  </header>
+
+  <section class="card payday" aria-label="Days to payday">
+    <div class="payday__ring">
+      <svg viewBox="0 0 120 120" aria-hidden="true">
+        <circle cx="60" cy="60" r="50" fill="none" stroke="#15131C" stroke-opacity="0.14" stroke-width="12"></circle>
+        <circle
+          class="ring"
+          cx="60"
+          cy="60"
+          r="50"
+          fill="none"
+          stroke="#15131C"
+          stroke-width="12"
+          stroke-linecap="round"
+          stroke-dasharray={RING}
+          stroke-dashoffset={ringOffset}
+          data-ring-to={ringOffset}
+          data-ring-from={RING}></circle>
+      </svg>
+      <div class="payday__count">
+        <span class="num payday__days" data-count-from={home.payday.cycleDays} data-count-to={home.payday.daysLeft}>
+          {home.payday.daysLeft}
+        </span>
+        <span class="payday__unit">days</span>
+      </div>
+    </div>
+    <div class="payday__body">
+      <p class="eyebrow">To payday</p>
+      <h2 class="payday__title">Salary aa rahi hai!</h2>
+      <p class="num payday__meta">{home.payday.date} · <b>{inr(home.payday.expected)}</b> expected</p>
+      <a href={routes.plan} class="btn btn--ink payday__cta">
+        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2ED3A0" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"></path></svg>
+        See salary-day plan
+      </a>
+    </div>
+    <span class="payday__handy payday__handy--big"><Handy mood="cheer" size={120} decorative /></span>
+    <span class="payday__handy payday__handy--small"><Handy mood="happy" size={58} decorative /></span>
+  </section>
+
+  <section class="card week" aria-labelledby="week-h">
+    <div class="card__top">
+      <h2 id="week-h" class="card__title">This week</h2>
+      <a href={routes.week} class="link">Details</a>
+    </div>
+    <p class="num week__total">
+      <span class="week__spent" data-count-from="0" data-count-to={spent} data-format="inr">{inr(spent)}</span> of {inr(plan)} plan
+    </p>
+    <div class="bar" role="img" aria-label={`Spent ${inr(spent)} of a ${inr(plan)} plan`}>
+      <div class="bar__fill" style={`width: ${spentPct}%`}></div>
+    </div>
+    <div class="week__cats">
+      {
+        home.week.categories.map((c) => (
+          <div class="cat">
+            <span class="cat__label">{c.label}</span>
+            <span class="num cat__amt">{inr(c.amount)}</span>
+          </div>
+        ))
+      }
+    </div>
+    {
+      underBy >= 0 ? (
+        <p class="note note--good">
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"></path></svg>
+          {inr(underBy)} under plan. Chill, you’re on track.
+        </p>
+      ) : (
+        <p class="note note--bad">{inr(-underBy)} over plan this week.</p>
+      )
+    }
+  </section>
+
+  <section class="card renewals" aria-labelledby="renew-h">
+    <h2 id="renew-h" class="card__title">Upcoming renewals</h2>
+    <span class="num renewals__total">{inr(home.renewals.monthTotal)} this month</span>
+    {
+      home.renewals.items.map((r) => (
+        <div class="renewal">
+          <span class:list={['renewal__icon', { 'renewal__icon--warn': r.warn }]} aria-hidden="true">
+            {r.icon === 'tv' && (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="3" /><path d="M8 21h8M10 10.5v3l3-1.5z" /></svg>
+            )}
+            {r.icon === 'music' && (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13" /><circle cx="6.5" cy="18" r="2.5" /><circle cx="17.5" cy="16" r="2.5" /></svg>
+            )}
+            {r.icon === 'gym' && (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8v8M18 8v8M3 10v4M21 10v4M6 12h12" /></svg>
+            )}
+          </span>
+          <div class="renewal__text">
+            <span class="renewal__label">{r.label}</span>
+            <span class:list={['renewal__note', { 'renewal__note--warn': r.warn }]}>{r.note}</span>
+          </div>
+          <span class="num renewal__amt">{inr(r.amount)}</span>
+        </div>
+      ))
+    }
+  </section>
+
+  <section class="card streak" aria-label="Check-in streak">
+    <svg class="flick" aria-hidden="true" width="52" height="60" viewBox="0 0 24 28"><path d="M12 27c5 0 8.5-3.5 8.5-8.5 0-6-6-8.5-6-14.5-3.5 2.4-6 6-6 9.6-1.2-1.2-2.4-2.4-2.4-4.8-2.4 2.4-2.6 6-2.6 9.7C3.5 23.5 7 27 12 27z" fill="#FFB21E" stroke="#15131C" stroke-width="1.6" stroke-linejoin="round"></path><path d="M12 25c2.5 0 4.2-1.8 4.2-4.2 0-3-3-4.4-3-7.4-2 1.4-4.5 3.8-4.5 7 0 2.8 1.2 4.6 3.3 4.6z" fill="#FFD27A"></path></svg>
+    <div class="streak__body">
+      <p class="streak__title">{home.streak.weeks}-week check-in streak</p>
+      <div class="streak__weeks" role="img" aria-label={`${streakDone} of ${home.streak.done.length} weeks done, this Sunday pending`}>
+        {home.streak.done.map((d) => <span class:list={['streak__week', { 'streak__week--done': d }]} />)}
+      </div>
+      <p class="streak__next">Next check-in: Sunday. Don’t break it now!</p>
+    </div>
+  </section>
+
+  <section class="card ask" aria-labelledby="ask-h">
+    <div class="ask__top">
+      <span class="ask__handy"><Handy mood="chai" size={48} decorative /></span>
+      <h2 id="ask-h" class="card__title">Ask your coach</h2>
+    </div>
+    <form class="ask__field" action={routes.coach} method="get">
+      <label for="ask-input" class="visually-hidden">Ask your coach a question</label>
+      <input id="ask-input" name="q" type="text" placeholder="Can I afford this?" autocomplete="off" />
+      <button type="submit" class="btn ask__send" aria-label="Send question">
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+      </button>
+    </form>
+    <div class="ask__chips">
+      {
+        home.coachPrompts.map((p) => (
+          <button type="button" class="chip" data-prompt={p}>
+            {p}
+          </button>
+        ))
+      }
+    </div>
+  </section>
+</AppShell>
+
+<script>
+  import { inr } from '../../lib/format';
+  import { initials, loadProfile } from '../../scripts/profile-store';
+
+  // Greet whoever is saved in the profile
+  const profile = loadProfile();
+  document.querySelector('[data-first-name]')!.textContent = profile.name || 'there';
+  document.querySelector('[data-initials]')!.textContent = initials(profile);
+
+  // Chips fill the question box
+  const input = document.getElementById('ask-input') as HTMLInputElement | null;
+  document.querySelectorAll<HTMLButtonElement>('.chip[data-prompt]').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      if (!input) return;
+      input.value = chip.dataset.prompt ?? '';
+      input.focus();
+    });
+  });
+
+  // Count-up and ring fill on load (the page already shows the final values without JS)
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const counters = [...document.querySelectorAll<HTMLElement>('[data-count-to]')];
+    const rings = [...document.querySelectorAll<SVGCircleElement>('[data-ring-to]')];
+
+    const show = (el: HTMLElement, v: number) => {
+      el.textContent = el.dataset.format === 'inr' ? inr(v) : String(Math.max(1, Math.round(v)));
+    };
+
+    counters.forEach((el) => show(el, Number(el.dataset.countFrom)));
+    rings.forEach((r) => r.setAttribute('stroke-dashoffset', r.dataset.ringFrom ?? '0'));
+
+    requestAnimationFrame(() => {
+      rings.forEach((r) => r.setAttribute('stroke-dashoffset', r.dataset.ringTo ?? '0'));
+      const t0 = performance.now();
+      const step = (now: number) => {
+        const t = Math.min(1, (now - t0) / 900);
+        const k = 1 - Math.pow(1 - t, 3);
+        counters.forEach((el) => {
+          const from = Number(el.dataset.countFrom);
+          const to = Number(el.dataset.countTo);
+          show(el, from + (to - from) * k);
+        });
+        if (t < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
+  }
+</script>
+
+<style>
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  /* Header */
+  .head {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .head__who {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .head__avatar {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 16px;
+    background: var(--mango);
+    border: 2.5px solid var(--ink);
+    box-sizing: border-box;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 18px;
+  }
+
+  .head__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .head__date {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--ink-muted);
+  }
+
+  .head__date--short {
+    display: none;
+  }
+
+  h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 40px;
+    letter-spacing: -0.03em;
+  }
+
+  .head__actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .icon-btn {
+    position: relative;
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    color: var(--ink);
+  }
+
+  .icon-btn__dot {
+    position: absolute;
+    top: 9px;
+    right: 10px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--coral);
+    border: 2px solid var(--white);
+  }
+
+  /* Cards */
+  .card {
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    border-radius: 28px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 6px 0 var(--ink);
+  }
+
+  .card__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .card__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 22px;
+  }
+
+  .link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--violet);
+  }
+
+  .eyebrow {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* Payday */
+  .payday {
+    grid-column: span 7;
+    position: relative;
+    flex-direction: row;
+    align-items: center;
+    gap: 32px;
+    padding: 32px;
+    border-radius: 32px;
+    background: var(--mango);
+    border-width: 3px;
+    box-shadow: 0 8px 0 var(--ink);
+    overflow: hidden;
+  }
+
+  .payday__ring {
+    position: relative;
+    flex: none;
+    width: 180px;
+    height: 180px;
+  }
+
+  .payday__ring svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+
+  .ring {
+    transition: stroke-dashoffset 0.9s cubic-bezier(0.3, 1.2, 0.5, 1);
+  }
+
+  .payday__count {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .payday__days {
+    font-weight: 800;
+    font-size: 68px;
+    line-height: 1;
+    letter-spacing: -0.04em;
+  }
+
+  .payday__unit {
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .payday__body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .payday__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 40px;
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+
+  .payday__meta {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 500;
+  }
+
+  .payday__cta {
+    align-self: flex-start;
+    margin-top: 6px;
+    min-height: 50px;
+    padding: 0 18px;
+    color: var(--paper);
+    box-shadow: 0 5px 0 #000;
+  }
+
+  .payday__handy {
+    position: absolute;
+    line-height: 0;
+    pointer-events: none;
+  }
+
+  .payday__handy--big {
+    right: 18px;
+    bottom: -10px;
+    transform: rotate(10deg);
+  }
+
+  .payday__handy--small {
+    display: none;
+    right: -14px;
+    top: -16px;
+    transform: rotate(14deg);
+  }
+
+  /* This week */
+  .week {
+    grid-column: span 5;
+    gap: 16px;
+    padding: 28px;
+  }
+
+  .week__total {
+    margin: -10px 0 0;
+    font-size: 16px;
+    color: var(--ink-muted);
+  }
+
+  .week__spent {
+    font-weight: 800;
+    font-size: 44px;
+    letter-spacing: -0.04em;
+    color: var(--ink);
+  }
+
+  .bar {
+    display: flex;
+    height: 22px;
+    margin-top: 6px;
+    border-radius: 99px;
+    overflow: hidden;
+    border: 2px solid var(--ink);
+    background: #f1e7d3;
+  }
+
+  .bar__fill {
+    background: var(--mango);
+  }
+
+  .week__cats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .cat {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: var(--paper-deep);
+  }
+
+  .cat__label {
+    flex: 1;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .cat__amt {
+    font-size: 16px;
+    font-weight: 800;
+  }
+
+  .note {
+    margin: auto 0 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .note--good {
+    background: #e2f8ef;
+    color: #0a6b4d;
+  }
+
+  .note--bad {
+    background: var(--danger-bg);
+    color: var(--danger);
+  }
+
+  /* Renewals */
+  .renewals {
+    grid-column: span 4;
+    gap: 6px;
+  }
+
+  .renewals__total {
+    margin: 0 0 6px;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--danger);
+  }
+
+  .renewal {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-top: 2px dashed var(--line);
+  }
+
+  .renewal__icon {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: var(--paper-deep);
+  }
+
+  .renewal__icon--warn {
+    background: var(--danger-bg);
+    color: var(--danger);
+  }
+
+  .renewal__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .renewal__label {
+    font-weight: 700;
+    font-size: 16px;
+  }
+
+  .renewal__note {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--ink-muted);
+  }
+
+  .renewal__note--warn {
+    font-weight: 700;
+    color: var(--danger);
+  }
+
+  .renewal__amt {
+    font-weight: 800;
+    font-size: 16px;
+  }
+
+  /* Streak */
+  .streak {
+    grid-column: span 3;
+    gap: 14px;
+    background: #ffe7b0;
+  }
+
+  .streak .flick {
+    flex: none;
+  }
+
+  .streak__body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .streak__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 24px;
+    line-height: 1.1;
+  }
+
+  .streak__weeks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .streak__week {
+    width: 22px;
+    height: 22px;
+    border-radius: 8px;
+    border: 2px solid var(--ink-muted);
+    box-sizing: border-box;
+  }
+
+  .streak__week--done {
+    background: var(--mango);
+    border-color: var(--ink);
+  }
+
+  .streak__next {
+    margin: auto 0 0;
+    font-size: 16px;
+    line-height: 1.4;
+    color: var(--ink-muted);
+  }
+
+  .flick {
+    animation: flick 1.6s ease-in-out infinite;
+    transform-origin: 50% 90%;
+  }
+
+  @keyframes flick {
+    0%,
+    100% {
+      transform: scale(1) rotate(-2deg);
+    }
+    50% {
+      transform: scale(1.08) rotate(2deg);
+    }
+  }
+
+  /* Ask your coach */
+  .ask {
+    grid-column: span 5;
+    gap: 14px;
+  }
+
+  .ask__top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .ask__handy {
+    line-height: 0;
+  }
+
+  .ask__field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 6px 6px 16px;
+    border-radius: 20px;
+    background: var(--white);
+    border: 2.5px solid var(--focus);
+    box-shadow: 0 5px 0 var(--focus);
+  }
+
+  .ask__field input {
+    flex: 1;
+    min-width: 0;
+    min-height: 44px;
+    border: none;
+    background: transparent;
+    color: var(--ink);
+    font-size: 16px;
+    outline: none;
+  }
+
+  .ask__field:focus-within {
+    border-color: var(--violet);
+  }
+
+  .ask__send {
+    flex: none;
+    width: 46px;
+    min-height: 46px;
+    height: 46px;
+    padding: 0;
+    border-radius: 15px;
+    background: var(--focus);
+  }
+
+  .ask__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .chip {
+    min-height: 44px;
+    padding: 8px 12px;
+    border-radius: 99px;
+    background: var(--paper-deep);
+    border: 2px solid #d9cfbb;
+    color: var(--ink);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .chip:hover {
+    border-color: var(--ink);
+  }
+
+  /* Narrow laptops: the 1440px layout's columns get too tight, so give the cards more room */
+  @media (max-width: 1279px) {
+    .payday {
+      grid-column: 1 / -1;
+    }
+
+    .week,
+    .renewals {
+      grid-column: span 6;
+    }
+
+    .streak {
+      grid-column: span 5;
+    }
+
+    .ask {
+      grid-column: span 7;
+    }
+  }
+
+  /* Phone, following designs/Home.dc.html */
+  @media (max-width: 639px) {
+    .head__avatar {
+      display: inline-flex;
+    }
+
+    .head__date--long,
+    .head__scan {
+      display: none;
+    }
+
+    .head__date--short {
+      display: inline;
+    }
+
+    .head h1 {
+      font-size: 26px !important;
+      letter-spacing: -0.02em;
+    }
+
+    .icon-btn {
+      width: 48px;
+      height: 48px;
+    }
+
+    .card {
+      padding: 20px;
+      border-radius: 26px;
+    }
+
+    .card__title {
+      font-size: 20px;
+    }
+
+    .payday {
+      gap: 18px;
+      padding: 20px;
+      border-radius: 28px;
+      box-shadow: 0 7px 0 var(--ink);
+    }
+
+    .payday__ring {
+      width: 116px;
+      height: 116px;
+    }
+
+    .payday__days {
+      font-size: 44px;
+    }
+
+    .payday__body {
+      gap: 6px;
+    }
+
+    .payday__title {
+      font-size: 24px;
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+    }
+
+    .payday__meta {
+      font-size: 16px;
+    }
+
+    .payday__cta {
+      min-height: 44px;
+      padding: 0 12px;
+      margin-top: 4px;
+      font-size: 15px;
+    }
+
+    .payday__handy--big {
+      display: none;
+    }
+
+    .payday__handy--small {
+      display: block;
+    }
+
+    .week {
+      padding: 20px;
+      gap: 14px;
+    }
+
+    .streak {
+      flex-direction: row;
+      align-items: center;
+      padding: 18px 20px;
+    }
+
+    .streak .flick {
+      width: 44px;
+      height: 52px;
+    }
+
+    .streak__body {
+      gap: 8px;
+    }
+
+    .streak__title {
+      font-size: 19px;
+    }
+
+    .streak__week {
+      width: 26px;
+      height: 26px;
+      border-radius: 9px;
+    }
+
+    .streak__next {
+      margin: 0;
+    }
+
+    .ask {
+      padding: 0;
+      gap: 10px;
+      background: none;
+      border: none;
+      box-shadow: none;
+    }
+
+    .ask__handy {
+      display: none;
+    }
+  }
+</style>

@@ -1,0 +1,341 @@
+---
+// Email HR about a missing PF deposit: a draft the user checks, then copies or opens in their own email app.
+import AppShell from '../../../layouts/AppShell.astro';
+import Handy from '../../../components/Handy.astro';
+import { routes } from '../../../lib/routes';
+import { inr } from '../../../lib/format';
+import { PF } from '../../../data/demo-tools';
+import { DEFAULT_PROFILE } from '../../../scripts/profile-store';
+
+const m = PF.missing;
+const drafts = {
+  polite: `Hi team,\n\nI hope you’re well. While checking my EPF passbook, I noticed that the PF contribution for ${m.month} (${inr(m.yourShare)} employee share and ${inr(m.employerShare)} employer share) hasn’t been credited yet. It was due by ${m.dueBy}.\n\nCould you please check and let me know when it will be deposited? My UAN is ${m.uan}.\n\nThanks so much,\n{name}`,
+  firm: `Hi team,\n\nMy EPF passbook shows no contribution for ${m.month}. ${inr(m.yourShare)} was deducted from my salary as the employee share, and neither it nor the employer share has been credited. The due date was ${m.dueBy}.\n\nPlease deposit it and share the challan details by the end of this week. My UAN is ${m.uan}.\n\nRegards,\n{name}`,
+};
+const subject = `PF contribution for ${m.month} not credited`;
+const facts = [
+  ['Month', m.month],
+  ['Your share', inr(m.yourShare)],
+  ['Employer share', inr(m.employerShare)],
+  ['Was due by', m.dueBy],
+  ['UAN', m.uan],
+];
+---
+
+<AppShell title="Email HR" active="pf">
+  <header class="head">
+    <a href={routes.pf} class="back">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+      Back to PF corner
+    </a>
+    <h1>Email HR about the missing PF</h1>
+    <p class="muted">Handy drafted it. Check the details, then send it from your own email.</p>
+  </header>
+
+  <section class="card draft" aria-label="Email draft" data-hr data-drafts={JSON.stringify(drafts)}>
+    <div class="tone-row">
+      <span class="tone-row__label">Tone</span>
+      <div class="tones" role="group" aria-label="Tone">
+        <button type="button" class="tones__btn" data-tone="polite" aria-pressed="true">Polite</button>
+        <button type="button" class="tones__btn" data-tone="firm" aria-pressed="false">Firm</button>
+      </div>
+    </div>
+    <div class="group">
+      <label for="hr-to" class="group__label">To</label>
+      <div class="field"><input id="hr-to" type="email" placeholder="hr@yourcompany.com" autocomplete="off" /></div>
+    </div>
+    <div class="group">
+      <label for="hr-sub" class="group__label">Subject</label>
+      <div class="field"><input id="hr-sub" type="text" value={subject} /></div>
+    </div>
+    <div class="group">
+      <label for="hr-body" class="group__label">Message</label>
+      <textarea id="hr-body" class="body" rows="12">{drafts.polite.replace('{name}', DEFAULT_PROFILE.name)}</textarea>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn btn--mango btn--lg" data-copy>
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 9h11v11H9zM5 15H4V4h11v1"></path></svg>
+        <span data-copy-label>Copy email</span>
+      </button>
+      <a href="mailto:" class="btn" data-mailto>
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18v12H3zM3 7l9 7 9-7"></path></svg>
+        Open in my email app
+      </a>
+    </div>
+  </section>
+
+  <aside class="side">
+    <section class="facts" aria-label="Facts used">
+      <span class="facts__title">What Handy found</span>
+      <dl class="num facts__list">
+        {
+          facts.map(([k, v]) => (
+            <>
+              <dt>{k}</dt>
+              <dd>{v}</dd>
+            </>
+          ))
+        }
+      </dl>
+    </section>
+    <section class="tips" aria-label="Tips">
+      <div class="tips__top">
+        <Handy mood="sus" size={56} decorative />
+        <span class="tips__title">If HR goes quiet</span>
+      </div>
+      <p class="muted">
+        Wait a week, then follow up. Still nothing after a month? You can raise a grievance on the EPFO grievance portal with your UAN. We’ll
+        remind you.
+      </p>
+    </section>
+  </aside>
+</AppShell>
+
+<script>
+  import { loadProfile } from '../../../scripts/profile-store';
+
+  const root = document.querySelector<HTMLElement>('[data-hr]')!;
+  const drafts = JSON.parse(root.dataset.drafts!) as Record<'polite' | 'firm', string>;
+  const to = root.querySelector<HTMLInputElement>('#hr-to')!;
+  const sub = root.querySelector<HTMLInputElement>('#hr-sub')!;
+  const body = root.querySelector<HTMLTextAreaElement>('#hr-body')!;
+  const copyLabel = root.querySelector('[data-copy-label]')!;
+  const mailto = root.querySelector<HTMLAnchorElement>('[data-mailto]')!;
+  const name = loadProfile().name || 'Aarav';
+  let edited = false;
+
+  function updateMailto() {
+    // Keep "@" readable: some mail apps don't decode %40 in the address
+    mailto.href = `mailto:${encodeURIComponent(to.value.trim()).replace(/%40/g, '@')}?subject=${encodeURIComponent(sub.value)}&body=${encodeURIComponent(body.value)}`;
+    copyLabel.textContent = 'Copy email';
+  }
+
+  function setTone(tone: 'polite' | 'firm') {
+    // Switching tone replaces the draft; ask first if the user has edited it
+    if (edited && !window.confirm('Switch tone? Your edits to the message will be replaced.')) return;
+    root.querySelectorAll('[data-tone]').forEach((b) => b.setAttribute('aria-pressed', String((b as HTMLElement).dataset.tone === tone)));
+    body.value = drafts[tone].replace('{name}', name);
+    edited = false;
+    updateMailto();
+  }
+
+  root.querySelectorAll<HTMLElement>('[data-tone]').forEach((b) =>
+    b.addEventListener('click', () => {
+      if (b.getAttribute('aria-pressed') !== 'true') setTone(b.dataset.tone as 'polite' | 'firm');
+    }),
+  );
+
+  body.addEventListener('input', () => {
+    edited = true;
+    updateMailto();
+  });
+  to.addEventListener('input', updateMailto);
+  sub.addEventListener('input', updateMailto);
+
+  root.querySelector('[data-copy]')!.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(`Subject: ${sub.value}\n\n${body.value}`);
+      copyLabel.textContent = 'Copied!';
+    } catch {
+      body.select();
+      copyLabel.textContent = 'Select and copy the text';
+    }
+  });
+
+  body.value = drafts.polite.replace('{name}', name);
+  updateMailto();
+</script>
+
+<style>
+  .muted {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--ink-muted);
+  }
+
+  .head {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .back {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--violet);
+  }
+
+  h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 40px;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+  }
+
+  .card {
+    padding: 24px;
+    border-radius: 28px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 6px 0 var(--ink);
+  }
+
+  .draft {
+    grid-column: span 8;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .tone-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .tone-row__label {
+    font-weight: 800;
+  }
+
+  .tones {
+    display: inline-grid;
+    grid-template-columns: repeat(2, 120px);
+    gap: 4px;
+    padding: 4px;
+    border-radius: 16px;
+    background: var(--paper-deep);
+    border: 2px solid var(--ink);
+  }
+
+  .tones__btn {
+    min-height: 44px;
+    border-radius: 12px;
+    background: transparent;
+    border: 2px solid transparent;
+    color: var(--ink);
+    font-weight: 800;
+    font-size: 16px;
+    cursor: pointer;
+  }
+
+  .tones__btn[aria-pressed='true'] {
+    background: var(--mango);
+    border-color: var(--ink);
+    box-shadow: 0 3px 0 var(--ink);
+  }
+
+  .group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .group__label {
+    font-weight: 700;
+  }
+
+  .body {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+    color: var(--ink);
+    font-size: 16px;
+    line-height: 1.55;
+    resize: vertical;
+  }
+
+  .body:focus {
+    border-color: var(--violet);
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .side {
+    grid-column: span 4;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .facts,
+  .tips {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 20px;
+    border-radius: 24px;
+    border: 2.5px solid var(--ink);
+  }
+
+  .facts {
+    background: var(--danger-bg);
+  }
+
+  .tips {
+    background: var(--white);
+  }
+
+  .facts__title,
+  .tips__title {
+    font-weight: 800;
+  }
+
+  .facts__list {
+    margin: 0;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 6px 12px;
+  }
+
+  .facts__list dt {
+    color: var(--ink-muted);
+  }
+
+  .facts__list dd {
+    margin: 0;
+    font-weight: 800;
+  }
+
+  .tips__top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  @media (max-width: 1279px) {
+    .draft,
+    .side {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (max-width: 639px) {
+    .draft {
+      padding: 18px;
+    }
+
+    .actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
+</style>

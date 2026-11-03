@@ -1,0 +1,397 @@
+---
+import AppShell from '../../layouts/AppShell.astro';
+import Handy from '../../components/Handy.astro';
+import { routes } from '../../lib/routes';
+import { NOTIFICATIONS, unreadCount } from '../../data/demo-notifications';
+
+const filters = [
+  ['all', 'All'],
+  ['money', 'Money'],
+  ['renew', 'Renewals'],
+  ['pf', 'PF'],
+  ['coach', 'Coach'],
+] as const;
+const groups = ['Today', 'This week'] as const;
+const unread = unreadCount([]);
+---
+
+<AppShell title="Notifications" active="notifications">
+  <header class="head">
+    <div class="head__text">
+      <h1>Notifications</h1>
+      <p class="num muted" aria-live="polite" data-unread-text>{unread ? `${unread} new` : 'You’re all caught up'}</p>
+    </div>
+    <button type="button" class="btn" data-mark-all>
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"></path></svg>
+      Mark all as read
+    </button>
+  </header>
+
+  <div class="list" data-notifs>
+    <div class="filters" role="group" aria-label="Filter notifications">
+      {
+        filters.map(([id, label]) => (
+          <button type="button" class="filter" data-filter={id} aria-pressed={id === 'all' ? 'true' : 'false'}>
+            {label}
+          </button>
+        ))
+      }
+    </div>
+
+    {
+      groups.map((g) => (
+        <section class="group" aria-label={g} data-group>
+          <h2 class="group__title">{g}</h2>
+          {NOTIFICATIONS.filter((n) => n.group === g).map((n) => (
+            <a href={n.href} class:list={['rowlink', 'notif', { 'notif--unread': n.unread }]} data-notif={n.id} data-kind={n.kind}>
+              <span class="notif__tile" aria-hidden="true" style={`background: ${n.tile}`}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d={n.icon} />
+                </svg>
+              </span>
+              <span class="notif__text">
+                <span class="notif__top">
+                  <span class="notif__title">{n.title}</span>
+                  <span class="num notif__time">{n.time}</span>
+                </span>
+                <span class="notif__body">{n.body}</span>
+                <span class="notif__cta">{n.cta} →</span>
+              </span>
+              <span class="visually-hidden" data-unread-label hidden={!n.unread}>
+                Unread.
+              </span>
+              <span class="notif__dot" aria-hidden="true" />
+            </a>
+          ))}
+        </section>
+      ))
+    }
+
+    <div class="empty" data-empty hidden>
+      <Handy mood="chill" size={96} decorative />
+      <p class="empty__title">All quiet here</p>
+      <p class="muted">Nothing in this filter. Handy will ping you when something needs you.</p>
+    </div>
+  </div>
+
+  <aside class="side">
+    <div class="side__top">
+      <Handy mood="chai" size={64} decorative />
+      <h2 class="side__title">Only what matters</h2>
+    </div>
+    <p class="side__text">Handy pings you about money moments only: payday, renewals before they charge, missing PF deposits and your Sunday recap.</p>
+    <a href={routes.me} class="btn">Notification settings</a>
+  </aside>
+</AppShell>
+
+<script>
+  import { NOTIFICATIONS, unreadCount } from '../../data/demo-notifications';
+  import { readLocal, writeLocal } from '../../scripts/local-state';
+
+  const root = document.querySelector<HTMLElement>('[data-notifs]')!;
+  const read = new Set<string>(readLocal<string[]>('notifications:read', []));
+  let filter = 'all';
+
+  function render() {
+    root.querySelectorAll<HTMLElement>('[data-notif]').forEach((a) => {
+      const n = NOTIFICATIONS.find((x) => x.id === a.dataset.notif)!;
+      const isUnread = n.unread && !read.has(n.id);
+      a.classList.toggle('notif--unread', isUnread);
+      a.querySelector<HTMLElement>('[data-unread-label]')!.hidden = !isUnread;
+      a.hidden = filter !== 'all' && a.dataset.kind !== filter;
+    });
+    let any = false;
+    root.querySelectorAll<HTMLElement>('[data-group]').forEach((g) => {
+      const visible = [...g.querySelectorAll<HTMLElement>('[data-notif]')].some((a) => !a.hidden);
+      g.hidden = !visible;
+      any ||= visible;
+    });
+    root.querySelector<HTMLElement>('[data-empty]')!.hidden = any;
+    root.querySelectorAll<HTMLElement>('[data-filter]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.filter === filter)));
+
+    const n = unreadCount([...read]);
+    document.querySelector('[data-unread-text]')!.textContent = n ? `${n} new` : 'You’re all caught up';
+    // Keep the sidebar badge in step
+    document.querySelectorAll<HTMLElement>('[data-nav-item="notifications"] [data-nav-badge]').forEach((b) => {
+      b.textContent = String(n);
+      b.hidden = n === 0;
+    });
+  }
+
+  function save() {
+    writeLocal('notifications:read', [...read]);
+  }
+
+  root.querySelectorAll<HTMLElement>('[data-filter]').forEach((b) =>
+    b.addEventListener('click', () => {
+      filter = b.dataset.filter!;
+      render();
+    }),
+  );
+
+  // Opening a notification marks it read
+  root.querySelectorAll<HTMLElement>('[data-notif]').forEach((a) =>
+    a.addEventListener('click', () => {
+      read.add(a.dataset.notif!);
+      save();
+    }),
+  );
+
+  document.querySelector('[data-mark-all]')!.addEventListener('click', () => {
+    NOTIFICATIONS.forEach((n) => read.add(n.id));
+    save();
+    render();
+  });
+
+  render();
+</script>
+
+<style>
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .muted {
+    margin: 0;
+    font-size: 16px;
+    color: var(--ink-muted);
+  }
+
+  .head {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .head__text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 40px;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+  }
+
+  .list {
+    grid-column: span 8;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .filter {
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 99px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+    color: var(--ink);
+    font-weight: 700;
+    font-size: 16px;
+    cursor: pointer;
+  }
+
+  .filter[aria-pressed='true'] {
+    background: var(--mango);
+    box-shadow: 0 3px 0 var(--ink);
+  }
+
+  .group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .group[hidden],
+  .notif[hidden],
+  .empty[hidden] {
+    display: none;
+  }
+
+  .group__title {
+    margin: 8px 0 0;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+
+  .notif {
+    position: relative;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 16px 18px;
+    border-radius: 22px;
+    background: #fbf8f1;
+    border: 2.5px solid #d9cfbb;
+    text-decoration: none;
+    color: var(--ink);
+  }
+
+  .notif--unread {
+    background: var(--white);
+    border-color: var(--ink);
+  }
+
+  .notif__tile {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    border: 2px solid var(--ink);
+    box-sizing: border-box;
+  }
+
+  .notif__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .notif__top {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: baseline;
+  }
+
+  .notif__title {
+    font-weight: 800;
+  }
+
+  .notif__time {
+    flex: none;
+    color: var(--ink-muted);
+  }
+
+  .notif__body {
+    line-height: 1.45;
+    color: var(--ink-muted);
+  }
+
+  .notif__cta {
+    margin-top: 2px;
+    font-weight: 800;
+    color: var(--violet);
+  }
+
+  .notif__dot {
+    display: none;
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--coral);
+    border: 2.5px solid var(--ink);
+    box-sizing: border-box;
+  }
+
+  .notif--unread .notif__dot {
+    display: block;
+  }
+
+  .empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 40px;
+    border-radius: 28px;
+    border: 3px dashed #8a5800;
+    text-align: center;
+  }
+
+  .empty__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 24px;
+  }
+
+  .side {
+    grid-column: span 4;
+    align-self: start;
+    position: sticky;
+    top: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 24px;
+    border-radius: 28px;
+    background: var(--cream);
+    border: 2.5px solid var(--ink);
+  }
+
+  .side__top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .side__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 22px;
+  }
+
+  .side__text {
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 1023px) {
+    .side {
+      position: static;
+    }
+  }
+
+  @media (max-width: 639px) {
+    .head .btn {
+      width: 100%;
+    }
+
+    .notif {
+      padding: 14px;
+      gap: 12px;
+    }
+
+    .notif__top {
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .empty {
+      padding: 28px 16px;
+    }
+  }
+</style>

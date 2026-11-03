@@ -1,0 +1,103 @@
+---
+// Body of a "are you sure?" sheet (log out, delete statements, delete account). Put inside SheetPage;
+// the default slot holds any extra field and the action buttons.
+interface Props {
+  title: string;
+  text: string;
+  /** 24×24 stroke icon path */
+  icon: string;
+  tone?: 'neutral' | 'warn' | 'danger';
+}
+
+const { title, text, icon, tone = 'neutral' } = Astro.props;
+---
+
+<div class="confirm">
+  <span class={`confirm__icon confirm__icon--${tone}`} aria-hidden="true">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d={icon}></path>
+    </svg>
+  </span>
+  <h1 id="sheet-title" class="confirm__title">{title}</h1>
+  <p class="confirm__text">{text}</p>
+  <slot />
+</div>
+
+<style>
+  .confirm {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .confirm__icon {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 18px;
+    border: 2.5px solid var(--ink);
+    box-sizing: border-box;
+    background: var(--paper-deep);
+  }
+
+  .confirm__icon--warn {
+    background: var(--danger-bg);
+  }
+
+  .confirm__icon--danger {
+    background: var(--coral);
+  }
+
+  .confirm__title {
+    margin: 0;
+    padding-right: 40px;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 30px;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+  }
+
+  .confirm__text {
+    margin: 0;
+    line-height: 1.5;
+    color: var(--ink-muted);
+  }
+
+  .confirm :global(.confirm__actions) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .confirm :global(.confirm__primary) {
+    flex: 1;
+  }
+
+  .confirm :global(.confirm__primary--danger) {
+    background: var(--coral);
+  }
+
+  .confirm :global(.confirm__primary--danger:hover) {
+    background: var(--white);
+  }
+
+  .confirm :global(.confirm__primary:disabled) {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  @media (max-width: 639px) {
+    .confirm__title {
+      font-size: 26px;
+    }
+
+    .confirm :global(.confirm__actions) {
+      flex-direction: column;
+    }
+  }
+</style>

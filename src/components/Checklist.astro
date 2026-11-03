@@ -1,0 +1,179 @@
+---
+// Tick-off list of steps (ITR, PF transfer). Ticks are saved in the browser under `storageKey`.
+// Anything with data-checklist-count / data-checklist-bar = storageKey shows the progress, and the
+// list fires a "checklist:change" event ({ key, done, total }) so pages can react.
+interface Step {
+  title: string;
+  body: string;
+  tag?: string;
+}
+
+interface Props {
+  storageKey: string;
+  steps: Step[];
+  /** Indexes ticked before the user changes anything */
+  defaultDone?: number[];
+  label: string;
+}
+
+const { storageKey, steps, defaultDone = [], label } = Astro.props;
+---
+
+<ol class="checklist" aria-label={label} data-checklist={storageKey} data-default={JSON.stringify(defaultDone)}>
+  {
+    steps.map((s, i) => {
+      const done = defaultDone.includes(i);
+      return (
+        <li class:list={['step', { 'step--done': done }]} data-step={i}>
+          <button type="button" class="step__box" role="checkbox" aria-checked={done ? 'true' : 'false'} aria-label={`Step ${i + 1}: ${s.title}`}>
+            <svg class="step__tick" aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12l4 4 10-10" />
+            </svg>
+            <span class="num step__num">{i + 1}</span>
+          </button>
+          <div class="step__text">
+            <span class="step__title">{s.title}</span>
+            <span class="step__body">{s.body}</span>
+            {s.tag && <span class="step__tag">{s.tag}</span>}
+          </div>
+        </li>
+      );
+    })
+  }
+</ol>
+
+<script>
+  import { readLocal, writeLocal } from '../scripts/local-state';
+
+  document.querySelectorAll<HTMLElement>('[data-checklist]').forEach((list) => {
+    const key = list.dataset.checklist!;
+    const items = [...list.querySelectorAll<HTMLElement>('[data-step]')];
+    const done = new Set<number>(readLocal<number[]>(`checklist:${key}`, JSON.parse(list.dataset.default ?? '[]')));
+
+    function render() {
+      items.forEach((li, i) => {
+        const on = done.has(i);
+        li.classList.toggle('step--done', on);
+        li.querySelector('[role="checkbox"]')!.setAttribute('aria-checked', String(on));
+      });
+      const n = done.size;
+      document.querySelectorAll(`[data-checklist-count="${key}"]`).forEach((el) => (el.textContent = String(n)));
+      document.querySelectorAll<HTMLElement>(`[data-checklist-bar="${key}"]`).forEach((el) => {
+        el.style.width = `${(n / items.length) * 100}%`;
+        el.parentElement?.setAttribute('aria-valuenow', String(n));
+      });
+      list.dispatchEvent(new CustomEvent('checklist:change', { bubbles: true, detail: { key, done: n, total: items.length } }));
+    }
+
+    items.forEach((li, i) =>
+      li.querySelector('[role="checkbox"]')!.addEventListener('click', () => {
+        if (done.has(i)) done.delete(i);
+        else done.add(i);
+        writeLocal(`checklist:${key}`, [...done]);
+        render();
+      }),
+    );
+
+    render();
+  });
+</script>
+
+<style>
+  .checklist {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .step {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 18px;
+    border-radius: 22px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+    transition: border-color 0.2s;
+  }
+
+  .step--done {
+    border-color: var(--mint);
+  }
+
+  .step__box {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: var(--paper-deep);
+    border: 2.5px solid var(--ink);
+    color: var(--ink);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition:
+      transform 0.25s cubic-bezier(0.3, 1.8, 0.5, 1),
+      background 0.2s;
+  }
+
+  .step--done .step__box {
+    background: var(--mint);
+    transform: scale(1.06);
+  }
+
+  .step__tick,
+  .step--done .step__num {
+    display: none;
+  }
+
+  .step--done .step__tick {
+    display: block;
+  }
+
+  .step__num {
+    font-weight: 800;
+  }
+
+  .step__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-top: 2px;
+  }
+
+  .step__title {
+    font-weight: 800;
+  }
+
+  .step--done .step__title {
+    text-decoration: line-through;
+  }
+
+  .step__body {
+    line-height: 1.45;
+    color: var(--ink-muted);
+  }
+
+  .step__tag {
+    align-self: flex-start;
+    margin-top: 4px;
+    padding: 4px 10px;
+    border-radius: 99px;
+    background: #e2f8ef;
+    color: #0a6b4d;
+    font-weight: 800;
+  }
+
+  @media (max-width: 639px) {
+    .step {
+      padding: 14px;
+      gap: 12px;
+    }
+  }
+</style>
