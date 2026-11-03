@@ -106,13 +106,13 @@ const settings = [
     <section class="plan" aria-labelledby="planbox-h">
       <div class="plan__top">
         <h2 id="planbox-h" class="card__title">Your plan</h2>
-        <span class="plan__badge">Free</span>
+        <span class="plan__badge" data-plan-badge>Free</span>
       </div>
-      <p class="plan__text">
+      <p class="plan__text" data-plan-text>
         Salary explainer, offer face-off and the first ITR checklist stay free forever. The Coach plan adds Sunday check-ins, renewal alerts
         and unlimited chats for ₹19/week.
       </p>
-      <a href={routes.paywall} class="btn btn--mango btn--lg">See the Coach plan</a>
+      <a href={routes.paywall} class="btn btn--mango btn--lg" data-plan-cta>See the Coach plan</a>
     </section>
 
     <section class="card list" aria-label="Settings">
@@ -185,6 +185,8 @@ const settings = [
     type NotificationKey,
   } from '../../../scripts/profile-store';
   import { showToast } from '../../../scripts/toast';
+  import { routes } from '../../../lib/routes';
+  import { accessUntil, hasCoachPlan, loadSubscription, nextCharge, shortDate } from '../../../scripts/subscription-store';
 
   const p = loadProfile();
   const cmp = compareRegimes(p.ctc);
@@ -202,6 +204,21 @@ const settings = [
     '[data-fact="regime"]',
     cmp.monthlyGap < 1 ? 'Either (same in-hand)' : `${cmp.winner === 'new' ? 'New' : 'Old'} (saves ${inr(cmp.monthlyGap)}/mo)`,
   );
+
+  // Coach plan box
+  const sub = loadSubscription();
+  if (hasCoachPlan(sub)) {
+    set('[data-plan-badge]', 'Coach');
+    set(
+      '[data-plan-text]',
+      sub.status === 'cancelled'
+        ? `Cancelled. You keep Sunday check-ins and renewal alerts until ${shortDate(accessUntil(sub), true)}.`
+        : `Sunday check-ins, renewal alerts and unlimited chats, ₹19/week. Next charge ${shortDate(nextCharge())}.`,
+    );
+    const cta = document.querySelector<HTMLAnchorElement>('[data-plan-cta]')!;
+    cta.textContent = 'Manage my plan';
+    cta.href = routes.managePlan;
+  }
 
   // Notification switches
   document.querySelectorAll<HTMLButtonElement>('[data-toggle]').forEach((sw) => {

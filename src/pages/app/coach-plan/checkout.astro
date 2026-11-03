@@ -1,0 +1,369 @@
+---
+// Coach plan checkout: set up UPI autopay → approve → done.
+// TEST MODE: there's no payment provider yet, so no money moves and no request reaches any UPI app.
+import SheetPage from '../../../layouts/SheetPage.astro';
+import Handy from '../../../components/Handy.astro';
+import { routes } from '../../../lib/routes';
+import { PLAN_GST, PLAN_PRICE } from '../../../scripts/subscription-store';
+
+const methods = [
+  { id: 'app', label: 'UPI app on this phone', sub: 'Opens your UPI app to approve' },
+  { id: 'id', label: 'UPI ID', sub: 'We send a request to your UPI ID' },
+];
+---
+
+<SheetPage title="Checkout" active="home" closeHref={routes.paywall} width={560}>
+  <div class="checkout" data-checkout data-step="pay">
+    <p class="test-mode" role="note">
+      <b>Test mode.</b> No real payment is taken and nothing is sent to your UPI app. Real payments need a payment provider first.
+    </p>
+
+    <!-- 1 · Pay -->
+    <form class="step pop-in" data-step-panel="pay" novalidate>
+      <div class="intro">
+        <span class="tag">COACH PLAN</span>
+        <h1 id="sheet-title">Set up UPI autopay</h1>
+        <p class="muted">₹{PLAN_PRICE} every Monday. Cancel any time from Me; no questions.</p>
+      </div>
+      <div class="num bill">
+        <span>Coach plan, weekly</span><b>₹{PLAN_PRICE.toFixed(2)}</b>
+        <span class="muted">GST included</span><span class="muted">₹{PLAN_GST.toFixed(2)}</span>
+        <span class="bill__rule"></span>
+        <b>Today</b><b class="bill__total">₹{PLAN_PRICE.toFixed(2)}</b>
+        <span class="muted">Next charge</span><span class="muted" data-next-charge>Mon, 9 Nov</span>
+      </div>
+      <fieldset class="group">
+        <legend class="group__label">Pay with</legend>
+        <div class="methods" role="radiogroup" aria-label="Payment method">
+          {
+            methods.map((m, i) => (
+              <button type="button" role="radio" class="method" data-method={m.id} aria-checked={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? 0 : -1}>
+                <span class="method__dot" aria-hidden="true" />
+                <span class="method__text">
+                  <b>{m.label}</b>
+                  <span class="muted">{m.sub}</span>
+                </span>
+              </button>
+            ))
+          }
+        </div>
+      </fieldset>
+      <div class="group" data-upi-group hidden>
+        <label for="upi-id" class="group__label">Your UPI ID</label>
+        <div class="field"><input id="upi-id" type="text" placeholder="name@bank" autocomplete="off" autocapitalize="none" aria-describedby="upi-error" /></div>
+        <p class="error" id="upi-error" data-upi-error hidden>That doesn’t look like a UPI ID. It’s usually name@bank.</p>
+      </div>
+      <button type="submit" class="btn btn--mango btn--lg btn--block">
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11h14v10H5zM8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+        Approve ₹{PLAN_PRICE} autopay
+      </button>
+      <p class="muted">You’ll approve a mandate in your UPI app, capped at ₹{PLAN_PRICE} a week. Inhandy can’t charge more than that.</p>
+    </form>
+
+    <!-- 2 · Waiting for approval -->
+    <div class="step step--center pop-in" role="status" data-step-panel="wait" hidden>
+      <Handy mood="chai" size={120} decorative />
+      <h2 class="big">Approve it in your UPI app</h2>
+      <p class="num muted">We sent a request to <span data-upi-shown>your UPI app</span>. Expires in <span data-expires>5:00</span>.</p>
+      <div class="row">
+        <button type="button" class="btn btn--mango btn--lg" data-approved>I’ve approved it</button>
+        <button type="button" class="btn" data-back>Use another method</button>
+      </div>
+    </div>
+
+    <!-- 3 · Done -->
+    <div class="step step--center pop-in" role="status" data-step-panel="done" hidden>
+      <Handy mood="cheer" size={130} decorative />
+      <h2 class="big">You’re on the Coach plan!</h2>
+      <p class="muted">Your first Sunday check-in lands this weekend. <span data-receipt-line></span></p>
+      <div class="row">
+        <a href={routes.home} class="btn btn--mango btn--lg">Back to Home</a>
+        <a href={routes.managePlan} class="btn">Manage plan</a>
+      </div>
+    </div>
+  </div>
+</SheetPage>
+
+<script>
+  import {
+    PLAN_PRICE,
+    isValidUpiId,
+    loadSubscription,
+    nextCharge,
+    saveSubscription,
+    shortDate,
+  } from '../../../scripts/subscription-store';
+
+  const root = document.querySelector<HTMLElement>('[data-checkout]')!;
+  const form = root.querySelector<HTMLFormElement>('[data-step-panel="pay"]')!;
+  const upiInput = root.querySelector<HTMLInputElement>('#upi-id')!;
+  const methodBtns = [...root.querySelectorAll<HTMLButtonElement>('[data-method]')];
+  let method: 'app' | 'id' = 'app';
+  let timer = 0;
+
+  root.querySelector('[data-next-charge]')!.textContent = shortDate(nextCharge());
+
+  function showStep(step: 'pay' | 'wait' | 'done') {
+    root.dataset.step = step;
+    root.querySelectorAll<HTMLElement>('[data-step-panel]').forEach((p) => (p.hidden = p.dataset.stepPanel !== step));
+    window.clearInterval(timer);
+  }
+
+  function setMethod(m: 'app' | 'id') {
+    method = m;
+    methodBtns.forEach((b) => {
+      const on = b.dataset.method === m;
+      b.setAttribute('aria-checked', String(on));
+      b.tabIndex = on ? 0 : -1;
+    });
+    root.querySelector<HTMLElement>('[data-upi-group]')!.hidden = m !== 'id';
+  }
+
+  methodBtns.forEach((b, i) => {
+    b.addEventListener('click', () => setMethod(b.dataset.method as 'app' | 'id'));
+    // Radio-group keys: arrows move the choice
+    b.addEventListener('keydown', (e) => {
+      if (!['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+      e.preventDefault();
+      const next = methodBtns[(i + (e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : -1) + methodBtns.length) % methodBtns.length];
+      setMethod(next.dataset.method as 'app' | 'id');
+      next.focus();
+    });
+  });
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const err = root.querySelector<HTMLElement>('[data-upi-error]')!;
+    if (method === 'id' && !isValidUpiId(upiInput.value)) {
+      err.hidden = false;
+      upiInput.focus();
+      return;
+    }
+    err.hidden = true;
+    root.querySelector('[data-upi-shown]')!.textContent = method === 'id' ? upiInput.value.trim() : 'your UPI app';
+    showStep('wait');
+    // Request expiry countdown
+    let left = 300;
+    const el = root.querySelector('[data-expires]')!;
+    const tick = () => {
+      el.textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+      if (left-- <= 0) showStep('pay');
+    };
+    tick();
+    timer = window.setInterval(tick, 1000);
+  });
+
+  root.querySelector('[data-back]')!.addEventListener('click', () => showStep('pay'));
+
+  root.querySelector('[data-approved]')!.addEventListener('click', () => {
+    const today = new Date().toISOString();
+    const sub = loadSubscription();
+    saveSubscription({
+      status: 'active',
+      since: sub.status === 'free' || !sub.since ? today : sub.since,
+      method,
+      upiId: method === 'id' ? upiInput.value.trim() : undefined,
+      payments: [...sub.payments, { date: today, amount: PLAN_PRICE }],
+    });
+    // Test mode sends no email, so point to where the receipt actually is
+    root.querySelector('[data-receipt-line]')!.textContent = 'Your receipt is in Manage plan.';
+    showStep('done');
+  });
+
+  // Already on the plan: skip straight to the "you're in" screen
+  if (loadSubscription().status === 'active') {
+    root.querySelector('[data-receipt-line]')!.textContent = 'You’re already subscribed.';
+    showStep('done');
+  }
+</script>
+
+<style>
+  .checkout {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .test-mode {
+    margin: 0;
+    /* Leave room for the sheet's close button in the top-right corner */
+    margin-right: 44px;
+    padding: 10px 14px;
+    border-radius: 14px;
+    background: #eee9ff;
+    border: 2px dashed var(--violet);
+    line-height: 1.45;
+  }
+
+  .step {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .step[hidden] {
+    display: none;
+  }
+
+  .step--center {
+    align-items: center;
+    gap: 14px;
+    padding: 16px 0;
+    text-align: center;
+  }
+
+  .intro {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .tag {
+    align-self: flex-start;
+    padding: 4px 12px;
+    border-radius: 99px;
+    background: var(--ink);
+    color: var(--mango);
+    font-weight: 800;
+    letter-spacing: 0.04em;
+  }
+
+  h1,
+  .big {
+    margin: 8px 0 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 32px;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+  }
+
+  .big {
+    margin: 0;
+    font-size: 30px;
+  }
+
+  .muted {
+    margin: 0;
+    line-height: 1.5;
+    color: var(--ink-muted);
+  }
+
+  .bill {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 16px;
+    padding: 16px 18px;
+    border-radius: 18px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+  }
+
+  .bill__rule {
+    grid-column: 1 / -1;
+    height: 2px;
+    background: var(--line);
+  }
+
+  .bill__total {
+    font-size: 20px;
+  }
+
+  .group {
+    margin: 0;
+    padding: 0;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .group[hidden] {
+    display: none;
+  }
+
+  .group__label {
+    padding: 0;
+    margin-bottom: 2px;
+    font-weight: 700;
+  }
+
+  .methods {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .method {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 56px;
+    padding: 10px 14px;
+    border-radius: 16px;
+    background: var(--paper-deep);
+    border: 2.5px solid var(--ink);
+    color: var(--ink);
+    text-align: left;
+    font-size: 16px;
+    cursor: pointer;
+  }
+
+  .method[aria-checked='true'] {
+    background: var(--white);
+    border: 3px solid var(--mango);
+  }
+
+  .method__dot {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2.5px solid var(--ink);
+    box-sizing: border-box;
+    background: var(--white);
+  }
+
+  .method[aria-checked='true'] .method__dot {
+    background: var(--mango);
+  }
+
+  .method__text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .error {
+    margin: 0;
+    color: var(--danger);
+    font-weight: 700;
+  }
+
+  .error[hidden] {
+    display: none;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  @media (max-width: 639px) {
+    h1 {
+      font-size: 28px;
+    }
+
+    .big {
+      font-size: 26px;
+    }
+
+    .row {
+      flex-direction: column;
+      align-self: stretch;
+    }
+  }
+</style>

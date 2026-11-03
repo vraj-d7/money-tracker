@@ -73,7 +73,7 @@ const items: { id: AppSection; label: string; href: string; d: string; badge?: n
   </ul>
 
   <div class="appnav__foot">
-    <section class="nav-plus" aria-label="Coach plan">
+    <section class="nav-plus" aria-label="Coach plan" data-nav-plus>
       <p class="nav-plus__title">Sunday check-ins, every week</p>
       <p class="nav-plus__text">The Coach plan is ₹19/week. Cancel anytime.</p>
       <a href={routes.paywall} class="btn btn--mango nav-plus__cta">Try the Coach plan</a>
@@ -88,7 +88,7 @@ const items: { id: AppSection; label: string; href: string; d: string; badge?: n
       <span class="nav-me__avatar" aria-hidden="true" data-nav-initials>{demoUser.initials}</span>
       <span class="nav-text nav-me__text">
         <span class="nav-me__name" data-nav-name>{demoUser.name}</span>
-        <span class="nav-me__plan">{demoUser.plan}</span>
+        <span class="nav-me__plan" data-nav-plan>{demoUser.plan}</span>
       </span>
     </a>
   </div>
@@ -98,13 +98,18 @@ const items: { id: AppSection; label: string; href: string; d: string; badge?: n
   import { unreadCount } from '../data/demo-notifications';
   import { displayName, initials, loadProfile } from '../scripts/profile-store';
   import { readLocal } from '../scripts/local-state';
+  import { hasCoachPlan, loadSubscription } from '../scripts/subscription-store';
 
-  // Show the saved profile's name, and the live unread count, instead of the sample user
+  // Show the saved profile's name and plan, and the live unread count, instead of the sample user
   const p = loadProfile();
   const name = displayName(p);
+  const plan = hasCoachPlan(loadSubscription()) ? 'Coach plan' : 'Free plan';
   document.querySelectorAll('[data-nav-name]').forEach((el) => (el.textContent = name));
   document.querySelectorAll('[data-nav-initials]').forEach((el) => (el.textContent = initials(p)));
-  document.querySelectorAll('[data-nav-me]').forEach((el) => el.setAttribute('aria-label', `Me: ${name}, Free plan`));
+  document.querySelectorAll('[data-nav-plan]').forEach((el) => (el.textContent = plan));
+  document.querySelectorAll('[data-nav-me]').forEach((el) => el.setAttribute('aria-label', `Me: ${name}, ${plan}`));
+  // No need to advertise the Coach plan to someone already on it
+  document.querySelectorAll<HTMLElement>('[data-nav-plus]').forEach((el) => (el.hidden = plan === 'Coach plan'));
 
   const unread = unreadCount(readLocal<string[]>('notifications:read', []));
   document.querySelectorAll<HTMLElement>('[data-nav-item="notifications"]').forEach((link) => {
@@ -202,8 +207,9 @@ const items: { id: AppSection; label: string; href: string; d: string; badge?: n
     font-weight: 800;
   }
 
-  .nav-badge[hidden] {
-    display: none;
+  .nav-badge[hidden],
+  .nav-plus[hidden] {
+    display: none !important;
   }
 
   .appnav__foot {

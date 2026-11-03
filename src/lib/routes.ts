@@ -32,6 +32,8 @@ export const routes = {
   deleteStatements: '/app/me/delete-statements',
   deleteAccount: '/app/me/delete-account',
   paywall: '/app/coach-plan',
+  checkout: '/app/coach-plan/checkout',
+  managePlan: '/app/me/plan',
   share: '/app/share',
   brand: '/brand',
 } as const;

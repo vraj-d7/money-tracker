@@ -1,0 +1,360 @@
+---
+// Manage the Coach plan: details, receipts, cancel / keep. Reads the plan saved by checkout (test mode).
+import AppShell from '../../../layouts/AppShell.astro';
+import Handy from '../../../components/Handy.astro';
+import { routes } from '../../../lib/routes';
+import { PLAN_PRICE } from '../../../scripts/subscription-store';
+---
+
+<AppShell title="Your Coach plan" active="me">
+  <header class="head">
+    <a href={routes.me} class="back">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+      Back to Me
+    </a>
+    <h1>Your Coach plan</h1>
+    <p class="muted" data-since>You’re on the Free plan.</p>
+  </header>
+
+  <div class="manage" data-manage>
+    <!-- On Free: nothing to manage yet -->
+    <section class="card free" data-free hidden>
+      <Handy mood="chill" size={80} decorative />
+      <h2 class="card__title">You’re on Free</h2>
+      <p class="muted">The salary explainer, offer face-off and first ITR checklist are yours either way. Add Sunday check-ins and renewal alerts for ₹{PLAN_PRICE}/week.</p>
+      <a href={routes.paywall} class="btn btn--mango btn--lg">See the Coach plan</a>
+    </section>
+
+    <section class="card details" aria-labelledby="mp-h" data-details hidden>
+      <div class="details__top">
+        <h2 id="mp-h" class="card__title">Plan details</h2>
+        <span class="status" data-status>Active</span>
+      </div>
+      <dl class="num facts">
+        <div class="fact"><dt>Price</dt><dd>₹{PLAN_PRICE} a week</dd></div>
+        <div class="fact"><dt data-next-label>Next charge</dt><dd data-next>Mon, 9 Nov</dd></div>
+        <div class="fact"><dt>Paid with</dt><dd data-method>UPI autopay</dd></div>
+        <div class="fact"><dt>Paid so far</dt><dd data-paid>₹{PLAN_PRICE}</dd></div>
+      </dl>
+      <h3 class="receipts__title">Receipts</h3>
+      <ul class="receipts" data-receipts></ul>
+      <p class="muted small">Test mode: these are practice receipts. No money was charged.</p>
+    </section>
+
+    <aside class="side" data-side hidden>
+      <section class="card" aria-label="Cancel plan" data-cancel-box>
+        <div class="side__top">
+          <Handy mood="gasp" size={56} decorative />
+          <h2 class="card__title">Thinking of leaving?</h2>
+        </div>
+        <p class="muted">
+          You keep the Coach plan until <span data-until>Sunday, 8 Nov</span>. After that: no check-ins or renewal alerts, but the salary explainer
+          and offer face-off stay free.
+        </p>
+        <button type="button" class="btn cancel-btn" data-cancel>Cancel my plan</button>
+      </section>
+      <section class="card cancelled pop-in" role="status" data-cancelled-box hidden>
+        <h2 class="card__title">Plan cancelled</h2>
+        <p class="text">No more charges. Your UPI mandate is revoked, and you keep everything until <span data-until>Sunday, 8 Nov</span>.</p>
+        <button type="button" class="btn btn--mango btn--lg" data-resume>Keep my plan after all</button>
+      </section>
+    </aside>
+  </div>
+</AppShell>
+
+<script>
+  import { inr } from '../../../lib/format';
+  import {
+    accessUntil,
+    fullDate,
+    hasCoachPlan,
+    loadSubscription,
+    nextCharge,
+    saveSubscription,
+    shortDate,
+  } from '../../../scripts/subscription-store';
+
+  const root = document.querySelector<HTMLElement>('[data-manage]')!;
+  const sub = loadSubscription();
+
+  function render() {
+    const onPlan = hasCoachPlan(sub);
+    const cancelled = sub.status === 'cancelled';
+    root.querySelector<HTMLElement>('[data-free]')!.hidden = onPlan;
+    root.querySelector<HTMLElement>('[data-details]')!.hidden = !onPlan;
+    root.querySelector<HTMLElement>('[data-side]')!.hidden = !onPlan;
+    if (!onPlan) {
+      document.querySelector('[data-since]')!.textContent = 'You’re on the Free plan.';
+      return;
+    }
+
+    const until = accessUntil(sub);
+    document.querySelector('[data-since]')!.textContent = `Active since ${fullDate(new Date(sub.since!))}. You can cancel any time.`;
+    root.querySelector('[data-status]')!.textContent = cancelled ? `Ends ${shortDate(until).split(', ')[1]}` : 'Active';
+    root.querySelector('[data-status]')!.classList.toggle('status--ending', cancelled);
+    root.querySelector('[data-next-label]')!.textContent = cancelled ? 'Last day' : 'Next charge';
+    root.querySelector('[data-next]')!.textContent = cancelled ? shortDate(until) : shortDate(nextCharge());
+    root.querySelector('[data-method]')!.textContent = sub.method === 'id' && sub.upiId ? `UPI autopay · ${sub.upiId}` : 'UPI autopay · UPI app';
+    root.querySelector('[data-paid]')!.textContent = inr(sub.payments.reduce((s, p) => s + p.amount, 0));
+    root.querySelectorAll('[data-until]').forEach((el) => (el.textContent = shortDate(until, true)));
+    root.querySelector<HTMLElement>('[data-cancel-box]')!.hidden = cancelled;
+    root.querySelector<HTMLElement>('[data-cancelled-box]')!.hidden = !cancelled;
+
+    // Receipts, newest first, each downloadable as a small text file
+    const list = root.querySelector('[data-receipts]')!;
+    list.replaceChildren(
+      ...[...sub.payments].reverse().map((p, i) => {
+        const li = document.createElement('li');
+        li.className = 'receipt';
+        const label = document.createElement('span');
+        label.textContent = `${fullDate(new Date(p.date))} · Coach plan, weekly · ${inr(p.amount)}`;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'receipt__dl';
+        btn.textContent = 'Download';
+        btn.setAttribute('aria-label', `Download receipt for ${fullDate(new Date(p.date))}`);
+        btn.addEventListener('click', () => downloadReceipt(p, sub.payments.length - i));
+        li.append(label, btn);
+        return li;
+      }),
+    );
+  }
+
+  function downloadReceipt(p: { date: string; amount: number }, n: number) {
+    const text = [
+      'INHANDY · RECEIPT (TEST MODE, NO MONEY CHARGED)',
+      '',
+      `Receipt no.   INH-${String(n).padStart(4, '0')}`,
+      `Date          ${fullDate(new Date(p.date))}`,
+      'Item          Coach plan, weekly',
+      `Amount        ${inr(p.amount)} (GST included)`,
+      `Paid with     UPI autopay${sub.upiId ? ` · ${sub.upiId}` : ''}`,
+    ].join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+    a.download = `inhandy-receipt-${new Date(p.date).toISOString().slice(0, 10)}.txt`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  root.querySelector('[data-cancel]')!.addEventListener('click', () => {
+    sub.status = 'cancelled';
+    sub.cancelledOn = new Date().toISOString();
+    saveSubscription(sub);
+    render();
+  });
+
+  root.querySelector('[data-resume]')!.addEventListener('click', () => {
+    sub.status = 'active';
+    delete sub.cancelledOn;
+    saveSubscription(sub);
+    render();
+  });
+
+  render();
+</script>
+
+<style>
+  .muted {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--ink-muted);
+  }
+
+  .small {
+    font-size: 14px;
+  }
+
+  .head {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .back {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--violet);
+  }
+
+  h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 40px;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+  }
+
+  .manage {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    gap: 24px;
+    align-items: start;
+  }
+
+  .card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 24px;
+    border-radius: 28px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+  }
+
+  .card[hidden],
+  .side[hidden] {
+    display: none;
+  }
+
+  .details,
+  .free {
+    box-shadow: 0 6px 0 var(--ink);
+  }
+
+  .free {
+    align-items: flex-start;
+  }
+
+  .card__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 22px;
+  }
+
+  .details {
+    gap: 16px;
+  }
+
+  .details__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .status {
+    padding: 4px 12px;
+    border-radius: 99px;
+    background: #e2f8ef;
+    color: #0a6b4d;
+    border: 2px solid #0a6b4d;
+    font-weight: 800;
+  }
+
+  .status--ending {
+    background: var(--cream);
+    color: #8a5800;
+    border-color: #8a5800;
+  }
+
+  .facts {
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .fact {
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: var(--paper-deep);
+    min-width: 0;
+  }
+
+  .fact dt {
+    color: var(--ink-muted);
+  }
+
+  .fact dd {
+    margin: 2px 0 0;
+    font-weight: 800;
+    font-size: 18px;
+    overflow-wrap: anywhere;
+  }
+
+  .receipts__title {
+    margin: 8px 0 0;
+    font-size: 16px;
+    font-weight: 800;
+  }
+
+  .receipts {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .receipts :global(.receipt) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 0;
+    border-top: 2px dashed var(--line);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .receipts :global(.receipt__dl) {
+    flex: none;
+    min-height: 44px;
+    padding: 0 8px;
+    background: none;
+    border: none;
+    color: var(--violet);
+    font-weight: 700;
+    font-size: 16px;
+    cursor: pointer;
+  }
+
+  .side {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .side__top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .cancel-btn {
+    color: var(--danger);
+  }
+
+  .cancelled {
+    background: var(--cream);
+  }
+
+  .text {
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 1023px) {
+    .manage {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  @media (max-width: 639px) {
+    .facts {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .card {
+      padding: 20px;
+    }
+  }
+</style>
