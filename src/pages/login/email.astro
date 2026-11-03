@@ -7,7 +7,7 @@ import { routes } from '../../lib/routes';
 import { backendOn } from '../../scripts/backend';
 ---
 
-<SheetPage title="Continue with email" active="home" closeHref={routes.auth} width={520}>
+<SheetPage title="Continue with email" active="home" closeHref={backendOn ? routes.landing : routes.auth} width={520}>
   <form class="panel pop-in" data-email-form novalidate>
     <h1 id="sheet-title">Continue with email</h1>
     <p class="muted">We’ll email you a one-tap sign-in link. No password to remember.</p>
@@ -17,7 +17,13 @@ import { backendOn } from '../../scripts/backend';
       <p class="error" id="em-error" role="alert" data-error hidden>Enter a valid email address.</p>
     </div>
     <button type="submit" class="btn btn--mango btn--lg btn--block" data-send>Email me a link</button>
-    <a href={routes.auth} class="switch">Use my mobile number instead</a>
+    {
+      !backendOn && (
+        <a href={routes.auth} class="switch">
+          Use my mobile number instead
+        </a>
+      )
+    }
   </form>
 
   <div class="panel panel--sent pop-in" role="status" data-sent hidden>
@@ -41,7 +47,7 @@ import { backendOn } from '../../scripts/backend';
 </SheetPage>
 
 <script>
-  import { backendOn } from '../../scripts/backend';
+  import { backendOn, NEXT_KEY, safeNext } from '../../scripts/backend';
   import { routes } from '../../lib/routes';
 
   const form = document.querySelector<HTMLFormElement>('[data-email-form]')!;
@@ -50,6 +56,14 @@ import { backendOn } from '../../scripts/backend';
   const error = form.querySelector<HTMLElement>('[data-error]')!;
 
   const send = form.querySelector<HTMLButtonElement>('[data-send]')!;
+
+  // Already signed in: nothing to do here
+  if (backendOn) {
+    import('../../scripts/supabase').then(async ({ supabase }) => {
+      const { data } = await supabase!.auth.getSession();
+      if (data.session) window.location.replace(safeNext(new URLSearchParams(window.location.search).get('next')) ?? routes.home);
+    });
+  }
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -76,6 +90,14 @@ import { backendOn } from '../../scripts/backend';
           failed.status === 429 ? 'Too many tries. Wait a minute, then ask for a new link.' : 'We couldn’t send the email. Check your connection and try again.';
         error.hidden = false;
         return;
+      }
+      // The link may open in a new tab, so remember the page they were trying to reach
+      try {
+        const next = safeNext(new URLSearchParams(window.location.search).get('next'));
+        if (next) localStorage.setItem(NEXT_KEY, next);
+        else localStorage.removeItem(NEXT_KEY);
+      } catch {
+        // Storage blocked: they land on Home instead
       }
     }
     sent.querySelector('[data-sent-to]')!.textContent = mail;

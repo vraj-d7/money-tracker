@@ -37,6 +37,7 @@ import { routes } from '../../lib/routes';
   import { adoptAccount, pushNow } from '../../scripts/sync';
   import { loadProfile, saveProfile } from '../../scripts/profile-store';
   import { routes } from '../../lib/routes';
+  import { NEXT_KEY, safeNext } from '../../scripts/backend';
 
   const root = document.querySelector<HTMLElement>('[data-callback]')!;
   const show = (state: 'wait' | 'fail' | 'offline') =>
@@ -55,7 +56,15 @@ import { routes } from '../../lib/routes';
         if (!loadProfile().email && session.user.email) saveProfile({ email: session.user.email });
         await pushNow();
       }
-      window.location.replace(who === 'new' ? routes.onboarding : routes.home);
+      // New accounts set up their salary first; returning people go back to what they were opening
+      let next: string | null = null;
+      try {
+        next = safeNext(localStorage.getItem(NEXT_KEY));
+        localStorage.removeItem(NEXT_KEY);
+      } catch {
+        // Storage blocked
+      }
+      window.location.replace(who === 'new' ? routes.onboarding : (next ?? routes.home));
     } catch {
       show('offline');
     }

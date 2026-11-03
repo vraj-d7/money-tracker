@@ -1,6 +1,8 @@
 ---
 import '../styles/global.css';
 import OfflineScreen from '../components/OfflineScreen.astro';
+import { authStorageKey, backendOn, SIGNED_IN_PATHS } from '../scripts/backend';
+import { routes } from '../lib/routes';
 
 interface Props {
   title: string;
@@ -15,6 +17,21 @@ const { title } = Astro.props;
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
+    {
+      backendOn && (
+        // Before anything paints: no saved session on an app page → straight to sign-in.
+        // (The script at the end of the page double-checks the session is still valid.)
+        <script is:inline define:vars={{ key: authStorageKey, pattern: SIGNED_IN_PATHS.source, signIn: routes.emailAuth }}>
+          if (new RegExp(pattern).test(location.pathname)) {
+            let signedIn = false;
+            try {
+              signedIn = !!localStorage.getItem(key);
+            } catch {}
+            if (!signedIn) location.replace(signIn + '?next=' + encodeURIComponent(location.pathname + location.search));
+          }
+        </script>
+      )
+    }
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -26,9 +43,22 @@ const { title } = Astro.props;
     <slot />
     <OfflineScreen />
     <script>
-      import { backendOn } from '../scripts/backend';
-      // Signed-in data sync; the Supabase library only loads when a backend is set up
-      if (backendOn) import('../scripts/sync').then((m) => m.startSync());
+      import { backendOn, SIGNED_IN_PATHS } from '../scripts/backend';
+      import { routes } from '../lib/routes';
+
+      // The Supabase library only loads when a backend is set up
+      if (backendOn) {
+        // A saved session can still be expired or revoked: confirm it on app pages
+        if (SIGNED_IN_PATHS.test(location.pathname)) {
+          import('../scripts/supabase').then(async ({ supabase }) => {
+            const { data } = await supabase!.auth.getSession();
+            // Offline, a session that couldn't refresh isn't proof of being signed out
+            if (!data.session && navigator.onLine) location.replace(`${routes.emailAuth}?next=${encodeURIComponent(location.pathname + location.search)}`);
+          });
+        }
+        // Signed-in data sync
+        import('../scripts/sync').then((m) => m.startSync());
+      }
     </script>
   </body>
 </html>

@@ -14,6 +14,14 @@ const checks = [
 ---
 
 <HandySplit title="Sign up or log in" bubble="Hi! I’m Handy. I explain your salary, no jargon." moods={['happy', 'cheer', 'chai']}>
+  {
+    // With real accounts, phone codes aren't live yet, so sign-in happens by email
+    backendOn && (
+      <script is:inline define:vars={{ to: routes.emailAuth }}>
+        location.replace(to + location.search);
+      </script>
+    )
+  }
   <ul slot="aside-foot" class="checks">
     {
       checks.map((c) => (

@@ -38,7 +38,7 @@ Where Vraj is in the step-by-step guide:
 - Possible tidy-up later: `sync.ts` stores each value as a JSON string inside `data`, so the
   dashboard shows escaped `\"`. Storing parsed values would read better, but sync would need to
   accept both formats.
-- ✅ **Task #1 done (not committed yet): screens use the user's own details.**
+- ✅ **Task #1 done and pushed (`32d0098`): screens use the user's own details.**
   - The profile now starts blank (no "Aarav", no sample email or phone). The welcome screen asks
     "What should we call you?" (required; prefilled if phone sign-up already saved a name).
   - Home shows today's real date, the user's name, and their payday countdown, date and expected
@@ -53,8 +53,18 @@ Where Vraj is in the step-by-step guide:
   - New helpers in `profile-store.ts`: `paydayCycle`, `monthlyInhand`, `shortDate`, `longDate`.
   - Fixed an older bug: `nextPayday` could return a past date when a weekend shift moved a salary
     day across a month boundary. Checked against a brute-force count for all 64 settings over 400 days.
-- ⏳ **Next:** ask Vraj whether to commit and push. Then the remaining "before others use it"
-  items: **require sign-in** for app pages, and tidy the saved data format. Not touched yet: the
+- ✅ **Task #2 done (not committed yet): sign-in is required** when Supabase keys are set.
+  - `/app/*` and `/welcome` send signed-out visitors to `/login/email?next=…`. There's a fast check
+    in Base's `<head>` (is a session saved?) and a second check at the end of the page (is the
+    session still valid?). The second check is skipped while offline.
+  - `/login` (phone) redirects to `/login/email` in real mode; the "Use my mobile number" link is
+    hidden and the email page's close button goes to the landing page.
+  - After sign-in, returning people go back to the page they wanted (`inhandy-next` in
+    localStorage, same-site paths only); new accounts go to onboarding. A signed-in visit to
+    `/login/email` goes straight in.
+  - Test mode (no keys) is unchanged: everything stays open.
+  - Constants are in `src/scripts/backend.ts`: `SIGNED_IN_PATHS`, `authStorageKey`, `NEXT_KEY`, `safeNext`.
+- ⏳ **Next:** ask Vraj whether to commit and push. Then the last "before others use it" item: tidy the saved data format. Not touched yet: the
   PF/ITR tools and notifications still use sample content from `src/data/demo-tools.ts` and
   `demo-notifications.ts`.
 
@@ -130,6 +140,7 @@ Still pretend or test mode ("heavy tasks", roughly in order):
 
 ## History (newest first)
 
+- `32d0098`: Screens use the user's own details; SAMPLE tags; payday date fix.
 - `2fc6617`: This handoff file and CLAUDE.md.
 - `c88d882`: Supabase accounts (email link sign-in, sync, real log out and delete account).
 - `5665b09`: PDF password check, calendar reminders, restore data, test-mode notes on sign-in.
