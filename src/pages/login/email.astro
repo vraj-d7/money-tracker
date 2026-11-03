@@ -25,6 +25,8 @@ import { routes } from '../../lib/routes';
     <p class="muted">
       We sent a sign-in link to <b class="ink" data-sent-to></b>. It works for 15 minutes. Can’t find it? Check spam or promotions.
     </p>
+    <p class="test-note">Test mode: no email is sent yet. Continue straight in instead.</p>
+    <a href={routes.home} class="btn btn--mango">Continue (test mode)</a>
     <button type="button" class="btn" data-again>Use a different email</button>
   </div>
 </SheetPage>
@@ -57,6 +59,15 @@ import { routes } from '../../lib/routes';
 </script>
 
 <style>
+  .test-note {
+    margin: 0;
+    padding: 10px 14px;
+    border-radius: 14px;
+    background: var(--cream);
+    border: 2px dashed var(--ink);
+    font-weight: 700;
+  }
+
   .panel {
     display: flex;
     flex-direction: column;

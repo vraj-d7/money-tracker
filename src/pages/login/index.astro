@@ -75,6 +75,7 @@ const checks = [
           Sent to +91 <span data-phone-shown></span>.
           <button type="button" class="text-btn" data-change-number>Change number</button>
         </p>
+        <p class="test-note">Test mode: no text is sent yet. Type any 6 digits to continue.</p>
         <fieldset class="otp-group">
           <legend class="group__label">6-digit code</legend>
           <div class="otp" data-otp>
@@ -257,6 +258,15 @@ const checks = [
 </script>
 
 <style>
+  .test-note {
+    margin: 0;
+    padding: 10px 14px;
+    border-radius: 14px;
+    background: var(--cream);
+    border: 2px dashed var(--ink);
+    font-weight: 700;
+  }
+
   .checks {
     list-style: none;
     margin: 0;

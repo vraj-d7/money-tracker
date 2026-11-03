@@ -93,6 +93,7 @@ const first = picked[0];
   import { readLocal, writeLocal } from '../../../scripts/local-state';
   import { showToast } from '../../../scripts/toast';
   import { routes } from '../../../lib/routes';
+  import { daysFromNow, downloadReminder } from '../../../scripts/reminder';
 
   const root = document.querySelector<HTMLElement>('[data-guide]')!;
   const all = JSON.parse(root.dataset.subs!) as Subscription[];
@@ -196,7 +197,17 @@ const first = picked[0];
     render();
   });
 
-  root.querySelector('[data-remind]')!.addEventListener('click', () => showToast('We’ll remind you tomorrow at 7 PM.', { kind: 'info' }));
+  root.querySelector('[data-remind]')!.addEventListener('click', () => {
+    const s = picked.find((p) => p.id === cur);
+    if (!s) return;
+    downloadReminder({
+      title: `Cancel ${s.label}`,
+      details: `${inr(s.monthly)}/mo you’re not using. Steps: ${location.origin}${routes.cancelGuide}`,
+      at: daysFromNow(1, 19),
+      file: `inhandy-cancel-${s.id}.ics`,
+    });
+    showToast('Open the downloaded file to add tomorrow 7 PM to your calendar.', { kind: 'info' });
+  });
 
   render();
 </script>

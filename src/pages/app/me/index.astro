@@ -147,6 +147,17 @@ const settings = [
         </span>
         <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
       </button>
+      <input type="file" accept="application/json,.json" id="restore-file" hidden data-restore-file />
+      <button type="button" class="rowlink row" data-restore>
+        <span class="row__icon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v4h4"></path></svg>
+        </span>
+        <span class="row__text">
+          <span class="row__label">Restore my data</span>
+          <span class="muted">From a file you downloaded, e.g. on another device</span>
+        </span>
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+      </button>
       <a href={routes.deleteStatements} class="rowlink row">
         <span class="row__icon" aria-hidden="true">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d={icon.trash}></path></svg>
@@ -271,11 +282,41 @@ const settings = [
     showToast('Downloaded inhandy-my-data.json');
   });
 
+  // Put back everything from a "Download my data" file, replacing what's in this browser
+  const restoreInput = document.querySelector<HTMLInputElement>('[data-restore-file]')!;
+  document.querySelector('[data-restore]')!.addEventListener('click', () => restoreInput.click());
+  restoreInput.addEventListener('change', async () => {
+    const f = restoreInput.files?.[0];
+    restoreInput.value = '';
+    if (!f) return;
+    let saved: Record<string, unknown>;
+    try {
+      const parsed = JSON.parse(await f.text());
+      if (!parsed || typeof parsed.saved !== 'object' || parsed.saved === null) throw new Error('shape');
+      saved = parsed.saved;
+    } catch {
+      showToast('That’s not an Inhandy data file. Use inhandy-my-data.json from “Download my data”.', { kind: 'error' });
+      return;
+    }
+    if (!window.confirm('Replace what’s saved in this browser with the data in this file?')) return;
+    try {
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith('inhandy:'))
+        .forEach((k) => localStorage.removeItem(k));
+      Object.entries(saved).forEach(([k, v]) => localStorage.setItem(`inhandy:${k}`, typeof v === 'string' ? v : JSON.stringify(v)));
+    } catch {
+      showToast('This browser is blocking storage, so nothing could be restored.', { kind: 'error' });
+      return;
+    }
+    window.location.href = `${routes.me}?done=restored`;
+  });
+
   // Toasts left by the confirm screens (e.g. after deleting statements)
   const done = new URLSearchParams(window.location.search).get('done');
   const doneMessages: Record<string, string> = {
     statements: 'Statement history deleted. Your jars and goals are safe.',
     tax: 'Salary and tax details saved.',
+    restored: 'Your data is back. Everything from the file is restored.',
   };
   if (done && doneMessages[done]) {
     history.replaceState(null, '', window.location.pathname);

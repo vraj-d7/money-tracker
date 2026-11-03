@@ -84,15 +84,28 @@ const facts = [
         <span class="tips__title">If HR goes quiet</span>
       </div>
       <p class="muted">
-        Wait a week, then follow up. Still nothing after a month? You can raise a grievance on the EPFO grievance portal with your UAN. We’ll
-        remind you.
+        Wait a week, then follow up. Still nothing after a month? You can raise a grievance on the EPFO grievance portal with your UAN.
       </p>
+      <button type="button" class="btn" data-hr-remind>Remind me in a week</button>
     </section>
   </aside>
 </AppShell>
 
 <script>
   import { loadProfile } from '../../../scripts/profile-store';
+  import { daysFromNow, downloadReminder } from '../../../scripts/reminder';
+  import { showToast } from '../../../scripts/toast';
+  import { routes } from '../../../lib/routes';
+
+  document.querySelector('[data-hr-remind]')!.addEventListener('click', () => {
+    downloadReminder({
+      title: 'Follow up with HR about your PF transfer',
+      details: `No reply yet? Send a polite follow-up. Draft: ${location.origin}${routes.hrEmail}`,
+      at: daysFromNow(7, 10),
+      file: 'inhandy-pf-follow-up.ics',
+    });
+    showToast('Open the downloaded file to add the reminder to your calendar.', { kind: 'info' });
+  });
 
   const root = document.querySelector<HTMLElement>('[data-hr]')!;
   const drafts = JSON.parse(root.dataset.drafts!) as Record<'polite' | 'firm', string>;

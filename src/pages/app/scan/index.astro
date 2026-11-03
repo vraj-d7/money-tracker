@@ -62,18 +62,32 @@ const phases = [
         </div>
         <div class="group">
           <label for="pdf-pass" class="group__label">PDF password <span class="muted">(if your bank set one)</span></label>
-          <div class="field">
-            <input id="pdf-pass" type="password" autocomplete="off" placeholder="e.g. DDMMYYYY" />
+          <div class="field" data-pass-field>
+            <input id="pdf-pass" type="password" autocomplete="off" placeholder="e.g. DDMMYYYY" aria-describedby="pdf-pass-hint" />
             <button type="button" class="field__show" aria-label="Show password" data-show-pass>Show</button>
           </div>
-          <p class="muted">Often your date of birth or customer ID. Used once to open the file, never saved.</p>
+          <div class="alert" id="pdf-pass-err" role="alert" data-pass-error hidden>
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex: none"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 8v5M12 16.5v.5"></path></svg>
+            <span><b data-pass-error-title></b> <span data-pass-error-text></span></span>
+          </div>
+          <p class="muted" id="pdf-pass-hint">Often your date of birth or customer ID. Used once to open the file, never saved.</p>
+          <details class="pass-help" data-pass-help>
+            <summary>Help me find my password</summary>
+            <ul>
+              <li>Date of birth as <b>DDMMYYYY</b>, e.g. 07031999</li>
+              <li>First 4 letters of your name in capitals + DDMM, e.g. ANIK0703</li>
+              <li>Your customer ID or the last digits of your account number</li>
+              <li>Still stuck? The email your bank sent the statement with usually says the format.</li>
+            </ul>
+          </details>
         </div>
       </section>
 
       <aside class="upload-side">
-        <div class="talk">
-          <Handy mood="chill" size={96} decorative />
-          <p class="talk__bubble">Just the PDF. Not your net-banking login. Never.</p>
+        <div class="talk" data-talk data-mood="chill">
+          <span data-mood-for="chill"><Handy mood="chill" size={96} decorative /></span>
+          <span data-mood-for="gasp"><Handy mood="gasp" size={96} decorative /></span>
+          <p class="talk__bubble" data-talk-text>Just the PDF. Not your net-banking login. Never.</p>
         </div>
         <ul class="trust">
           {
@@ -183,6 +197,7 @@ const phases = [
   import { inr } from '../../../lib/format';
   import { SCAN_RESULTS, SCAN_STATUS } from '../../../data/demo-tools';
   import { readLocal, writeLocal } from '../../../scripts/local-state';
+  import { checkPdf } from '../../../scripts/pdf-check';
 
   const root = document.querySelector<HTMLElement>('[data-scan]')!;
   const fileInput = root.querySelector<HTMLInputElement>('[data-file-input]')!;
@@ -212,6 +227,7 @@ const phases = [
   function setFile(f: File | null) {
     const err = root.querySelector<HTMLElement>('[data-file-error]')!;
     err.hidden = true;
+    setPassError(null);
     if (f && !(f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'))) {
       err.textContent = 'That’s not a PDF. Download the statement from your bank as a PDF and try again.';
       err.hidden = false;
@@ -257,12 +273,56 @@ const phases = [
     showBtn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
   });
 
-  // Scanning (simulated) → results
-  startBtn.addEventListener('click', () => {
+  // Password problems show on the field, with Handy reacting on the side
+  const talk = root.querySelector<HTMLElement>('[data-talk]')!;
+  const talkText = talk.querySelector('[data-talk-text]')!;
+  const calmLine = talkText.textContent;
+  function setPassError(reason: 'needs-password' | 'wrong-password' | null) {
+    const box = root.querySelector<HTMLElement>('[data-pass-error]')!;
+    box.hidden = !reason;
+    root.querySelector('[data-pass-field]')!.classList.toggle('field--error', !!reason);
+    pass.setAttribute('aria-invalid', String(!!reason));
+    pass.setAttribute('aria-describedby', reason ? 'pdf-pass-err pdf-pass-hint' : 'pdf-pass-hint');
+    talk.dataset.mood = reason === 'wrong-password' ? 'gasp' : 'chill';
+    talkText.textContent = reason === 'wrong-password' ? 'Arre, that key didn’t fit. Happens to everyone.' : calmLine;
+    if (!reason) return;
+    box.querySelector('[data-pass-error-title]')!.textContent =
+      reason === 'wrong-password' ? 'That password didn’t open your PDF.' : 'This PDF is locked with a password.';
+    box.querySelector('[data-pass-error-text]')!.textContent =
+      reason === 'wrong-password' ? 'Check the format and try again.' : 'Type the password your bank set, then scan again.';
+    root.querySelector<HTMLDetailsElement>('[data-pass-help]')!.open = true;
+    pass.focus();
+  }
+  pass.addEventListener('input', () => {
+    if (pass.getAttribute('aria-invalid') === 'true') setPassError(null);
+  });
+
+  // Scanning → results. A picked file is really opened (in this browser) first;
+  // the results themselves are still the sample ones.
+  startBtn.addEventListener('click', async () => {
+    let opened = '';
+    if (file) {
+      startBtn.disabled = true;
+      startBtn.textContent = 'Opening your PDF…';
+      const res = await checkPdf(file, pass.value).catch(() => ({ ok: false, reason: 'unreadable' }) as const);
+      startBtn.disabled = false;
+      startBtn.textContent = 'Scan for subscriptions';
+      if (!res.ok) {
+        if (res.reason === 'unreadable') {
+          const err = root.querySelector<HTMLElement>('[data-file-error]')!;
+          err.textContent = 'We couldn’t read that PDF. It might be damaged. Download it from your bank again and retry.';
+          err.hidden = false;
+        } else {
+          setPassError(res.reason);
+        }
+        return;
+      }
+      opened = `Opened your statement: ${res.pages} ${res.pages === 1 ? 'page' : 'pages'}`;
+    }
     setPhase('scan');
     let i = 0;
     const status = root.querySelector('[data-status]')!;
-    status.textContent = SCAN_STATUS[0];
+    status.textContent = opened || SCAN_STATUS[0];
     window.clearInterval(statusTimer);
     statusTimer = window.setInterval(() => {
       i = (i + 1) % SCAN_STATUS.length;
@@ -563,6 +623,52 @@ const phases = [
 
   .field {
     padding: 4px 4px 4px 14px;
+  }
+
+  .field.field--error,
+  .field.field--error:focus-within {
+    border-color: var(--coral);
+    box-shadow: 0 0 0 4px rgba(255, 107, 91, 0.2);
+  }
+
+  .alert {
+    display: flex;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: var(--danger-bg);
+    color: var(--danger);
+    line-height: 1.45;
+  }
+
+  .alert[hidden] {
+    display: none;
+  }
+
+  .pass-help summary {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    font-weight: 700;
+    color: var(--violet);
+    cursor: pointer;
+  }
+
+  .pass-help ul {
+    margin: 0;
+    padding-left: 20px;
+    line-height: 1.6;
+    color: var(--ink-muted);
+  }
+
+  .talk > [data-mood-for] {
+    display: none;
+    line-height: 0;
+  }
+
+  .talk[data-mood='chill'] > [data-mood-for='chill'],
+  .talk[data-mood='gasp'] > [data-mood-for='gasp'] {
+    display: block;
   }
 
   .field__show {
