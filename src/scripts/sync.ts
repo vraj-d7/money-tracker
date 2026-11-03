@@ -25,12 +25,24 @@ const set = (k: string, v: string | null) => {
   }
 };
 
-export function snapshot(): Record<string, string> {
-  const out: Record<string, string> = {};
+// What's stored in user_data.data. Format 2 keeps each value as real JSON
+// ({"profile": {"name": "Priya", …}}) so it reads cleanly in the Supabase dashboard.
+// Rows saved before that (no `_format`) hold each value as a JSON string instead.
+const FORMAT = 2;
+type AccountData = Record<string, unknown>;
+
+export function snapshot(): AccountData {
+  const out: AccountData = { _format: FORMAT };
   try {
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i)!;
-      if (k.startsWith(PREFIX)) out[k.slice(PREFIX.length)] = localStorage.getItem(k)!;
+      if (!k.startsWith(PREFIX)) continue;
+      const raw = localStorage.getItem(k)!;
+      try {
+        out[k.slice(PREFIX.length)] = JSON.parse(raw);
+      } catch {
+        out[k.slice(PREFIX.length)] = raw; // not JSON (shouldn't happen): keep as text
+      }
     }
   } catch {
     // Storage blocked
@@ -38,13 +50,16 @@ export function snapshot(): Record<string, string> {
   return out;
 }
 
-/** Replace everything saved in this browser with `data` */
-export function applySnapshot(data: Record<string, string>) {
+/** Replace everything saved in this browser with the account's `data` (either format) */
+export function applySnapshot(data: AccountData) {
+  const { _format, ...items } = data;
   try {
     Object.keys(localStorage)
       .filter((k) => k.startsWith(PREFIX))
       .forEach((k) => localStorage.removeItem(k));
-    Object.entries(data).forEach(([k, v]) => localStorage.setItem(PREFIX + k, v));
+    Object.entries(items).forEach(([k, v]) =>
+      localStorage.setItem(PREFIX + k, _format === FORMAT ? JSON.stringify(v) : String(v)),
+    );
   } catch {
     // Storage blocked
   }
@@ -85,7 +100,7 @@ export async function pullNow(): Promise<boolean> {
   const { data, error } = await supabase!.from('user_data').select('data, updated_at').eq('user_id', id).maybeSingle();
   if (error || !data) return false;
   if (data.updated_at === get(SEEN)) return false;
-  applySnapshot(data.data as Record<string, string>);
+  applySnapshot(data.data as AccountData);
   set(SEEN, data.updated_at);
   set(DIRTY, null);
   return true;
@@ -101,7 +116,7 @@ export async function adoptAccount(): Promise<'returning' | 'new'> {
   const { data, error } = await supabase!.from('user_data').select('data, updated_at').eq('user_id', id).maybeSingle();
   if (error) throw error;
   if (data) {
-    applySnapshot(data.data as Record<string, string>);
+    applySnapshot(data.data as AccountData);
     set(SEEN, data.updated_at);
     set(DIRTY, null);
     return 'returning';

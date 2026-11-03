@@ -35,9 +35,6 @@ Where Vraj is in the step-by-step guide:
 - ✅ Authentication → Users lists **two accounts** (Vraj signed in with two different emails).
 - ✅ Table Editor → `user_data` has a row per account (one `{}`, one with the profile), and
   shows "4 RLS policies". **Supabase setup is complete and syncing works.**
-- Possible tidy-up later: `sync.ts` stores each value as a JSON string inside `data`, so the
-  dashboard shows escaped `\"`. Storing parsed values would read better, but sync would need to
-  accept both formats.
 - ✅ **Task #1 done and pushed (`32d0098`): screens use the user's own details.**
   - The profile now starts blank (no "Aarav", no sample email or phone). The welcome screen asks
     "What should we call you?" (required; prefilled if phone sign-up already saved a name).
@@ -53,7 +50,7 @@ Where Vraj is in the step-by-step guide:
   - New helpers in `profile-store.ts`: `paydayCycle`, `monthlyInhand`, `shortDate`, `longDate`.
   - Fixed an older bug: `nextPayday` could return a past date when a weekend shift moved a salary
     day across a month boundary. Checked against a brute-force count for all 64 settings over 400 days.
-- ✅ **Task #2 done (not committed yet): sign-in is required** when Supabase keys are set.
+- ✅ **Task #2 done and pushed (`ef8a8c6`): sign-in is required** when Supabase keys are set.
   - `/app/*` and `/welcome` send signed-out visitors to `/login/email?next=…`. There's a fast check
     in Base's `<head>` (is a session saved?) and a second check at the end of the page (is the
     session still valid?). The second check is skipped while offline.
@@ -64,7 +61,13 @@ Where Vraj is in the step-by-step guide:
     `/login/email` goes straight in.
   - Test mode (no keys) is unchanged: everything stays open.
   - Constants are in `src/scripts/backend.ts`: `SIGNED_IN_PATHS`, `authStorageKey`, `NEXT_KEY`, `safeNext`.
-- ⏳ **Next:** ask Vraj whether to commit and push. Then the last "before others use it" item: tidy the saved data format. Not touched yet: the
+- ✅ **Task #3 done (not committed yet): saved data is readable.** `sync.ts` now writes
+  `user_data.data` as format 2 (`{"_format": 2, "profile": {…}, "plan": {…}}`, real JSON values).
+  Rows without `_format` (the old JSON-string-per-value style) still load. An account converts the
+  next time it saves anything. Tested round trips for both formats.
+- ⏳ **Next:** ask Vraj whether to commit and push. All three "before others use it" items are done.
+  Next options: put it online (Netlify or Vercel; then add the live URL to Supabase Site URL and
+  Redirect URLs) or a bigger feature (statement reading, AI coach, phone sign-in, payments). Not touched yet: the
   PF/ITR tools and notifications still use sample content from `src/data/demo-tools.ts` and
   `demo-notifications.ts`.
 
@@ -140,6 +143,7 @@ Still pretend or test mode ("heavy tasks", roughly in order):
 
 ## History (newest first)
 
+- `ef8a8c6`: Require sign-in for the app when Supabase is set up.
 - `32d0098`: Screens use the user's own details; SAMPLE tags; payday date fix.
 - `2fc6617`: This handoff file and CLAUDE.md.
 - `c88d882`: Supabase accounts (email link sign-in, sync, real log out and delete account).
