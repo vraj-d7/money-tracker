@@ -16,7 +16,7 @@ const filters: ('all' | SpendCategory)[] = ['all', 'Food', 'Travel', 'Fun', 'Oth
     </a>
     <h1 class="num">This week: {inr(weekSpent)} of {inr(WEEK.plan)}</h1>
     <p class="muted">
-      {WEEK.range} · {under >= 0 ? `${inr(under)} under plan` : `${inr(-under)} over plan`}
+      {WEEK.range} · {under >= 0 ? `${inr(under)} under plan` : `${inr(-under)} over plan`} <span class="sample-tag">Sample</span>
     </p>
   </header>
 

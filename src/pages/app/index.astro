@@ -5,11 +5,15 @@ import { demoUser } from '../../data/demo-user';
 import { demoHome as home } from '../../data/demo-home';
 import { routes } from '../../lib/routes';
 import { inr } from '../../lib/format';
+import { DEFAULT_PROFILE, longDate, monthlyInhand, paydayCycle, shortDate } from '../../scripts/profile-store';
 
-const firstName = demoUser.name.split(' ')[0];
+// Rendered with the default profile at build time; the script below swaps in the saved profile and today's date
+const cycle = paydayCycle(DEFAULT_PROFILE);
+const expected = monthlyInhand(DEFAULT_PROFILE);
+const today = new Date();
 
 const RING = 314.16; // circumference of the r=50 payday ring
-const progress = (home.payday.cycleDays - home.payday.daysLeft) / home.payday.cycleDays;
+const progress = (cycle.cycleDays - cycle.daysLeft) / cycle.cycleDays;
 const ringOffset = (RING * (1 - progress)).toFixed(1);
 
 const { spent, plan } = home.week;
@@ -22,11 +26,11 @@ const streakDone = home.streak.done.filter(Boolean).length;
 <AppShell title="Home" active="home">
   <header class="head">
     <div class="head__who">
-      <span class="head__avatar" aria-hidden="true" data-initials>{demoUser.initials}</span>
+      <span class="head__avatar" aria-hidden="true" data-initials></span>
       <div class="head__text">
-        <span class="head__date head__date--long">{home.today.long}</span>
-        <span class="head__date head__date--short">{home.today.short}</span>
-        <h1>Hey <span data-first-name>{firstName}</span></h1>
+        <span class="head__date head__date--long" data-today-long>{longDate(today)}</span>
+        <span class="head__date head__date--short" data-today-short>{shortDate(today)}</span>
+        <h1>Hey <span data-first-name>there</span></h1>
       </div>
     </div>
     <div class="head__actions">
@@ -60,16 +64,16 @@ const streakDone = home.streak.done.filter(Boolean).length;
           data-ring-from={RING}></circle>
       </svg>
       <div class="payday__count">
-        <span class="num payday__days" data-count-from={home.payday.cycleDays} data-count-to={home.payday.daysLeft}>
-          {home.payday.daysLeft}
+        <span class="num payday__days" data-count-from={cycle.cycleDays} data-count-to={cycle.daysLeft} data-payday-days>
+          {cycle.daysLeft}
         </span>
-        <span class="payday__unit">days</span>
+        <span class="payday__unit" data-payday-unit>{cycle.daysLeft === 1 ? 'day' : 'days'}</span>
       </div>
     </div>
     <div class="payday__body">
       <p class="eyebrow">To payday</p>
-      <h2 class="payday__title">Salary aa rahi hai!</h2>
-      <p class="num payday__meta">{home.payday.date} · <b>{inr(home.payday.expected)}</b> expected</p>
+      <h2 class="payday__title" data-payday-title>Salary aa rahi hai!</h2>
+      <p class="num payday__meta"><span data-payday-date>{shortDate(cycle.next)}</span> · <b data-payday-expected>{inr(expected)}</b> expected</p>
       <a href={routes.plan} class="btn btn--ink payday__cta">
         <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2ED3A0" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"></path></svg>
         See salary-day plan
@@ -81,7 +85,7 @@ const streakDone = home.streak.done.filter(Boolean).length;
 
   <section class="card week" aria-labelledby="week-h">
     <div class="card__top">
-      <h2 id="week-h" class="card__title">This week</h2>
+      <h2 id="week-h" class="card__title">This week <span class="sample-tag">Sample</span></h2>
       <a href={routes.week} class="link">Details</a>
     </div>
     <p class="num week__total">
@@ -110,10 +114,11 @@ const streakDone = home.streak.done.filter(Boolean).length;
         <p class="note note--bad">{inr(-underBy)} over plan this week.</p>
       )
     }
+    <p class="sample-note">Sample spends. Yours show up here once Inhandy can read your bank statements.</p>
   </section>
 
   <section class="card renewals" aria-labelledby="renew-h">
-    <h2 id="renew-h" class="card__title">Upcoming renewals</h2>
+    <h2 id="renew-h" class="card__title">Upcoming renewals <span class="sample-tag">Sample</span></h2>
     <span class="num renewals__total">{inr(home.renewals.monthTotal)} this month</span>
     {
       home.renewals.items.map((r) => (
@@ -142,7 +147,7 @@ const streakDone = home.streak.done.filter(Boolean).length;
   <section class="card streak" aria-label="Check-in streak">
     <svg class="flick" aria-hidden="true" width="52" height="60" viewBox="0 0 24 28"><path d="M12 27c5 0 8.5-3.5 8.5-8.5 0-6-6-8.5-6-14.5-3.5 2.4-6 6-6 9.6-1.2-1.2-2.4-2.4-2.4-4.8-2.4 2.4-2.6 6-2.6 9.7C3.5 23.5 7 27 12 27z" fill="#FFB21E" stroke="#15131C" stroke-width="1.6" stroke-linejoin="round"></path><path d="M12 25c2.5 0 4.2-1.8 4.2-4.2 0-3-3-4.4-3-7.4-2 1.4-4.5 3.8-4.5 7 0 2.8 1.2 4.6 3.3 4.6z" fill="#FFD27A"></path></svg>
     <div class="streak__body">
-      <p class="streak__title">{home.streak.weeks}-week check-in streak</p>
+      <p class="streak__title">{home.streak.weeks}-week check-in streak <span class="sample-tag">Sample</span></p>
       <div class="streak__weeks" role="img" aria-label={`${streakDone} of ${home.streak.done.length} weeks done, this Sunday pending`}>
         {home.streak.done.map((d) => <span class:list={['streak__week', { 'streak__week--done': d }]} />)}
       </div>
@@ -176,12 +181,30 @@ const streakDone = home.streak.done.filter(Boolean).length;
 
 <script>
   import { inr } from '../../lib/format';
-  import { initials, loadProfile } from '../../scripts/profile-store';
+  import { initials, loadProfile, longDate, monthlyInhand, paydayCycle, shortDate } from '../../scripts/profile-store';
 
-  // Greet whoever is saved in the profile
+  // Greet whoever is saved in the profile, on today's date
   const profile = loadProfile();
+  const today = new Date();
   document.querySelector('[data-first-name]')!.textContent = profile.name || 'there';
   document.querySelector('[data-initials]')!.textContent = initials(profile);
+  document.querySelector('[data-today-long]')!.textContent = longDate(today);
+  document.querySelector('[data-today-short]')!.textContent = shortDate(today);
+
+  // Payday countdown from the saved salary day and CTC (set before the count-up below reads it)
+  const cycle = paydayCycle(profile, today);
+  const days = document.querySelector<HTMLElement>('[data-payday-days]')!;
+  days.dataset.countFrom = String(cycle.cycleDays);
+  days.dataset.countTo = String(cycle.daysLeft);
+  days.textContent = String(cycle.daysLeft);
+  document.querySelector('[data-payday-unit]')!.textContent = cycle.daysLeft === 1 ? 'day' : 'days';
+  document.querySelector('[data-payday-date]')!.textContent = cycle.daysLeft === 0 ? 'Today' : shortDate(cycle.next);
+  document.querySelector('[data-payday-expected]')!.textContent = inr(monthlyInhand(profile));
+  if (cycle.daysLeft === 0) document.querySelector('[data-payday-title]')!.textContent = 'Salary aa gayi! 🎉';
+  const ring = document.querySelector<SVGCircleElement>('[data-ring-to]')!;
+  const ringTo = (314.16 * (cycle.daysLeft / cycle.cycleDays)).toFixed(1);
+  ring.dataset.ringTo = ringTo;
+  ring.setAttribute('stroke-dashoffset', ringTo);
 
   // Chips fill the question box
   const input = document.getElementById('ask-input') as HTMLInputElement | null;
@@ -199,7 +222,7 @@ const streakDone = home.streak.done.filter(Boolean).length;
     const rings = [...document.querySelectorAll<SVGCircleElement>('[data-ring-to]')];
 
     const show = (el: HTMLElement, v: number) => {
-      el.textContent = el.dataset.format === 'inr' ? inr(v) : String(Math.max(1, Math.round(v)));
+      el.textContent = el.dataset.format === 'inr' ? inr(v) : String(Math.max(0, Math.round(v)));
     };
 
     counters.forEach((el) => show(el, Number(el.dataset.countFrom)));

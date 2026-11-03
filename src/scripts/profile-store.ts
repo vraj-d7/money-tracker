@@ -1,6 +1,7 @@
 // What sign-up, onboarding and the Me screens know about the user. Kept in this browser and synced to the account when signed in.
 import type { CoachMode } from '../lib/coach';
 import { noteChange } from './local-state';
+import { compareRegimes } from '../lib/salary';
 
 export type { CoachMode };
 
@@ -43,10 +44,10 @@ export interface Profile {
 }
 
 export const DEFAULT_PROFILE: Profile = {
-  name: 'Aarav',
-  lastName: 'R.',
-  email: 'aarav@example.com',
-  phone: '98765 43210',
+  name: '',
+  lastName: '',
+  email: '',
+  phone: '',
   ctc: 12,
   city: 'Bengaluru',
   payday: 7,
@@ -82,26 +83,39 @@ export function saveProfile(patch: Partial<Profile>): void {
 }
 
 export function initials(p: Pick<Profile, 'name' | 'lastName'>): string {
-  return ((p.name[0] ?? '') + (p.lastName[0] ?? '')).toUpperCase() || '?';
+  return ((p.name[0] ?? '') + (p.lastName[0] ?? '')).toUpperCase() || '🙂';
 }
 
 export function displayName(p: Pick<Profile, 'name' | 'lastName'>): string {
   return [p.name, p.lastName].filter(Boolean).join(' ') || 'You';
 }
 
+/** The salary date for month `m` of year `y` (m may run past 0–11), moved off weekends */
+function paydayIn(y: number, m: number, payday: Profile['payday'], shift: Profile['paydayShift']): Date {
+  const last = new Date(y, m + 1, 0).getDate();
+  const d = new Date(y, m, payday === 'last' ? last : Math.min(payday, last));
+  // Weekend: last working day always steps back; a fixed date follows the user's choice
+  const step = payday === 'last' || shift === 'before' ? -1 : 1;
+  while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + step);
+  return d;
+}
+
 /** Next salary date on or after today */
 export function nextPayday(payday: Profile['payday'], today = new Date(), shift: Profile['paydayShift'] = 'before'): Date {
-  const pick = (y: number, m: number) => {
-    const last = new Date(y, m + 1, 0).getDate();
-    const d = new Date(y, m, payday === 'last' ? last : Math.min(payday, last));
-    // Weekend: last working day always steps back; a fixed date follows the user's choice
-    const step = payday === 'last' || shift === 'before' ? -1 : 1;
-    while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + step);
-    return d;
-  };
   const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const thisMonth = pick(start.getFullYear(), start.getMonth());
-  return thisMonth >= start ? thisMonth : pick(start.getFullYear(), start.getMonth() + 1);
+  // A weekend shift can move a salary day into the next or previous month, so look one month either side
+  for (let m = start.getMonth() - 1; ; m++) {
+    const d = paydayIn(start.getFullYear(), m, payday, shift);
+    if (d >= start) return d;
+  }
+}
+
+/** Last salary date before the given day */
+function previousPayday(payday: Profile['payday'], before: Date, shift: Profile['paydayShift']): Date {
+  for (let m = before.getMonth() + 1; ; m--) {
+    const d = paydayIn(before.getFullYear(), m, payday, shift);
+    if (d < before) return d;
+  }
 }
 
 export function daysUntil(date: Date, today = new Date()): number {
@@ -109,8 +123,33 @@ export function daysUntil(date: Date, today = new Date()): number {
   return Math.round((date.getTime() - start.getTime()) / 86400000);
 }
 
+/** Where today sits between the last salary day and the next one */
+export function paydayCycle(p: Pick<Profile, 'payday' | 'paydayShift'>, today = new Date()) {
+  const next = nextPayday(p.payday, today, p.paydayShift);
+  const prev = previousPayday(p.payday, next, p.paydayShift);
+  return { next, daysLeft: daysUntil(next, today), cycleDays: Math.max(1, daysUntil(next, prev)) };
+}
+
+/** Monthly take-home for the saved CTC, under whichever tax regime leaves more */
+export function monthlyInhand(p: Pick<Profile, 'ctc'>): number {
+  const cmp = compareRegimes(p.ctc);
+  return Math.round(cmp[cmp.winner].inhand / 12);
+}
+
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const LONG_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const LONG_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+/** "Sat, 7 Nov" */
+export function shortDate(d: Date): string {
+  return `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+}
+
+/** "Saturday, 7 November" */
+export function longDate(d: Date): string {
+  return `${LONG_DAYS[d.getDay()]}, ${d.getDate()} ${LONG_MONTHS[d.getMonth()]}`;
+}
 
 /** "Sat, 7 Nov (4 days)" */
 export function describeNextPayday(p: Pick<Profile, 'payday' | 'paydayShift'>, today = new Date()): string {

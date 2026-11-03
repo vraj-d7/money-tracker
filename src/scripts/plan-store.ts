@@ -1,5 +1,5 @@
 // Keeps the user's plan (jar split + goals) in this browser, synced to the account when signed in.
-import { DEFAULT_GOALS, DEFAULT_JARS, type Goal } from '../data/demo-plan';
+import { DEFAULT_JARS, type Goal } from '../data/demo-plan';
 import { noteChange } from './local-state';
 
 const KEY = 'inhandy:plan';
@@ -13,7 +13,8 @@ export interface PlanState {
 function defaults(): PlanState {
   return {
     jars: Object.fromEntries(DEFAULT_JARS.map((j) => [j.id, j.pct])),
-    goals: DEFAULT_GOALS.map((g) => ({ ...g })),
+    // Everyone starts with no goals and adds their own
+    goals: [],
   };
 }
 

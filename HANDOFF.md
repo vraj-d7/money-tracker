@@ -20,21 +20,43 @@ Where Vraj is in the step-by-step guide:
 - ✅ Part 1: created the Supabase account, the organization **Inhandy** (Free plan) and the project
   **inhandy**. The region came out as **Central EU (Frankfurt)** instead of Mumbai; that's fine
   for testing, but it may be worth a Mumbai project before real users.
-- ⏳ **Part 2 (current step):** in Supabase, open **SQL Editor**, paste the whole of
-  [`supabase/schema.sql`](supabase/schema.sql), click **Run**, and expect *"Success. No rows returned"*.
-  Vraj was asked to send a screenshot of the result.
-- ⬜ Part 3: **Authentication → URL Configuration**: set **Site URL** to `http://localhost:4322` and
-  add `http://localhost:4322/auth/callback` under **Redirect URLs**.
-- ⬜ Part 4: from **Project Settings → API**, copy the **anon / publishable** key (never the
-  `service_role` / secret key). The Project URL is `https://brpogrvbvethcbaimpgv.supabase.co`.
-- ⬜ Then Claude creates `.env` in the project folder (it's git-ignored, never pushed):
-  ```
-  PUBLIC_SUPABASE_URL=https://brpogrvbvethcbaimpgv.supabase.co
-  PUBLIC_SUPABASE_ANON_KEY=<anon key>
-  ```
-- ⬜ Then Claude checks the table and the `delete_my_account` function respond, restarts the dev
-  server so it picks up `.env`, and has Vraj test a real email sign-in on `/login/email`
-  (Vraj types their own email; the link should land on `/auth/callback`).
+- ✅ Part 2: Vraj ran [`supabase/schema.sql`](supabase/schema.sql) in the SQL Editor and said it
+  was done (no screenshot of the result, so confirm the `user_data` table exists once `.env` is set).
+- ✅ Part 3: Site URL is `http://localhost:4322` and Redirect URLs has
+  `http://localhost:4322/auth/callback` (confirmed from a screenshot).
+- ✅ Part 4: `.env` is created in the project folder with the URL and the **publishable** key.
+  It's git-ignored and was never pushed; if it's missing on another machine, Vraj can copy the
+  publishable key again from Project Settings → API Keys.
+- ✅ Checked from outside: the `user_data` table answers (empty for signed-out visitors),
+  `delete_my_account` refuses signed-out callers, and email sign-in is enabled.
+- ✅ The dev server was restarted with `.env`; `/login/email` now runs in real mode, with no test-mode button.
+- ✅ **First real sign-in worked**: Vraj signed in with their email in Chrome, opened the link
+  and reached the app.
+- ✅ Authentication → Users lists **two accounts** (Vraj signed in with two different emails).
+- ✅ Table Editor → `user_data` has a row per account (one `{}`, one with the profile), and
+  shows "4 RLS policies". **Supabase setup is complete and syncing works.**
+- Possible tidy-up later: `sync.ts` stores each value as a JSON string inside `data`, so the
+  dashboard shows escaped `\"`. Storing parsed values would read better, but sync would need to
+  accept both formats.
+- ✅ **Task #1 done (not committed yet): screens use the user's own details.**
+  - The profile now starts blank (no "Aarav", no sample email or phone). The welcome screen asks
+    "What should we call you?" (required; prefilled if phone sign-up already saved a name).
+  - Home shows today's real date, the user's name, and their payday countdown, date and expected
+    pay from their saved payday and CTC.
+  - Plan, Edit plan and SIP use the user's own monthly take-home and next payday. New users start
+    with **no goals** (the sample goals were removed).
+  - Salary explained opens on the user's CTC and their better tax regime.
+  - The sidebar, Me and first-day screens no longer pre-render sample details.
+  - Still sample data, now marked with a dashed **SAMPLE** tag: the weekly spends, renewals and
+    check-in streak (Home), the Week page, the Sunday recap, and the payday streak (Plan). These
+    need real statement reading (heavy task #4).
+  - New helpers in `profile-store.ts`: `paydayCycle`, `monthlyInhand`, `shortDate`, `longDate`.
+  - Fixed an older bug: `nextPayday` could return a past date when a weekend shift moved a salary
+    day across a month boundary. Checked against a brute-force count for all 64 settings over 400 days.
+- ⏳ **Next:** ask Vraj whether to commit and push. Then the remaining "before others use it"
+  items: **require sign-in** for app pages, and tidy the saved data format. Not touched yet: the
+  PF/ITR tools and notifications still use sample content from `src/data/demo-tools.ts` and
+  `demo-notifications.ts`.
 
 ## About Vraj (how to work with them)
 
@@ -108,6 +130,7 @@ Still pretend or test mode ("heavy tasks", roughly in order):
 
 ## History (newest first)
 
+- `2fc6617`: This handoff file and CLAUDE.md.
 - `c88d882`: Supabase accounts (email link sign-in, sync, real log out and delete account).
 - `5665b09`: PDF password check, calendar reminders, restore data, test-mode notes on sign-in.
 - `e0cfa22`: States and errors (404, offline, scan empty state, celebration).

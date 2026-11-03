@@ -82,12 +82,12 @@ const items: { id: AppSection; label: string; href: string; d: string; badge?: n
       href={routes.me}
       class:list={['navlink', 'nav-me', { 'navlink--me-on': active === 'me' }]}
       aria-current={active === 'me' ? 'page' : undefined}
-      aria-label={`Me: ${demoUser.name}, ${demoUser.plan}`}
+      aria-label={`Me, ${demoUser.plan}`}
       data-nav-me
     >
-      <span class="nav-me__avatar" aria-hidden="true" data-nav-initials>{demoUser.initials}</span>
+      <span class="nav-me__avatar" aria-hidden="true" data-nav-initials></span>
       <span class="nav-text nav-me__text">
-        <span class="nav-me__name" data-nav-name>{demoUser.name}</span>
+        <span class="nav-me__name" data-nav-name>Me</span>
         <span class="nav-me__plan" data-nav-plan>{demoUser.plan}</span>
       </span>
     </a>

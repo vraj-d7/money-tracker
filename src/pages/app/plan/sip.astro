@@ -29,7 +29,7 @@ const steps = [
     <p class="muted">A SIP (systematic investment plan) puts a fixed amount into a mutual fund every month, automatically.</p>
   </header>
 
-  <section class="card amount" aria-label="Pick an amount" data-sip data-inhand={MONTHLY_INHAND}>
+  <section class="card amount" aria-label="Pick an amount" data-sip>
     <div class="amount__top">
       <label for="sip-amt" class="amount__label">Monthly amount</label>
       <span class="num amount__value" data-amt>{inr(start)}</span>
@@ -46,7 +46,7 @@ const steps = [
       style={`--p: ${(((start - 500) / 9500) * 100).toFixed(1)}%; --c: var(--mint)`}
     />
     <p class="num muted">
-      That’s <span data-pct>{((start / MONTHLY_INHAND) * 100).toFixed(1)}%</span> of your in-hand pay. Your SIP jar already holds {inr(sipJar)} a month.
+      That’s <span data-pct>{((start / MONTHLY_INHAND) * 100).toFixed(1)}%</span> of your in-hand pay. Your SIP jar already holds <span data-sip-jar>{inr(sipJar)}</span> a month.
     </p>
     <div class="num proj">
       {
@@ -93,11 +93,16 @@ const steps = [
 <script>
   import { inr } from '../../../lib/format';
   import { sipProjection } from '../../../lib/sip';
+  import { loadProfile, monthlyInhand } from '../../../scripts/profile-store';
+  import { loadPlan } from '../../../scripts/plan-store';
 
   const box = document.querySelector<HTMLElement>('[data-sip]');
   if (box) {
-    const inhand = Number(box.dataset.inhand);
+    // The user's own take-home and SIP jar
+    const inhand = monthlyInhand(loadProfile());
+    box.querySelector('[data-sip-jar]')!.textContent = inr((inhand * (loadPlan().jars.sip ?? 0)) / 100);
     const input = box.querySelector<HTMLInputElement>('#sip-amt')!;
+    box.querySelector('[data-pct]')!.textContent = ((parseInt(input.value, 10) / inhand) * 100).toFixed(1) + '%';
 
     input.addEventListener('input', () => {
       const v = parseInt(input.value, 10);

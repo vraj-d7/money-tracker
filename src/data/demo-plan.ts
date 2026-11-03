@@ -1,4 +1,5 @@
-// Starting salary-day plan from the designs. Edits made in the app are kept in the browser (scripts/plan-store.ts).
+// Starting jar split, plus values used to pre-render the plan pages before the saved profile loads.
+// Edits are saved by scripts/plan-store.ts.
 import type { GoalIcon } from '../lib/goal-icons';
 
 export const MONTHLY_INHAND = 85395;
@@ -27,11 +28,6 @@ export interface Goal {
   target: number;
   saved: number;
 }
-
-export const DEFAULT_GOALS: Goal[] = [
-  { id: 'emer', label: 'Emergency fund', sub: '3 months of expenses · on track for Jun 2027', icon: 'shield', target: 120000, saved: 42000 },
-  { id: 'trip', label: 'Goa trip with the gang', sub: 'Two taps away. Tap “Add ₹1,000”!', icon: 'plane', target: 25000, saved: 23000 },
-];
 
 export const nextPayday = { label: 'Sat, 7 Nov', short: '7 Nov' };
 export const paydayStreak = 4;

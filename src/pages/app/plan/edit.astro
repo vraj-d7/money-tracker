@@ -10,7 +10,7 @@ const freePct = 100 - DEFAULT_JARS.reduce((s, j) => s + j.pct, 0);
 <SheetPage title="Edit plan" active="plan" closeHref={routes.plan}>
   <div class="intro">
     <h1 id="sheet-title">Edit your salary-day plan</h1>
-    <p class="num muted">Split {inr(MONTHLY_INHAND)} across your jars. What’s left is yours to spend.</p>
+    <p class="num muted">Split <span data-inhand>{inr(MONTHLY_INHAND)}</span> across your jars. What’s left is yours to spend.</p>
   </div>
 
   {
@@ -54,10 +54,13 @@ const freePct = 100 - DEFAULT_JARS.reduce((s, j) => s + j.pct, 0);
 <script>
   import { inr } from '../../../lib/format';
   import { routes } from '../../../lib/routes';
-  import { DEFAULT_JARS, MONTHLY_INHAND } from '../../../data/demo-plan';
+  import { DEFAULT_JARS } from '../../../data/demo-plan';
+  import { loadProfile, monthlyInhand } from '../../../scripts/profile-store';
   import { loadPlan, savePlan } from '../../../scripts/plan-store';
 
   const state = loadPlan();
+  const inhand = monthlyInhand(loadProfile());
+  document.querySelector('[data-inhand]')!.textContent = inr(inhand);
   const save = document.querySelector<HTMLButtonElement>('[data-save]')!;
 
   function render() {
@@ -67,14 +70,14 @@ const freePct = 100 - DEFAULT_JARS.reduce((s, j) => s + j.pct, 0);
       total += pct;
       const row = document.querySelector<HTMLElement>(`[data-jar="${j.id}"]`)!;
       const input = row.querySelector<HTMLInputElement>('input')!;
-      const amt = inr((MONTHLY_INHAND * pct) / 100);
+      const amt = inr((inhand * pct) / 100);
       input.value = String(pct);
       input.style.setProperty('--p', ((pct / 50) * 100).toFixed(1) + '%');
       input.setAttribute('aria-valuetext', `${pct}%, ${amt}`);
       row.querySelector('[data-val]')!.textContent = `${pct}% · ${amt}`;
     }
     const over = total > 100;
-    const free = (MONTHLY_INHAND * (100 - total)) / 100;
+    const free = (inhand * (100 - total)) / 100;
     document.querySelector<HTMLElement>('[data-free]')!.classList.toggle('free--over', over);
     document.querySelector('[data-free-label]')!.textContent = over
       ? `Over by ${total - 100}%. Lower a jar to save.`

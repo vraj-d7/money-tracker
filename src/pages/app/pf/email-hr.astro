@@ -114,7 +114,8 @@ const facts = [
   const body = root.querySelector<HTMLTextAreaElement>('#hr-body')!;
   const copyLabel = root.querySelector('[data-copy-label]')!;
   const mailto = root.querySelector<HTMLAnchorElement>('[data-mailto]')!;
-  const name = loadProfile().name || 'Aarav';
+  const me = loadProfile();
+  const name = [me.name, me.lastName].filter(Boolean).join(' ') || '[Your name]';
   let edited = false;
 
   function updateMailto() {

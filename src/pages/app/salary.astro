@@ -162,12 +162,14 @@ const ticks = [2, 10, 20, 50, 100].map((l) => ({
 <script>
   import { inr } from '../../lib/format';
   import { routes } from '../../lib/routes';
+  import { loadProfile } from '../../scripts/profile-store';
   import {
     CTC_STEPS,
     FLOW_ROWS,
     calcSalary,
     compareRegimes,
     regimeLine,
+    stepIndexOf,
     taxExplainer,
     type Regime,
   } from '../../lib/salary';
@@ -280,6 +282,20 @@ const ticks = [2, 10, 20, 50, 100].map((l) => ({
         open = open === row.dataset.row ? null : row.dataset.row!;
         render();
       });
+    }
+
+    // Open on the user's own CTC and their better regime (the page is pre-rendered for ₹12L, new regime)
+    const profile = loadProfile();
+    const ownIdx = stepIndexOf(profile.ctc);
+    const ownRegime = compareRegimes(CTC_STEPS[ownIdx]).winner;
+    if (ownIdx !== idx || ownRegime !== regime) {
+      idx = ownIdx;
+      // Jump straight to the user's number instead of counting up from the sample one
+      shownMonthly = calcSalary(CTC_STEPS[idx], ownRegime).inhand / 12;
+      $('[data-inhand]')!.textContent = inr(shownMonthly);
+      const regimeChanged = ownRegime !== regime;
+      regime = ownRegime;
+      render(regimeChanged);
     }
   }
 </script>

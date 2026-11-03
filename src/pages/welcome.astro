@@ -48,6 +48,13 @@ const modes: { id: string; label: string; mood: HandyMood; sample: string }[] = 
 
       <section class="ob__step" data-panel="0">
         <h1>Let’s start with your salary</h1>
+        <div class="group">
+          <label for="ob-name" class="group__label">What should we call you?</label>
+          <div class="field">
+            <input id="ob-name" type="text" placeholder="Your first name" autocomplete="given-name" maxlength="40" aria-describedby="ob-name-err" />
+          </div>
+          <p class="error" id="ob-name-err" role="alert" data-name-error hidden>Add your first name so Handy knows who to cheer for.</p>
+        </div>
         <div class="ctc-card">
           <div class="ctc-card__top">
             <label for="ob-ctc">Your CTC</label>
@@ -114,7 +121,7 @@ const modes: { id: string; label: string; mood: HandyMood; sample: string }[] = 
 <script>
   import { routes } from '../lib/routes';
   import { CTC_STEPS } from '../lib/salary';
-  import { daysUntil, nextPayday, saveProfile, type CoachMode, type Profile } from '../scripts/profile-store';
+  import { daysUntil, loadProfile, nextPayday, saveProfile, type CoachMode, type Profile } from '../scripts/profile-store';
 
   const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const BUBBLES = [
@@ -130,7 +137,20 @@ const modes: { id: string; label: string; mood: HandyMood; sample: string }[] = 
   const bubble = document.querySelector('[data-bubble]');
   const handyBox = document.querySelector<HTMLElement>('[data-handy-box]');
 
-  const answers: Omit<Profile, 'name'> = { ctc: 12, city: 'Bengaluru', payday: 7, coachMode: 'honest' };
+  const answers: Pick<Profile, 'name' | 'ctc' | 'city' | 'payday' | 'coachMode'> = {
+    name: '',
+    ctc: 12,
+    city: 'Bengaluru',
+    payday: 7,
+    coachMode: 'honest',
+  };
+
+  // Phone sign-up already asked for a name; start from it
+  const nameInput = root.querySelector<HTMLInputElement>('#ob-name')!;
+  nameInput.value = loadProfile().name;
+  nameInput.addEventListener('input', () => {
+    if (nameInput.value.trim()) root.querySelector<HTMLElement>('[data-name-error]')!.hidden = true;
+  });
   let step = 0;
 
   const ctcLabel = (l: number) => (l >= 100 ? '₹1Cr' : `₹${l}L`);
@@ -217,6 +237,16 @@ const modes: { id: string; label: string; mood: HandyMood; sample: string }[] = 
   });
 
   nextBtn.addEventListener('click', () => {
+    if (step === 0) {
+      const name = nameInput.value.trim();
+      root.querySelector<HTMLElement>('[data-name-error]')!.hidden = !!name;
+      nameInput.setAttribute('aria-invalid', String(!name));
+      if (!name) {
+        nameInput.focus();
+        return;
+      }
+      answers.name = name;
+    }
     if (step < 2) {
       step++;
       render();
@@ -429,6 +459,20 @@ const modes: { id: string; label: string; mood: HandyMood; sample: string }[] = 
     display: flex;
     flex-direction: column;
     gap: 10px;
+  }
+
+  .group__label {
+    font-weight: 700;
+  }
+
+  .error {
+    margin: 0;
+    font-weight: 700;
+    color: var(--danger);
+  }
+
+  .error[hidden] {
+    display: none;
   }
 
   .group legend {

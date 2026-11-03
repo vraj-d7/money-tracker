@@ -23,7 +23,7 @@ const doneCount = tasks.filter((t) => t.done).length;
   <header class="head">
     <div class="head__text">
       <span class="muted" data-today>Monday, 2 November</span>
-      <h1>Welcome, <span data-name>{DEFAULT_PROFILE.name}</span>!</h1>
+      <h1>Welcome, <span data-name>there</span>!</h1>
     </div>
     <a href={routes.notifications} class="btn icon-btn" aria-label="Notifications, none yet">
       <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0"></path></svg>
@@ -99,8 +99,7 @@ const doneCount = tasks.filter((t) => t.done).length;
 
 <script>
   import { inr } from '../../lib/format';
-  import { calcSalary } from '../../lib/salary';
-  import { daysUntil, loadProfile, nextPayday } from '../../scripts/profile-store';
+  import { daysUntil, loadProfile, monthlyInhand, nextPayday } from '../../scripts/profile-store';
 
   const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -109,9 +108,9 @@ const doneCount = tasks.filter((t) => t.done).length;
   // Fill in what onboarding saved, against today's real date
   const p = loadProfile();
   const today = new Date();
-  const pay = nextPayday(p.payday, today);
+  const pay = nextPayday(p.payday, today, p.paydayShift);
   const n = daysUntil(pay, today);
-  const monthly = inr(calcSalary(p.ctc, 'new').inhand / 12);
+  const monthly = inr(monthlyInhand(p));
 
   document.querySelector('[data-today]')!.textContent = `${DAYS[today.getDay()]}, ${today.getDate()} ${MONTHS[today.getMonth()]}`;
   document.querySelector('[data-name]')!.textContent = p.name || 'there';
