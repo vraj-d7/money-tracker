@@ -1,5 +1,6 @@
-// What sign-up, onboarding and the Me screens know about the user, kept in this browser until there's a real backend.
+// What sign-up, onboarding and the Me screens know about the user. Kept in this browser and synced to the account when signed in.
 import type { CoachMode } from '../lib/coach';
+import { noteChange } from './local-state';
 
 export type { CoachMode };
 
@@ -74,6 +75,7 @@ export function loadProfile(): Profile {
 export function saveProfile(patch: Partial<Profile>): void {
   try {
     localStorage.setItem(KEY, JSON.stringify({ ...loadProfile(), ...patch }));
+    noteChange();
   } catch {
     // Storage blocked: the flow still works, it just won't remember
   }

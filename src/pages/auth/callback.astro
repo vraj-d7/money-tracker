@@ -1,0 +1,101 @@
+---
+// Where the email sign-in link lands. Finishes signing in, brings in the account's saved data,
+// then sends returning people Home and new people to onboarding.
+import Base from '../../layouts/Base.astro';
+import Logo from '../../components/Logo.astro';
+import StatePanel from '../../components/StatePanel.astro';
+import { routes } from '../../lib/routes';
+---
+
+<Base title="Signing in · Inhandy">
+  <div class="page paper-dots">
+    <nav class="top"><a href={routes.landing} aria-label="Inhandy home"><Logo size={36} /></a></nav>
+    <main class="main" data-callback>
+      <div data-state="wait">
+        <StatePanel mood="chai" title="Signing you in…" text="Fetching your jars, goals and settings. One sec." />
+      </div>
+      <div data-state="fail" hidden>
+        <StatePanel mood="gasp" title="That link didn’t work" text="It may have expired or been used already. Ask for a fresh one; it only takes a moment.">
+          <div class="state__actions">
+            <a href={routes.emailAuth} class="btn btn--mango btn--lg">Send a new link</a>
+          </div>
+        </StatePanel>
+      </div>
+      <div data-state="offline" hidden>
+        <StatePanel mood="sus" title="Signed in, but your data didn’t load" text="We couldn’t reach your saved data just now. Try again in a moment.">
+          <div class="state__actions">
+            <button type="button" class="btn btn--mango btn--lg" data-retry>Try again</button>
+          </div>
+        </StatePanel>
+      </div>
+    </main>
+  </div>
+</Base>
+
+<script>
+  import { supabase } from '../../scripts/supabase';
+  import { adoptAccount, pushNow } from '../../scripts/sync';
+  import { loadProfile, saveProfile } from '../../scripts/profile-store';
+  import { routes } from '../../lib/routes';
+
+  const root = document.querySelector<HTMLElement>('[data-callback]')!;
+  const show = (state: 'wait' | 'fail' | 'offline') =>
+    root.querySelectorAll<HTMLElement>('[data-state]').forEach((el) => (el.hidden = el.dataset.state !== state));
+
+  async function finish() {
+    show('wait');
+    if (!supabase) return show('fail');
+    // The Supabase client reads the sign-in details from the link on load
+    const { data } = await supabase.auth.getSession();
+    const session = data.session;
+    if (!session) return show('fail');
+    try {
+      const who = await adoptAccount();
+      if (who === 'new') {
+        if (!loadProfile().email && session.user.email) saveProfile({ email: session.user.email });
+        await pushNow();
+      }
+      window.location.replace(who === 'new' ? routes.onboarding : routes.home);
+    } catch {
+      show('offline');
+    }
+  }
+
+  root.querySelector('[data-retry]')!.addEventListener('click', finish);
+  finish();
+</script>
+
+<style>
+  .page {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .top {
+    padding: 24px 32px;
+  }
+
+  .main {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 20px 64px;
+  }
+
+  [data-state][hidden] {
+    display: none;
+  }
+
+  @media (max-width: 639px) {
+    .top {
+      padding: 16px;
+    }
+
+    .main {
+      align-items: flex-start;
+    }
+  }
+</style>

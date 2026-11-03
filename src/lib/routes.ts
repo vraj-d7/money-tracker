@@ -3,6 +3,7 @@ export const routes = {
   landing: '/',
   auth: '/login',
   emailAuth: '/login/email',
+  authCallback: '/auth/callback',
   onboarding: '/welcome',
   firstDay: '/app/first-day',
   paydaySettings: '/app/me/payday',

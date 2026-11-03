@@ -1,5 +1,6 @@
-// Keeps the user's plan (jar split + goals) in this browser until there's a real backend.
+// Keeps the user's plan (jar split + goals) in this browser, synced to the account when signed in.
 import { DEFAULT_GOALS, DEFAULT_JARS, type Goal } from '../data/demo-plan';
+import { noteChange } from './local-state';
 
 const KEY = 'inhandy:plan';
 
@@ -34,6 +35,7 @@ export function loadPlan(): PlanState {
 export function savePlan(state: PlanState): void {
   try {
     localStorage.setItem(KEY, JSON.stringify(state));
+    noteChange();
   } catch {
     // Storage blocked (private mode etc.): changes just won't persist
   }

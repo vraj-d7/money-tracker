@@ -25,5 +25,10 @@ const { title } = Astro.props;
   <body>
     <slot />
     <OfflineScreen />
+    <script>
+      import { backendOn } from '../scripts/backend';
+      // Signed-in data sync; the Supabase library only loads when a backend is set up
+      if (backendOn) import('../scripts/sync').then((m) => m.startSync());
+    </script>
   </body>
 </html>

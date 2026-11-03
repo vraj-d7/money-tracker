@@ -1,9 +1,10 @@
 ---
 // Continue with email: asks for an address, then shows "check your inbox".
-// No backend yet, so no email is actually sent.
+// With Supabase set up, a real sign-in link is emailed; otherwise it's test mode and nothing is sent.
 import SheetPage from '../../layouts/SheetPage.astro';
 import Handy from '../../components/Handy.astro';
 import { routes } from '../../lib/routes';
+import { backendOn } from '../../scripts/backend';
 ---
 
 <SheetPage title="Continue with email" active="home" closeHref={routes.auth} width={520}>
@@ -13,9 +14,9 @@ import { routes } from '../../lib/routes';
     <div class="group">
       <label for="em-mail" class="group__label">Email</label>
       <div class="field"><input id="em-mail" type="email" placeholder="you@example.com" autocomplete="email" aria-describedby="em-error" /></div>
-      <p class="error" id="em-error" data-error hidden>Enter a valid email address.</p>
+      <p class="error" id="em-error" role="alert" data-error hidden>Enter a valid email address.</p>
     </div>
-    <button type="submit" class="btn btn--mango btn--lg btn--block">Email me a link</button>
+    <button type="submit" class="btn btn--mango btn--lg btn--block" data-send>Email me a link</button>
     <a href={routes.auth} class="switch">Use my mobile number instead</a>
   </form>
 
@@ -23,29 +24,60 @@ import { routes } from '../../lib/routes';
     <Handy mood="cheer" size={110} decorative />
     <h2 class="sent__title">Check your inbox</h2>
     <p class="muted">
-      We sent a sign-in link to <b class="ink" data-sent-to></b>. It works for 15 minutes. Can’t find it? Check spam or promotions.
+      We sent a sign-in link to <b class="ink" data-sent-to></b>. Open it on any device. Can’t find it? Check spam or promotions.
     </p>
-    <p class="test-note">Test mode: no email is sent yet. Continue straight in instead.</p>
-    <a href={routes.home} class="btn btn--mango">Continue (test mode)</a>
+    {
+      !backendOn && (
+        <>
+          <p class="test-note">Test mode: no email is sent yet. Continue straight in instead.</p>
+          <a href={routes.home} class="btn btn--mango">
+            Continue (test mode)
+          </a>
+        </>
+      )
+    }
     <button type="button" class="btn" data-again>Use a different email</button>
   </div>
 </SheetPage>
 
 <script>
+  import { backendOn } from '../../scripts/backend';
+  import { routes } from '../../lib/routes';
+
   const form = document.querySelector<HTMLFormElement>('[data-email-form]')!;
   const sent = document.querySelector<HTMLElement>('[data-sent]')!;
   const input = form.querySelector<HTMLInputElement>('#em-mail')!;
   const error = form.querySelector<HTMLElement>('[data-error]')!;
 
-  form.addEventListener('submit', (e) => {
+  const send = form.querySelector<HTMLButtonElement>('[data-send]')!;
+
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const mail = input.value.trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) {
+      error.textContent = 'Enter a valid email address.';
       error.hidden = false;
       input.focus();
       return;
     }
     error.hidden = true;
+    if (backendOn) {
+      send.disabled = true;
+      send.textContent = 'Sending…';
+      const { supabase } = await import('../../scripts/supabase');
+      const { error: failed } = await supabase!.auth.signInWithOtp({
+        email: mail,
+        options: { emailRedirectTo: `${window.location.origin}${routes.authCallback}` },
+      });
+      send.disabled = false;
+      send.textContent = 'Email me a link';
+      if (failed) {
+        error.textContent =
+          failed.status === 429 ? 'Too many tries. Wait a minute, then ask for a new link.' : 'We couldn’t send the email. Check your connection and try again.';
+        error.hidden = false;
+        return;
+      }
+    }
     sent.querySelector('[data-sent-to]')!.textContent = mail;
     form.hidden = true;
     sent.hidden = false;

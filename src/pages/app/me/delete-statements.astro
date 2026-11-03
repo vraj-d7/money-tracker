@@ -20,11 +20,13 @@ import { routes } from '../../../lib/routes';
 
 <script>
   import { routes } from '../../../lib/routes';
+  import { noteChange } from '../../../scripts/local-state';
 
   document.querySelector('[data-confirm]')!.addEventListener('click', () => {
     // Scan picks and cancel progress are the "statement history" kept in this browser
     try {
       ['inhandy:scan:cut', 'inhandy:cancel:done', 'inhandy:scan:done'].forEach((k) => localStorage.removeItem(k));
+      noteChange();
     } catch {
       // Storage blocked: nothing was saved anyway
     }

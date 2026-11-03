@@ -4,6 +4,7 @@
 import HandySplit from '../../layouts/HandySplit.astro';
 import Logo from '../../components/Logo.astro';
 import { routes } from '../../lib/routes';
+import { backendOn } from '../../scripts/backend';
 
 const checks = [
   'We never ask for your bank password',
@@ -75,7 +76,9 @@ const checks = [
           Sent to +91 <span data-phone-shown></span>.
           <button type="button" class="text-btn" data-change-number>Change number</button>
         </p>
-        <p class="test-note">Test mode: no text is sent yet. Type any 6 digits to continue.</p>
+        <p class="test-note">
+          {backendOn ? <>Phone codes aren’t live yet. To sign in for real, <a href={routes.emailAuth}>continue with email</a>. Or type any 6 digits to try the app.</> : 'Test mode: no text is sent yet. Type any 6 digits to continue.'}
+        </p>
         <fieldset class="otp-group">
           <legend class="group__label">6-digit code</legend>
           <div class="otp" data-otp>
