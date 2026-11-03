@@ -3,6 +3,7 @@
 // No backend yet: the chosen PDF never leaves the browser, and results are the design's sample findings.
 import AppShell from '../../../layouts/AppShell.astro';
 import Handy from '../../../components/Handy.astro';
+import StatePanel from '../../../components/StatePanel.astro';
 import { routes } from '../../../lib/routes';
 import { inr } from '../../../lib/format';
 import { DEFAULT_CUT, SCAN_RESULTS, SCAN_STATUS } from '../../../data/demo-tools';
@@ -16,7 +17,7 @@ const phases = [
 ---
 
 <AppShell title="Autopay scan" active="scan">
-  <div class="scan" data-scan data-phase="upload" data-default-cut={JSON.stringify(DEFAULT_CUT)}>
+  <div class="scan" data-scan data-phase="empty" data-default-cut={JSON.stringify(DEFAULT_CUT)}>
     <header class="head">
       <div class="head__text">
         <span class="eyebrow">Autopay scan</span>
@@ -27,8 +28,18 @@ const phases = [
       </ol>
     </header>
 
+    <!-- 0 · Empty: never scanned (or history deleted) -->
+    <div class="empty" data-panel="empty">
+      <StatePanel mood="chill" as="h2" title="No autopays spotted yet" text="Upload one bank statement and I’ll sniff out anything that quietly renews.">
+        <div class="state__actions">
+          <button type="button" class="btn btn--mango btn--lg" data-go-upload>Upload a statement</button>
+          <a href={routes.help} class="safe-link">Why this is safe</a>
+        </div>
+      </StatePanel>
+    </div>
+
     <!-- 1 · Upload -->
-    <div class="split split--upload" data-panel="upload">
+    <div class="split split--upload" data-panel="upload" hidden>
       <section class="card upload">
         <input type="file" accept="application/pdf,.pdf" id="statement" class="visually-hidden" data-file-input />
         <label for="statement" class="drop" data-drop>
@@ -184,8 +195,9 @@ const phases = [
 
   const cut = new Set<string>(readLocal<string[]>('scan:cut', JSON.parse(root.dataset.defaultCut!)));
 
-  function setPhase(phase: 'upload' | 'scan' | 'results') {
+  function setPhase(phase: 'empty' | 'upload' | 'scan' | 'results') {
     root.dataset.phase = phase;
+    root.querySelector<HTMLElement>('.phases')!.hidden = phase === 'empty';
     root.querySelectorAll<HTMLElement>('[data-panel]').forEach((p) => (p.hidden = p.dataset.panel !== phase));
     root.querySelectorAll<HTMLElement>('[data-phase-pill]').forEach((p) => {
       if (p.dataset.phasePill === phase) p.setAttribute('aria-current', 'step');
@@ -261,6 +273,7 @@ const phases = [
       () => {
         window.clearInterval(statusTimer);
         pass.value = ''; // never kept around
+        writeLocal('scan:done', true);
         setPhase('results');
         renderResults();
       },
@@ -308,10 +321,17 @@ const phases = [
     setPhase('upload');
   });
 
-  // Coming back from the cancel guide (?results) shows the results again
-  if (new URLSearchParams(window.location.search).has('results')) {
+  root.querySelector('[data-go-upload]')!.addEventListener('click', () => {
+    setPhase('upload');
+    fileInput.focus();
+  });
+
+  // Scanned before (or coming back from the cancel guide): show the results; otherwise the empty state
+  if (readLocal('scan:done', false) || new URLSearchParams(window.location.search).has('results')) {
     setPhase('results');
     renderResults();
+  } else {
+    setPhase('empty');
   }
 </script>
 
@@ -411,8 +431,25 @@ const phases = [
   }
 
   .split[hidden],
-  .scanning[hidden] {
+  .scanning[hidden],
+  .empty[hidden],
+  .phases[hidden] {
     display: none;
+  }
+
+  .empty {
+    display: flex;
+    justify-content: center;
+    padding: 48px 0;
+  }
+
+  .safe-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    font-weight: 700;
+    color: var(--violet);
   }
 
   .split--upload {

@@ -1,0 +1,193 @@
+---
+// "Gym pass: killed!" success pop-up. Open from a script with:
+//   document.dispatchEvent(new CustomEvent('celebrate', { detail: { title, amount, line, shareHref } }))
+import Handy from './Handy.astro';
+
+const colors = ['#FFB21E', '#FFC94D', '#F98B0B', '#FFD27A'];
+const rnd = (i: number, k: number) => {
+  const x = Math.sin((i + 1) * k) * 10000;
+  return x - Math.floor(x);
+};
+const petals = Array.from({ length: 16 }, (_, i) => ({
+  style: [
+    `left: ${(rnd(i, 12.9) * 100).toFixed(1)}%`,
+    `width: ${(10 + rnd(i, 4.1) * 10).toFixed(0)}px`,
+    `height: ${(16 + rnd(i, 7.3) * 12).toFixed(0)}px`,
+    `background: ${colors[i % colors.length]}`,
+    `--dur: ${(5 + rnd(i, 3.7) * 4).toFixed(2)}s`,
+    `--delay: ${(-rnd(i, 9.1) * 8).toFixed(2)}s`,
+    `--dx: ${((rnd(i, 5.5) - 0.5) * 160).toFixed(0)}px`,
+    `--rot: ${((rnd(i, 2.2) - 0.5) * 900).toFixed(0)}deg`,
+  ].join(';'),
+}));
+---
+
+<div class="celebrate" data-celebrate hidden>
+  <div class="celebrate__box pop-in" role="dialog" aria-modal="true" aria-labelledby="celebrate-title">
+    <div class="celebrate__petals" aria-hidden="true">
+      {petals.map((p) => <span class="loop-petal" style={p.style} />)}
+    </div>
+    <div class="celebrate__handy"><Handy mood="cheer" size={120} decorative /></div>
+    <h2 id="celebrate-title" class="celebrate__title" data-c-title>Killed!</h2>
+    <p class="num celebrate__text"><span class="celebrate__amt" data-c-amount></span><br /><span data-c-line></span></p>
+    <div class="celebrate__actions">
+      <a href="#" class="btn btn--mango btn--lg" data-c-share>Share the win</a>
+      <button type="button" class="btn" data-c-done>Done</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const box = document.querySelector<HTMLElement>('[data-celebrate]');
+  if (box) {
+    let back: HTMLElement | null = null;
+
+    const close = () => {
+      box.hidden = true;
+      back?.focus?.();
+    };
+
+    document.addEventListener('celebrate', (e) => {
+      const d = (e as CustomEvent<{ title: string; amount: string; line: string; shareHref: string }>).detail;
+      box.querySelector('[data-c-title]')!.textContent = d.title;
+      box.querySelector('[data-c-amount]')!.textContent = d.amount;
+      box.querySelector('[data-c-line]')!.textContent = d.line;
+      box.querySelector<HTMLAnchorElement>('[data-c-share]')!.href = d.shareHref;
+      back = document.activeElement as HTMLElement | null;
+      box.hidden = false;
+      box.querySelector<HTMLButtonElement>('[data-c-done]')!.focus();
+    });
+
+    box.querySelector('[data-c-done]')!.addEventListener('click', close);
+    box.addEventListener('click', (e) => {
+      if (e.target === box) close();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !box.hidden) close();
+    });
+  }
+</script>
+
+<style>
+  .celebrate {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(21, 19, 28, 0.72);
+  }
+
+  .celebrate[hidden] {
+    display: none;
+  }
+
+  .celebrate__box {
+    position: relative;
+    width: 520px;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 40px 40px 28px;
+    border-radius: 32px;
+    background: var(--paper);
+    border: 3px solid var(--ink);
+    box-shadow: 0 10px 0 #000;
+    text-align: center;
+  }
+
+  .celebrate__petals {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .loop-petal {
+    position: absolute;
+    top: -30px;
+    border-radius: 70% 0 70% 0;
+    animation: c-petal var(--dur) linear var(--delay) infinite;
+  }
+
+  @keyframes c-petal {
+    0% {
+      transform: translate(0, 0) rotate(0deg);
+      opacity: 0;
+    }
+    10%,
+    90% {
+      opacity: 0.9;
+    }
+    100% {
+      transform: translate(var(--dx), 560px) rotate(var(--rot));
+      opacity: 0;
+    }
+  }
+
+  .celebrate__handy,
+  .celebrate__title,
+  .celebrate__text,
+  .celebrate__actions {
+    position: relative;
+  }
+
+  .celebrate__handy {
+    line-height: 0;
+  }
+
+  .celebrate__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 40px;
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+
+  .celebrate__text {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+
+  .celebrate__amt {
+    font-weight: 800;
+    font-size: 40px;
+    letter-spacing: -0.03em;
+    color: #0a6b4d;
+  }
+
+  .celebrate__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    width: 100%;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .loop-petal {
+      display: none;
+    }
+  }
+
+  @media (max-width: 639px) {
+    .celebrate__box {
+      padding: 32px 20px 24px;
+    }
+
+    .celebrate__title {
+      font-size: 32px;
+    }
+
+    .celebrate__actions {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

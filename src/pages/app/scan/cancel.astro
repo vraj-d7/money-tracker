@@ -2,6 +2,7 @@
 // How to cancel: walks through each subscription picked for cancelling on the scan results.
 // The list comes from the browser (what the user picked); the server renders the default picks.
 import AppShell from '../../../layouts/AppShell.astro';
+import Celebration from '../../../components/Celebration.astro';
 import { routes } from '../../../lib/routes';
 import { inr } from '../../../lib/format';
 import { DEFAULT_CUT, SCAN_RESULTS } from '../../../data/demo-tools';
@@ -83,6 +84,7 @@ const first = picked[0];
       <a href={`${routes.scan}?results`} class="btn btn--mango">Back to scan results</a>
     </section>
   </div>
+  <Celebration />
 </AppShell>
 
 <script>
@@ -90,6 +92,7 @@ const first = picked[0];
   import type { Subscription } from '../../../data/demo-tools';
   import { readLocal, writeLocal } from '../../../scripts/local-state';
   import { showToast } from '../../../scripts/toast';
+  import { routes } from '../../../lib/routes';
 
   const root = document.querySelector<HTMLElement>('[data-guide]')!;
   const all = JSON.parse(root.dataset.subs!) as Subscription[];
@@ -171,6 +174,19 @@ const first = picked[0];
     done.add(cur);
     writeLocal('cancel:done', [...done]);
     render();
+    const s = picked.find((p) => p.id === cur)!;
+    const killed = picked.filter((p) => done.has(p.id));
+    const saved = killed.reduce((sum, p) => sum + p.monthly * 12, 0);
+    document.dispatchEvent(
+      new CustomEvent('celebrate', {
+        detail: {
+          title: `${s.label}: killed!`,
+          amount: `+${inr(s.monthly * 12)}`,
+          line: 'a year, back in your pocket',
+          shareHref: `${routes.share}?card=graveyard&saved=${saved}&count=${killed.length}&from=cancel`,
+        },
+      }),
+    );
   });
 
   root.querySelector('[data-undo]')!.addEventListener('click', () => {

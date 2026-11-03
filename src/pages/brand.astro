@@ -69,6 +69,47 @@ const moods: { id: HandyMood; title: string; when: string }[] = [
       <h2>Phone tab bar</h2>
       <div class="tabbar-demo"><TabBar active="home" /></div>
     </section>
+
+    <section>
+      <h2>Key states</h2>
+      <div class="states">
+        <div class="state-card" role="status" aria-label="Loading example">
+          <p class="state-card__label">Loading</p>
+          <div class="skel skel--title"></div>
+          <div class="skel skel--line"></div>
+          <div class="skel skel--line skel--short"></div>
+          <div class="skel-row">
+            <div class="skel skel--tile"></div>
+            <div class="skel skel--tile"></div>
+            <div class="skel skel--tile"></div>
+          </div>
+          <div class="handy-say">
+            <Handy mood="chai" size={64} decorative />
+            <span class="bubble">Counting your chillar…</span>
+          </div>
+        </div>
+
+        <div class="state-card">
+          <p class="state-card__label">Error: wrong PDF password</p>
+          <label class="pw-label" for="brand-pw">Statement password</label>
+          <div class="field field--error">
+            <input id="brand-pw" type="password" value="12345678" aria-invalid="true" aria-describedby="brand-pw-err" />
+          </div>
+          <div class="alert" id="brand-pw-err" role="alert">
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex: none"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 8v5M12 16.5v.5"></path></svg>
+            <span><b>That password didn’t open your PDF.</b> Most banks use your date of birth as DDMMYYYY, sometimes with the first 4 letters of your name.</span>
+          </div>
+          <div class="row row--tight">
+            <button type="button" class="btn btn--mango">Try again</button>
+            <button type="button" class="btn">Help me find my password</button>
+          </div>
+          <div class="handy-say">
+            <Handy mood="gasp" size={64} decorative />
+            <span class="bubble">Arre, that key didn’t fit. Happens to everyone.</span>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
 </Base>
 
@@ -159,5 +200,110 @@ const moods: { id: HandyMood; title: string; when: string }[] = [
   .tabbar-demo {
     max-width: 420px;
     margin: 0;
+  }
+
+  .states {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+    gap: 20px;
+  }
+
+  .state-card {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 24px;
+    border-radius: 28px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 6px 0 var(--ink);
+  }
+
+  .state-card__label {
+    margin: 0;
+    font-weight: 800;
+    color: var(--ink-muted);
+  }
+
+  .skel {
+    border-radius: 12px;
+    background: linear-gradient(90deg, var(--paper-deep) 0%, var(--cream) 50%, var(--paper-deep) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s linear infinite;
+  }
+
+  .skel--title {
+    width: 60%;
+    height: 32px;
+  }
+
+  .skel--line {
+    height: 16px;
+  }
+
+  .skel--short {
+    width: 75%;
+  }
+
+  .skel-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .skel--tile {
+    height: 72px;
+    border-radius: 18px;
+  }
+
+  @keyframes shimmer {
+    to {
+      background-position: -200% 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .skel {
+      animation: none;
+    }
+  }
+
+  .handy-say {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: auto;
+  }
+
+  .bubble {
+    padding: 10px 14px;
+    border-radius: 16px 16px 16px 4px;
+    background: var(--cream);
+    border: 2px solid var(--ink);
+    font-weight: 700;
+  }
+
+  .pw-label {
+    font-weight: 700;
+  }
+
+  .field--error,
+  .field--error:focus-within {
+    border-color: var(--coral);
+    box-shadow: 0 0 0 4px rgba(255, 107, 91, 0.2);
+  }
+
+  .alert {
+    display: flex;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: var(--danger-bg);
+    color: var(--danger);
+    line-height: 1.45;
+  }
+
+  .row--tight {
+    gap: 12px;
   }
 </style>

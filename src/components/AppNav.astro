@@ -111,6 +111,15 @@ const items: { id: AppSection; label: string; href: string; d: string; badge?: n
   // No need to advertise the Coach plan to someone already on it
   document.querySelectorAll<HTMLElement>('[data-nav-plus]').forEach((el) => (el.hidden = plan === 'Coach plan'));
 
+  // "Autopays to review" only means something after a statement has been scanned
+  if (!readLocal('scan:done', false)) {
+    document.querySelectorAll<HTMLElement>('[data-nav-item="scan"]').forEach((link) => {
+      const badge = link.querySelector<HTMLElement>('[data-nav-badge]');
+      if (badge) badge.hidden = true;
+      link.setAttribute('aria-label', 'Autopay scan');
+    });
+  }
+
   const unread = unreadCount(readLocal<string[]>('notifications:read', []));
   document.querySelectorAll<HTMLElement>('[data-nav-item="notifications"]').forEach((link) => {
     const badge = link.querySelector<HTMLElement>('[data-nav-badge]');

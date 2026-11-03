@@ -24,7 +24,7 @@ import { routes } from '../../../lib/routes';
   document.querySelector('[data-confirm]')!.addEventListener('click', () => {
     // Scan picks and cancel progress are the "statement history" kept in this browser
     try {
-      ['inhandy:scan:cut', 'inhandy:cancel:done'].forEach((k) => localStorage.removeItem(k));
+      ['inhandy:scan:cut', 'inhandy:cancel:done', 'inhandy:scan:done'].forEach((k) => localStorage.removeItem(k));
     } catch {
       // Storage blocked: nothing was saved anyway
     }
