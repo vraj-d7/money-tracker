@@ -1,14 +1,13 @@
 ---
 // Autopay scan: upload → scanning → results.
-// No backend yet: the chosen PDF never leaves the browser, and results are the design's sample findings.
+// The chosen PDF is read in the browser and never uploaded; with no file, the sample results show.
 import AppShell from '../../../layouts/AppShell.astro';
 import Handy from '../../../components/Handy.astro';
 import StatePanel from '../../../components/StatePanel.astro';
 import { routes } from '../../../lib/routes';
-import { inr } from '../../../lib/format';
-import { DEFAULT_CUT, SCAN_RESULTS, SCAN_STATUS } from '../../../data/demo-tools';
+import { DEFAULT_CUT, SCAN_STATUS } from '../../../data/demo-tools';
 
-const trust = ['We never ask for your bank password', 'PDF deleted right after the scan', 'Nothing shared with anyone'];
+const trust = ['We never ask for your bank password', 'Your PDF never leaves this device', 'Transactions stay on this device too'];
 const phases = [
   { id: 'upload', label: '1 · Upload' },
   { id: 'scan', label: '2 · Scanning' },
@@ -137,41 +136,37 @@ const phases = [
         </div>
         <p class="muted lock">
           <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="3"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
-          Your PDF is deleted as soon as we’re done.
+          Your PDF never leaves this device.
         </p>
       </div>
     </section>
 
     <!-- 3 · Results -->
     <div class="split split--results" data-panel="results" hidden>
-      <section class="subs" aria-label="Subscriptions found">
-        {
-          SCAN_RESULTS.map((s) => (
-            <div class="sub" data-sub={s.id} data-monthly={s.monthly}>
-              <div class="sub__info">
-                <span class="sub__initial" aria-hidden="true">
-                  {s.label.charAt(0)}
-                </span>
-                <span class="sub__text">
-                  <span class="sub__label">{s.label}</span>
-                  <span class:list={['sub__note', { 'sub__note--flag': s.flag }]}>{s.note}</span>
-                </span>
-                <span class="num sub__amt">
-                  {inr(s.monthly)}
-                  <span class="sub__per">/mo</span>
-                </span>
-              </div>
-              <div class="sub__choice" role="group" aria-label={`Keep or cancel ${s.label}`}>
-                <button type="button" class="choice choice--keep" data-keep aria-pressed="true">
-                  Keep
-                </button>
-                <button type="button" class="choice choice--cut" data-cut aria-pressed="false">
-                  Cancel
-                </button>
-              </div>
+      <section class="subs" aria-label="Subscriptions found" data-subs>
+        <p class="sample-note" data-sample-note hidden>
+          <span class="sample-tag">Sample</span> These are example results. Scan your own statement to see yours.
+        </p>
+        <p class="none" data-none hidden>
+          No repeating charges in this statement. Nice and clean! A statement covering 3 months or more gives Handy the best chance of
+          spotting things.
+        </p>
+        <template id="sub-row">
+          <div class="sub" data-sub>
+            <div class="sub__info">
+              <span class="sub__initial" aria-hidden="true" data-initial></span>
+              <span class="sub__text">
+                <span class="sub__label" data-label></span>
+                <span class="sub__note" data-note></span>
+              </span>
+              <span class="num sub__amt"><span data-amt></span><span class="sub__per">/mo</span></span>
             </div>
-          ))
-        }
+            <div class="sub__choice" role="group">
+              <button type="button" class="choice choice--keep" data-keep aria-pressed="true">Keep</button>
+              <button type="button" class="choice choice--cut" data-cut aria-pressed="false">Cancel</button>
+            </div>
+          </div>
+        </template>
       </section>
       <aside class="results-side">
         <div class="total">
@@ -195,9 +190,11 @@ const phases = [
 
 <script>
   import { inr } from '../../../lib/format';
-  import { SCAN_RESULTS, SCAN_STATUS } from '../../../data/demo-tools';
+  import { SCAN_STATUS } from '../../../data/demo-tools';
+  import { findAutopays } from '../../../lib/statement';
   import { readLocal, writeLocal } from '../../../scripts/local-state';
-  import { checkPdf } from '../../../scripts/pdf-check';
+  import { readStatement } from '../../../scripts/statement-read';
+  import { saveScan, scanResults, useSample } from '../../../scripts/scan-store';
 
   const root = document.querySelector<HTMLElement>('[data-scan]')!;
   const fileInput = root.querySelector<HTMLInputElement>('[data-file-input]')!;
@@ -208,7 +205,8 @@ const phases = [
   let statusTimer = 0;
   let scanTimer = 0;
 
-  const cut = new Set<string>(readLocal<string[]>('scan:cut', JSON.parse(root.dataset.defaultCut!)));
+  let results = scanResults();
+  let cut = new Set<string>(readLocal<string[]>('scan:cut', JSON.parse(root.dataset.defaultCut!)));
 
   function setPhase(phase: 'empty' | 'upload' | 'scan' | 'results') {
     root.dataset.phase = phase;
@@ -219,7 +217,9 @@ const phases = [
       else p.removeAttribute('aria-current');
     });
     root.querySelector('[data-title]')!.textContent =
-      phase === 'results' ? `Found ${SCAN_RESULTS.length} things on autopay` : 'Let’s find your forgotten autopays';
+      phase === 'results'
+        ? `Found ${results.subs.length} ${results.subs.length === 1 ? 'thing' : 'things'} on autopay`
+        : 'Let’s find your forgotten autopays';
     window.scrollTo({ top: 0 });
   }
 
@@ -297,43 +297,50 @@ const phases = [
     if (pass.getAttribute('aria-invalid') === 'true') setPassError(null);
   });
 
-  // Scanning → results. A picked file is really opened (in this browser) first;
-  // the results themselves are still the sample ones.
+  // Scanning → results. A picked file is read right here in the browser; with no file, the sample results show.
   startBtn.addEventListener('click', async () => {
-    let opened = '';
+    let steps = SCAN_STATUS;
     if (file) {
       startBtn.disabled = true;
-      startBtn.textContent = 'Opening your PDF…';
-      const res = await checkPdf(file, pass.value).catch(() => ({ ok: false, reason: 'unreadable' }) as const);
+      startBtn.textContent = 'Reading your statement…';
+      const res = await readStatement(file, pass.value).catch(() => ({ ok: false, reason: 'unreadable' }) as const);
       startBtn.disabled = false;
       startBtn.textContent = 'Scan for subscriptions';
       if (!res.ok) {
-        if (res.reason === 'unreadable') {
-          const err = root.querySelector<HTMLElement>('[data-file-error]')!;
-          err.textContent = 'We couldn’t read that PDF. It might be damaged. Download it from your bank again and retry.';
-          err.hidden = false;
-        } else {
+        if (res.reason === 'needs-password' || res.reason === 'wrong-password') {
           setPassError(res.reason);
+        } else {
+          const err = root.querySelector<HTMLElement>('[data-file-error]')!;
+          err.textContent =
+            res.reason === 'no-transactions'
+              ? 'We couldn’t find any transactions in this PDF. If it’s a scanned photo of a statement, download the statement from net banking instead.'
+              : 'We couldn’t read that PDF. It might be damaged. Download it from your bank again and retry.';
+          err.hidden = false;
         }
         return;
       }
-      opened = `Opened your statement: ${res.pages} ${res.pages === 1 ? 'page' : 'pages'}`;
+      saveScan(findAutopays(res.txns), res.txns);
+      steps = [`Read ${res.txns.length} transactions from ${res.pages} ${res.pages === 1 ? 'page' : 'pages'}…`, ...SCAN_STATUS.slice(1)];
+    } else {
+      useSample();
     }
+    results = scanResults();
+    cut = new Set(readLocal<string[]>('scan:cut', []));
+    pass.value = ''; // never kept around
+
     setPhase('scan');
     let i = 0;
     const status = root.querySelector('[data-status]')!;
-    status.textContent = opened || SCAN_STATUS[0];
+    status.textContent = steps[0];
     window.clearInterval(statusTimer);
     statusTimer = window.setInterval(() => {
-      i = (i + 1) % SCAN_STATUS.length;
-      status.textContent = SCAN_STATUS[i];
+      i = (i + 1) % steps.length;
+      status.textContent = steps[i];
     }, 1400);
     window.clearTimeout(scanTimer);
     scanTimer = window.setTimeout(
       () => {
         window.clearInterval(statusTimer);
-        pass.value = ''; // never kept around
-        writeLocal('scan:done', true);
         setPhase('results');
         renderResults();
       },
@@ -341,40 +348,58 @@ const phases = [
     );
   });
 
-  // Results: keep / cancel each one, with live totals
+  // Results: one row per autopay, each with keep / cancel, and live totals
+  const subsBox = root.querySelector<HTMLElement>('[data-subs]')!;
+  const rowTemplate = subsBox.querySelector<HTMLTemplateElement>('#sub-row')!;
+
   function renderResults() {
+    subsBox.querySelectorAll('[data-sub]').forEach((r) => r.remove());
+    subsBox.querySelector<HTMLElement>('[data-sample-note]')!.hidden = !results.sample;
+    subsBox.querySelector<HTMLElement>('[data-none]')!.hidden = results.subs.length > 0;
+    for (const s of results.subs) {
+      const row = (rowTemplate.content.firstElementChild as HTMLElement).cloneNode(true) as HTMLElement;
+      row.dataset.sub = s.id;
+      row.querySelector('[data-initial]')!.textContent = s.label.charAt(0).toUpperCase();
+      row.querySelector('[data-label]')!.textContent = s.label;
+      const note = row.querySelector<HTMLElement>('[data-note]')!;
+      note.textContent = s.note;
+      note.classList.toggle('sub__note--flag', !!s.flag);
+      row.querySelector('[data-amt]')!.textContent = inr(s.monthly);
+      row.querySelector('.sub__choice')!.setAttribute('aria-label', `Keep or cancel ${s.label}`);
+      row.querySelector('[data-keep]')!.addEventListener('click', () => pick(s.id, false));
+      row.querySelector('[data-cut]')!.addEventListener('click', () => pick(s.id, true));
+      subsBox.append(row);
+    }
+    renderTotals();
+  }
+
+  function pick(id: string, cancel: boolean) {
+    if (cancel) cut.add(id);
+    else cut.delete(id);
+    writeLocal('scan:cut', [...cut]);
+    renderTotals();
+  }
+
+  function renderTotals() {
     let total = 0;
     let saved = 0;
-    root.querySelectorAll<HTMLElement>('[data-sub]').forEach((row) => {
-      const id = row.dataset.sub!;
-      const monthly = Number(row.dataset.monthly);
-      const isCut = cut.has(id);
-      total += monthly;
-      if (isCut) saved += monthly * 12;
+    for (const s of results.subs) {
+      const isCut = cut.has(s.id);
+      total += s.monthly;
+      if (isCut) saved += s.monthly * 12;
+      const row = subsBox.querySelector<HTMLElement>(`[data-sub="${CSS.escape(s.id)}"]`);
+      if (!row) continue;
       row.classList.toggle('sub--cut', isCut);
       row.querySelector('[data-keep]')!.setAttribute('aria-pressed', String(!isCut));
       row.querySelector('[data-cut]')!.setAttribute('aria-pressed', String(isCut));
-    });
+    }
+    const picked = results.subs.filter((s) => cut.has(s.id)).length;
     root.querySelector('[data-total-monthly]')!.textContent = inr(total);
     root.querySelector('[data-total-yearly]')!.textContent = inr(total * 12);
     root.querySelector('[data-saved-yearly]')!.textContent = inr(saved);
-    root.querySelector('[data-cut-count]')!.textContent = `${cut.size} ${cut.size === 1 ? 'thing' : 'things'}`;
-    root.querySelector<HTMLElement>('[data-guide-link]')!.toggleAttribute('aria-disabled', cut.size === 0);
+    root.querySelector('[data-cut-count]')!.textContent = `${picked} ${picked === 1 ? 'thing' : 'things'}`;
+    root.querySelector<HTMLElement>('[data-guide-link]')!.toggleAttribute('aria-disabled', picked === 0);
   }
-
-  root.querySelectorAll<HTMLElement>('[data-sub]').forEach((row) => {
-    const id = row.dataset.sub!;
-    row.querySelector('[data-keep]')!.addEventListener('click', () => {
-      cut.delete(id);
-      writeLocal('scan:cut', [...cut]);
-      renderResults();
-    });
-    row.querySelector('[data-cut]')!.addEventListener('click', () => {
-      cut.add(id);
-      writeLocal('scan:cut', [...cut]);
-      renderResults();
-    });
-  });
 
   root.querySelector('[data-reset]')!.addEventListener('click', () => {
     setFile(null);
@@ -917,6 +942,20 @@ const phases = [
     display: flex;
     flex-direction: column;
     gap: 12px;
+  }
+
+  .subs [hidden] {
+    display: none;
+  }
+
+  .none {
+    margin: 0;
+    padding: 20px;
+    border-radius: 22px;
+    background: #e2f8ef;
+    color: #0a6b4d;
+    font-weight: 700;
+    line-height: 1.5;
   }
 
   .sub {

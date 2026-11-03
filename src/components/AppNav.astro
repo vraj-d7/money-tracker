@@ -111,14 +111,19 @@ const items: { id: AppSection; label: string; href: string; d: string; badge?: n
   // No need to advertise the Coach plan to someone already on it
   document.querySelectorAll<HTMLElement>('[data-nav-plus]').forEach((el) => (el.hidden = plan === 'Coach plan'));
 
-  // "Autopays to review" only means something after a statement has been scanned
-  if (!readLocal('scan:done', false)) {
-    document.querySelectorAll<HTMLElement>('[data-nav-item="scan"]').forEach((link) => {
-      const badge = link.querySelector<HTMLElement>('[data-nav-badge]');
-      if (badge) badge.hidden = true;
-      link.setAttribute('aria-label', 'Autopay scan');
-    });
-  }
+  // "Autopays to review" only means something after a statement has been scanned,
+  // and then it's what that statement turned up
+  const scanned = readLocal('scan:done', false);
+  const found = readLocal<unknown[] | null>('scan:subs', null);
+  document.querySelectorAll<HTMLElement>('[data-nav-item="scan"]').forEach((link) => {
+    const badge = link.querySelector<HTMLElement>('[data-nav-badge]');
+    const count = !scanned ? 0 : found ? found.length : Number(badge?.textContent);
+    if (badge) {
+      badge.textContent = String(count);
+      badge.hidden = count === 0;
+    }
+    link.setAttribute('aria-label', count ? `Autopay scan, ${count} autopays to review` : 'Autopay scan');
+  });
 
   const unread = unreadCount(readLocal<string[]>('notifications:read', []));
   document.querySelectorAll<HTMLElement>('[data-nav-item="notifications"]').forEach((link) => {

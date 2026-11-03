@@ -61,15 +61,36 @@ Where Vraj is in the step-by-step guide:
     `/login/email` goes straight in.
   - Test mode (no keys) is unchanged: everything stays open.
   - Constants are in `src/scripts/backend.ts`: `SIGNED_IN_PATHS`, `authStorageKey`, `NEXT_KEY`, `safeNext`.
-- ✅ **Task #3 done (not committed yet): saved data is readable.** `sync.ts` now writes
+- ✅ **Task #3 done and pushed (`d4f5d98`): saved data is readable.** `sync.ts` now writes
   `user_data.data` as format 2 (`{"_format": 2, "profile": {…}, "plan": {…}}`, real JSON values).
   Rows without `_format` (the old JSON-string-per-value style) still load. An account converts the
   next time it saves anything. Tested round trips for both formats.
-- ⏳ **Next:** ask Vraj whether to commit and push. All three "before others use it" items are done.
-  Next options: put it online (Netlify or Vercel; then add the live URL to Supabase Site URL and
-  Redirect URLs) or a bigger feature (statement reading, AI coach, phone sign-in, payments). Not touched yet: the
-  PF/ITR tools and notifications still use sample content from `src/data/demo-tools.ts` and
-  `demo-notifications.ts`.
+- ✅ All three "before others use it" items are done.
+- ✅ **Statement reading, stage 1 (not committed yet):** the Autopay scan reads real statements.
+  - `src/lib/statement.ts` holds the pure logic. `parseTransactions(lines)` finds rows that start
+    with a date; it works out money in vs out from the column headings, Cr/Dr tags or the running
+    balance; and it joins wrapped descriptions. `findAutopays(txns)` finds payees charged the same
+    amount (±5%) in 2+ months at most about twice a month, plus anything with a NACH, ACH,
+    e-mandate or autopay marker. It flags price rises ≥ ₹10, and it knows about 30 brands
+    (`KNOWN`), with bills, SIPs, EMIs and rent marked "usually worth keeping".
+  - `src/scripts/statement-read.ts`: pdf.js text → lines of cells → transactions (replaces the
+    old `pdf-check.ts`). It handles password errors and "no transactions" (e.g. scanned photos).
+  - `src/scripts/scan-store.ts`: the found autopays are saved as `inhandy:scan:subs` (synced to
+    the account). The **raw transactions stay on the device** in `inhandy-device:statement`, which
+    is never synced; they're cleared on log out and by Delete statements. "Scan a sample
+    statement" (no file) still shows the sample list, with a SAMPLE note.
+  - The Scan page renders results from a `<template>`; the cancel guide and the sidebar badge
+    use the same list. The privacy promises were reworded to "Your PDF never leaves this device".
+  - Tested with three generated statement layouts (HDFC-style with wrapped narrations, SBI-style,
+    and no headings with Cr/Dr). All 64 transactions were read correctly in each, and exactly the 7
+    planted autopays were found. The generator is not in the repo.
+    **Not yet tested on a real bank PDF.** Vraj should try their own statement; it stays in their
+    browser. If something is missed, ask what the row looks like (not the PDF itself).
+- ⏳ **Next:** ask Vraj whether to commit and push, and to try a real statement. Then **stage 2**:
+  use `loadTransactions()` for the SAMPLE-tagged cards (Home "This week", renewals, the Week
+  page, the Sunday recap). Other options: put it online (Netlify or Vercel; then add the live URL to
+  Supabase Site URL and Redirect URLs), AI coach, phone sign-in, payments. The PF/ITR tools and
+  notifications still use sample content from `src/data/demo-tools.ts` and `demo-notifications.ts`.
 
 ## About Vraj (how to work with them)
 
@@ -106,7 +127,7 @@ Where Vraj is in the step-by-step guide:
   - `local-state.ts`: `readLocal` / `writeLocal` / `noteChange()`. Everything is saved in localStorage under `inhandy:*`.
   - `profile-store`, `plan-store`, `subscription-store`: the saved data.
   - `backend.ts` (is Supabase configured?), `supabase.ts` (client), `sync.ts` (account sync).
-  - `pdf-check.ts`: pdf.js opens the statement in the browser to check the password.
+  - `statement-read.ts` + `lib/statement.ts`: read statement PDFs in the browser; `scan-store.ts`: scan results.
   - `reminder.ts`: `.ics` calendar reminders.
   - `share-card.ts`, `toast.ts`, `petals.ts`.
 - `src/styles/global.css`: design tokens (`--ink`, `--paper`, `--mango`, `--violet`, `--coral`,
@@ -143,6 +164,7 @@ Still pretend or test mode ("heavy tasks", roughly in order):
 
 ## History (newest first)
 
+- `d4f5d98`: Synced data stored as readable JSON (format 2).
 - `ef8a8c6`: Require sign-in for the app when Supabase is set up.
 - `32d0098`: Screens use the user's own details; SAMPLE tags; payday date fix.
 - `2fc6617`: This handoff file and CLAUDE.md.

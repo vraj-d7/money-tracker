@@ -3,6 +3,7 @@
 // device replaces what's here and the page reloads once to show it.
 import { supabase } from './supabase';
 import { CHANGE_EVENT } from './local-state';
+import { STATEMENT_KEY } from './scan-store';
 
 const PREFIX = 'inhandy:';
 // Bookkeeping lives outside the inhandy: prefix so it never syncs itself
@@ -70,6 +71,7 @@ export function clearLocal() {
   applySnapshot({});
   set(DIRTY, null);
   set(SEEN, null);
+  set(STATEMENT_KEY, null); // transactions read on this device
 }
 
 async function userId() {

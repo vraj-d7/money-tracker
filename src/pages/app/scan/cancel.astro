@@ -21,7 +21,7 @@ const first = picked[0];
     <p class="muted">We can’t cancel for you, but we’ll walk you through it. Most take under 2 minutes.</p>
   </header>
 
-  <div class="guide" data-guide data-subs={JSON.stringify(SCAN_RESULTS)} data-default-cut={JSON.stringify(DEFAULT_CUT)}>
+  <div class="guide" data-guide data-default-cut={JSON.stringify(DEFAULT_CUT)}>
     <aside class="side">
       <div class="picker" role="group" aria-label="Subscriptions to cancel" data-picker>
         {
@@ -90,14 +90,17 @@ const first = picked[0];
 <script>
   import { inr } from '../../../lib/format';
   import type { Subscription } from '../../../data/demo-tools';
+  import { scanResults } from '../../../scripts/scan-store';
   import { readLocal, writeLocal } from '../../../scripts/local-state';
   import { showToast } from '../../../scripts/toast';
   import { routes } from '../../../lib/routes';
   import { daysFromNow, downloadReminder } from '../../../scripts/reminder';
 
   const root = document.querySelector<HTMLElement>('[data-guide]')!;
-  const all = JSON.parse(root.dataset.subs!) as Subscription[];
-  const cutIds = readLocal<string[]>('scan:cut', JSON.parse(root.dataset.defaultCut!));
+  // From the user's own statement, or the sample list if they haven't scanned one
+  const results = scanResults();
+  const all: Subscription[] = results.subs;
+  const cutIds = readLocal<string[]>('scan:cut', results.sample ? JSON.parse(root.dataset.defaultCut!) : []);
   const picked = all.filter((s) => cutIds.includes(s.id));
   const done = new Set<string>(readLocal<string[]>('cancel:done', []));
   let cur = picked[0]?.id;
