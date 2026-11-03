@@ -1,0 +1,291 @@
+---
+// Pricing: ₹19/week vs a cutting chai + samosa, then the Free and Coach plans.
+import { routes } from '../../lib/routes';
+
+const free = ['Salary explained: CTC to in-hand', 'Old vs new tax regime check', 'Offer face-off with share card', 'First ITR checklist'];
+const paid = [
+  'Sunday check-ins with your streak',
+  'Unlimited coach chat, all three modes',
+  'Autopay scans + forgotten-subscription finder',
+  'Renewal alerts before you’re charged',
+  'Salary-day plan, jars and goals',
+  'PF missing-deposit alerts',
+];
+const tick = 'M5 12l4 4 10-10';
+---
+
+<section id="pricing" class="lp-sec pricing" aria-labelledby="price-h">
+  <div class="lp-intro">
+    <p class="lp-eyebrow">Pricing</p>
+    <h2 id="price-h" class="lp-h2">₹19 a week. Less than one cutting chai + samosa.</h2>
+  </div>
+
+  <div class="compare">
+    <div class="tag19">
+      <span class="num tag19__amt">₹19</span>
+      <span class="tag19__per">per week</span>
+    </div>
+    <span class="less">is less than</span>
+    <div class="snack">
+      <svg viewBox="0 -6 80 116" width="72" height="104" role="img" aria-label="A glass of cutting chai">
+        <path class="steam" d="M30 22 Q24 14 30 8 Q36 2 30 -4" stroke="#5B5563" stroke-width="3" fill="none" stroke-linecap="round"></path>
+        <path class="steam steam--late" d="M48 24 Q42 16 48 10" stroke="#5B5563" stroke-width="3" fill="none" stroke-linecap="round"></path>
+        <path d="M14 34 L66 34 L60 102 Q59 106 55 106 L25 106 Q21 106 20 102 Z" fill="#FAF6EE" fill-opacity="0.6" stroke="#15131C" stroke-width="3.5" stroke-linejoin="round"></path>
+        <path d="M17 52 L63 52 L59 101 Q58 103 55 103 L25 103 Q22 103 21 101 Z" fill="#C9772B"></path>
+        <path d="M22 60 L24 96 M58 60 L56 96" stroke="#FFFFFF" stroke-opacity="0.35" stroke-width="3"></path>
+      </svg>
+      <span class="snack__plus" aria-hidden="true">+</span>
+      <svg viewBox="0 0 110 100" width="104" height="94" role="img" aria-label="A samosa">
+        <path d="M55 8 Q60 8 64 14 L102 84 Q105 92 96 92 L14 92 Q5 92 8 84 L46 14 Q50 8 55 8 Z" fill="#E8A33D" stroke="#15131C" stroke-width="3.5" stroke-linejoin="round"></path>
+        <path d="M55 20 L55 88" stroke="#B9741F" stroke-width="3" stroke-linecap="round"></path>
+        <path d="M30 70 l4 -3 M70 60 l4 3 M44 44 l3 3 M78 78 l3 -3" stroke="#B9741F" stroke-width="3" stroke-linecap="round"></path>
+      </svg>
+    </div>
+  </div>
+
+  <div class="plans">
+    <div class="plan">
+      <div>
+        <h3 class="plan__name">Free</h3>
+        <p class="plan__sub">Everything you need to understand your salary.</p>
+      </div>
+      <ul class="plan__list">
+        {
+          free.map((f) => (
+            <li>
+              <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0A6B4D" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d={tick} /></svg>
+              {f}
+            </li>
+          ))
+        }
+      </ul>
+      <a href={routes.auth} class="btn plan__cta">Start free</a>
+    </div>
+    <div class="plan plan--paid">
+      <div class="plan__top">
+        <div>
+          <h3 class="plan__name">Coach</h3>
+          <p class="plan__sub plan__sub--dark">A money coach in your pocket, every week.</p>
+        </div>
+        <span class="num plan__price">₹19/week</span>
+      </div>
+      <p class="plan__plus">Everything in Free, plus:</p>
+      <ul class="plan__list">
+        {
+          paid.map((f) => (
+            <li>
+              <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#15131C" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d={tick} /></svg>
+              {f}
+            </li>
+          ))
+        }
+      </ul>
+      <a href={routes.auth} class="btn btn--ink plan__cta">Get weekly coaching</a>
+      <p class="plan__note">Cancel anytime, in one tap.</p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .pricing {
+    display: flex;
+    flex-direction: column;
+    gap: 44px;
+  }
+
+  .compare {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+  }
+
+  .tag19 {
+    transform: rotate(-4deg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 26px 40px;
+    border-radius: 30px;
+    background: var(--mango);
+    border: 3px solid var(--ink);
+    box-shadow: 0 10px 0 var(--ink);
+  }
+
+  .tag19__amt {
+    font-weight: 800;
+    font-size: 96px;
+    letter-spacing: -0.06em;
+    line-height: 0.95;
+  }
+
+  .tag19__per {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 22px;
+  }
+
+  .less {
+    padding: 10px 18px;
+    border-radius: 99px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 20px;
+  }
+
+  .snack {
+    transform: rotate(3deg);
+    display: flex;
+    align-items: flex-end;
+    gap: 18px;
+    padding: 24px 30px;
+    border-radius: 30px;
+    background: var(--white);
+    border: 3px solid var(--ink);
+    box-shadow: 0 10px 0 var(--ink);
+  }
+
+  .snack__plus {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 34px;
+    padding-bottom: 30px;
+  }
+
+  .steam {
+    animation: steam 2.4s ease-in-out infinite;
+  }
+
+  .steam--late {
+    animation-delay: -1.1s;
+  }
+
+  @keyframes steam {
+    0%,
+    100% {
+      transform: translateY(0);
+      opacity: 0.5;
+    }
+    50% {
+      transform: translateY(-4px);
+      opacity: 0.9;
+    }
+  }
+
+  .plans {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px;
+    max-width: 1000px;
+    width: 100%;
+    align-self: center;
+  }
+
+  .plan {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 28px;
+    border-radius: 28px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 6px 0 var(--ink);
+  }
+
+  .plan--paid {
+    background: #ffd27a;
+    border-width: 3px;
+    box-shadow: 0 8px 0 var(--ink);
+  }
+
+  .plan__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .plan__name {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 26px;
+  }
+
+  .plan__sub {
+    margin: 4px 0 0;
+    color: var(--ink-muted);
+  }
+
+  .plan__sub--dark,
+  .plan__note {
+    color: #3d3646;
+  }
+
+  .plan__price {
+    flex: none;
+    padding: 6px 12px;
+    border-radius: 99px;
+    background: var(--ink);
+    color: var(--mango);
+    font-weight: 800;
+  }
+
+  .plan__plus {
+    margin: 0;
+    font-weight: 700;
+  }
+
+  .plan__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .plan__list li {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    line-height: 1.4;
+  }
+
+  .plan__list svg {
+    flex: none;
+  }
+
+  .plan__cta {
+    margin-top: auto;
+    font-weight: 800;
+  }
+
+  .plan--paid .plan__cta {
+    color: var(--paper);
+    box-shadow: 0 5px 0 #000;
+  }
+
+  .plan__note {
+    margin: 0;
+    text-align: center;
+  }
+
+  @media (max-width: 1023px) {
+    .tag19__amt {
+      font-size: 80px;
+    }
+  }
+
+  @media (max-width: 639px) {
+    .compare {
+      flex-direction: column;
+    }
+
+    .plans {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

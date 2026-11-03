@@ -1,0 +1,203 @@
+---
+// Final call to action (with gently falling petals) and the footer.
+import Handy from '../Handy.astro';
+import Logo from '../Logo.astro';
+import { routes } from '../../lib/routes';
+
+// Fixed pseudo-random petals so the server render is stable
+const colors = ['#FFB21E', '#FF9A1F', '#FFC94D', '#F98B0B', '#FFD27A'];
+const rnd = (i: number, k: number) => {
+  const x = Math.sin((i + 1) * k) * 10000;
+  return x - Math.floor(x);
+};
+const petals = Array.from({ length: 14 }, (_, i) => ({
+  left: (rnd(i, 12.9898) * 100).toFixed(1) + '%',
+  w: (10 + rnd(i, 4.1) * 10).toFixed(0) + 'px',
+  h: (16 + rnd(i, 7.3) * 12).toFixed(0) + 'px',
+  color: colors[i % colors.length],
+  dur: (6 + rnd(i, 3.7) * 5).toFixed(2) + 's',
+  delay: (-rnd(i, 9.1) * 10).toFixed(2) + 's',
+  dx: ((rnd(i, 5.5) - 0.5) * 160).toFixed(0) + 'px',
+  rot: ((rnd(i, 2.2) - 0.5) * 900).toFixed(0) + 'deg',
+}));
+
+const footerLinks = [
+  ['Privacy policy', 'privacy'],
+  ['Terms', 'terms'],
+  ['Delete my data', 'delete'],
+  ['Contact', 'contact'],
+];
+---
+
+<section class="lp-sec lp-sec--tight" aria-labelledby="cta-h">
+  <div class="cta">
+    <div class="cta__petals" aria-hidden="true">
+      {
+        petals.map((p) => (
+          <span
+            class="loop-petal"
+            style={`left: ${p.left}; width: ${p.w}; height: ${p.h}; background: ${p.color}; --dur: ${p.dur}; --delay: ${p.delay}; --dx: ${p.dx}; --rot: ${p.rot}`}
+          />
+        ))
+      }
+    </div>
+    <div class="cta__handy"><Handy mood="cheer" size={130} decorative /></div>
+    <h2 id="cta-h" class="cta__title">Your first salary deserves a plan.</h2>
+    <a href={routes.auth} class="btn btn--mango btn--lg cta__btn">
+      Make my plan, free
+      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+    </a>
+    <p class="cta__note">No signup to try. No bank password. Ever.</p>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="footer__about">
+    <Logo size={32} />
+    <p class="muted">
+      Not financial advice. Inhandy explains and estimates; for big decisions, talk to a SEBI-registered investment adviser or a chartered
+      accountant. Tax figures are estimates under the new regime.
+    </p>
+    <p class="muted">© 2026 Inhandy. Made with chai in India.</p>
+  </div>
+  <nav class="footer__links" aria-label="Footer">
+    {footerLinks.map(([label, tab]) => <a href={`${routes.legal}?tab=${tab}`}>{label}</a>)}
+  </nav>
+</footer>
+
+<style>
+  .cta {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+    padding: var(--lp-cta-pad);
+    border-radius: var(--lp-panel-r);
+    background: var(--ink);
+    color: var(--paper);
+    border: 3px solid var(--ink);
+    text-align: center;
+  }
+
+  .cta__petals {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .loop-petal {
+    position: absolute;
+    top: -30px;
+    border-radius: 70% 0 70% 0;
+    animation: petal-loop var(--dur) linear var(--delay) infinite;
+  }
+
+  @keyframes petal-loop {
+    0% {
+      transform: translate(0, 0) rotate(0deg);
+      opacity: 0;
+    }
+    10% {
+      opacity: 0.9;
+    }
+    90% {
+      opacity: 0.9;
+    }
+    100% {
+      transform: translate(var(--dx), 620px) rotate(var(--rot));
+      opacity: 0;
+    }
+  }
+
+  .cta__handy {
+    position: relative;
+    line-height: 0;
+  }
+
+  .cta__title {
+    position: relative;
+    margin: 0;
+    max-width: 820px;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: var(--lp-cta-h);
+    line-height: 1;
+    letter-spacing: -0.04em;
+  }
+
+  .cta__btn {
+    position: relative;
+    min-height: 64px;
+    padding: 16px 30px;
+    border-radius: 20px;
+    font-size: 21px;
+    gap: 12px;
+    box-shadow: 0 6px 0 #000;
+  }
+
+  .cta__note {
+    position: relative;
+    margin: 0;
+    font-weight: 500;
+    opacity: 0.85;
+  }
+
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    padding: var(--lp-foot-pad);
+    border-top: 2px solid var(--line);
+  }
+
+  .footer__about {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 520px;
+  }
+
+  .muted {
+    margin: 0;
+    line-height: 1.55;
+    color: var(--ink-muted);
+  }
+
+  .footer__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 20px;
+    align-content: flex-start;
+  }
+
+  .footer__links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-weight: 600;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .loop-petal {
+      display: none;
+    }
+  }
+
+  @media (max-width: 639px) {
+    .cta__handy :global(.handy) {
+      width: 100px !important;
+      height: 100px !important;
+    }
+
+    .cta__btn {
+      font-size: 19px;
+      padding: 14px 22px;
+    }
+
+    .footer {
+      flex-direction: column;
+    }
+  }
+</style>

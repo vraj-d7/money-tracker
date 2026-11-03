@@ -1,0 +1,702 @@
+---
+// Nav + hero: drag your CTC and watch it split into in-hand, tax, PF and other. Broadcasts "lp:ctc" for the jars section.
+import Logo from '../Logo.astro';
+import Handy from '../Handy.astro';
+import { routes } from '../../lib/routes';
+import { inr } from '../../lib/format';
+import { CTC_STEPS, stepIndexOf } from '../../lib/salary';
+import { flowPaths, heroBubble, heroMood, heroSplit, lakhLabel } from '../../lib/landing';
+import type { HandyMood } from '../../lib/handy';
+
+const start = 12;
+const s = heroSplit(start);
+const paths = flowPaths(s);
+const mood = heroMood(start, s);
+const idx = stepIndexOf(start);
+const maxIdx = CTC_STEPS.length - 1;
+const moods: HandyMood[] = ['happy', 'cheer', 'chill', 'gasp'];
+const ticks = [2, 10, 20, 50, 100].map((l) => ({ label: lakhLabel(l), left: ((stepIndexOf(l) / maxIdx) * 100).toFixed(1) + '%' }));
+
+const legend = [
+  { key: 'inhand', label: 'In-hand', color: '#2ED3A0', icon: 'M3 7h15a3 3 0 0 1 3 3v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7zM3 7l12-4 2 4M16.5 12.7a1.3 1.3 0 1 1 0 2.6 1.3 1.3 0 0 1 0-2.6z' },
+  { key: 'tax', label: 'Income tax', color: '#FF6B5B', icon: 'M3 9l9-5 9 5M5 10v8M10 10v8M14 10v8M19 10v8M3 20h18' },
+  { key: 'pf', label: 'Provident Fund', color: '#B9A6FF', icon: 'M7 10h10a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-5a3 3 0 0 1 3-3zM8 10V7a4 4 0 0 1 8 0v3' },
+  { key: 'other', label: 'Gratuity + prof. tax', color: '#D8C9A3', icon: 'M6 10.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zM12 10.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zM18 10.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3z' },
+] as const;
+const sliceColors = ['#2ED3A0', '#FF6B5B', '#B9A6FF', '#D8C9A3'];
+---
+
+<nav class="nav" aria-label="Main">
+  <a href={routes.landing} class="nav__logo" aria-label="Inhandy home"><Logo size={40} /></a>
+  <div class="nav__links">
+    <a href="#jars">How it works</a>
+    <a href="#vs">Offer face-off</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#trust">Privacy</a>
+  </div>
+  <a href={routes.auth} class="btn btn--mango nav__cta">Try it free</a>
+</nav>
+
+<div class="hero" data-hero data-start={start}>
+  <div class="hero__left">
+    <span class="chip">
+      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2"></path></svg>
+      For your first 1–3 years of work
+    </span>
+    <h1>
+      Where does your salary <span class="actually">actually<svg aria-hidden="true" viewBox="0 0 220 24" preserveAspectRatio="none"><path d="M4 15 C 50 5, 120 3, 216 10" stroke="#FFB21E" stroke-width="7" fill="none" stroke-linecap="round"></path><path d="M40 21 C 90 14, 150 14, 196 17" stroke="#FFB21E" stroke-width="4" fill="none" stroke-linecap="round"></path></svg></span> go?
+    </h1>
+    <p class="lp-lead">Drag your CTC and watch it split into tax, PF and the money that really lands in your account. Every month.</p>
+    <div class="ctc">
+      <div class="ctc__top">
+        <label for="hero-ctc" class="ctc__label">Your CTC <span class="ctc__per">(per year)</span></label>
+        <div class="num ctc__value">
+          <span>₹</span>
+          <input id="hero-ctc" class="ctc__input num" type="number" inputmode="decimal" min="2" max="100" step="0.5" value={start} data-ctc-input />
+          <span>L</span>
+        </div>
+      </div>
+      <input class="rng" type="range" min="0" max={maxIdx} step="1" value={idx} aria-label="Your CTC per year" aria-valuetext={lakhLabel(start)} style={`--p: ${((idx / maxIdx) * 100).toFixed(1)}%`} data-ctc-range />
+      <div class="num ctc__ticks" aria-hidden="true">
+        {ticks.map((t) => <span style={`left: ${t.left}`}>{t.label}</span>)}
+      </div>
+    </div>
+    <div class="hero__cta hero__cta--wide">
+      <a href={routes.salary} class="btn btn--mango btn--lg hero__btn">
+        Explain my salary in 30 sec
+        <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+      </a>
+      <p class="lock-line">
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="3"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+        No signup. No bank password. Ever.
+      </p>
+    </div>
+  </div>
+
+  <div class="split">
+    <div class="split__top">
+      <h2 class="split__title">Your <span class="num" data-ctc-short>{lakhLabel(start)}</span> CTC, split</h2>
+      <span class="split__tag">Per month · new tax regime</span>
+    </div>
+    <svg class="flow" viewBox="0 0 640 340" role="img" aria-label="" data-flow>
+      {paths.map((p, i) => <path d={p.d} fill={sliceColors[i]} fill-opacity="0.85" data-ribbon={i} />)}
+      <rect x="6" y="36" width="40" height="268" rx="14" fill="#FFB21E" stroke="#15131C" stroke-width="3"></rect>
+      <path d="M18 60 v220 M34 60 v220" stroke="#D88A00" stroke-width="2" stroke-dasharray="3 7" stroke-linecap="round"></path>
+      {paths.map((p, i) => <rect x="596" y={p.ry} width="38" height={p.rh} rx="7" fill={sliceColors[i]} stroke="#15131C" stroke-width="2.5" data-bar={i} />)}
+    </svg>
+    <div class="legend">
+      {
+        legend.map((l) => (
+          <div class="legend__item">
+            <span class="legend__icon" aria-hidden="true" style={`background: ${l.color}`}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d={l.icon} />
+              </svg>
+            </span>
+            <span class="legend__text">
+              <span class="legend__label">{l.label}</span>
+              {l.key === 'tax' && (
+                <span class="legend__sub" data-tax-sub hidden={s.tax === 0}>
+                  New regime, after ₹75,000 deduction
+                </span>
+              )}
+            </span>
+            <span class="num legend__amt" data-amt={l.key}>
+              {inr(s[l.key] / 12)}
+            </span>
+          </div>
+        ))
+      }
+    </div>
+    <div class="lands">
+      <div class="lands__text">
+        <p class="lands__label">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v13M6 11l6 6 6-6M4 20h16"></path></svg>
+          Lands in your account
+        </p>
+        <p class="num lands__amt"><span data-inhand>{inr(s.inhand / 12)}</span><span class="lands__per"> /month</span></p>
+      </div>
+      <div class="lands__handy">
+        <p class="lands__bubble" data-bubble>{heroBubble(mood, s)}</p>
+        <div class="mood-box" data-mood={mood} data-hero-handy>
+          {
+            moods.map((m) => (
+              <span data-mood-for={m}>
+                <Handy mood={m} size={104} decorative />
+              </span>
+            ))
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero__cta hero__cta--narrow">
+    <a href={routes.salary} class="btn btn--mango btn--lg hero__btn">
+      Explain my salary in 30 sec
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+    </a>
+    <p class="lock-line">
+      <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="3"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+      No signup. No bank password. Ever.
+    </p>
+  </div>
+</div>
+
+<script>
+  import { inr } from '../../lib/format';
+  import { CTC_STEPS, stepIndexOf } from '../../lib/salary';
+  import { flowPaths, heroBubble, heroMood, heroSplit, lakhLabel } from '../../lib/landing';
+  import { replayClass } from '../../scripts/replay-class';
+
+  const root = document.querySelector<HTMLElement>('[data-hero]')!;
+  const range = root.querySelector<HTMLInputElement>('[data-ctc-range]')!;
+  const input = root.querySelector<HTMLInputElement>('[data-ctc-input]')!;
+  const handy = root.querySelector<HTMLElement>('[data-hero-handy]')!;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const maxIdx = CTC_STEPS.length - 1;
+  let shown = heroSplit(Number(root.dataset.start)).inhand / 12;
+  let raf = 0;
+
+  function countTo(target: number) {
+    const el = root.querySelector('[data-inhand]')!;
+    cancelAnimationFrame(raf);
+    if (reduceMotion) {
+      shown = target;
+      el.textContent = inr(target);
+      return;
+    }
+    const from = shown;
+    const t0 = performance.now();
+    const step = (now: number) => {
+      const k = Math.min(1, (now - t0) / 420);
+      shown = from + (target - from) * (1 - Math.pow(1 - k, 3));
+      el.textContent = inr(shown);
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+  }
+
+  function setCtc(lakhs: number, fromInput = false) {
+    lakhs = Math.max(2, Math.min(100, lakhs));
+    const s = heroSplit(lakhs);
+    const idx = stepIndexOf(lakhs);
+    range.value = String(idx);
+    range.style.setProperty('--p', ((idx / maxIdx) * 100).toFixed(1) + '%');
+    range.setAttribute('aria-valuetext', lakhLabel(lakhs));
+    if (!fromInput) input.value = String(lakhs);
+    input.style.width = `${Math.max(1, input.value.length) + 0.3}ch`;
+    root.querySelector('[data-ctc-short]')!.textContent = lakhLabel(lakhs);
+
+    flowPaths(s).forEach((p, i) => {
+      root.querySelector(`[data-ribbon="${i}"]`)!.setAttribute('d', p.d);
+      const bar = root.querySelector(`[data-bar="${i}"]`)!;
+      bar.setAttribute('y', p.ry);
+      bar.setAttribute('height', p.rh);
+    });
+    (['inhand', 'tax', 'pf', 'other'] as const).forEach((k) => (root.querySelector(`[data-amt="${k}"]`)!.textContent = inr(s[k] / 12)));
+    root.querySelector<HTMLElement>('[data-tax-sub]')!.hidden = s.tax === 0;
+    root
+      .querySelector('[data-flow]')!
+      .setAttribute(
+        'aria-label',
+        `Your ${lakhLabel(lakhs)} CTC splits into ${inr(s.inhand / 12)} in-hand, ${inr(s.tax / 12)} tax, ${inr(s.pf / 12)} PF and ${inr(s.other / 12)} other, per month`,
+      );
+    countTo(s.inhand / 12);
+
+    const mood = heroMood(lakhs, s);
+    if (mood !== handy.dataset.mood) {
+      handy.dataset.mood = mood;
+      replayClass(handy, 'boing');
+    }
+    root.querySelector('[data-bubble]')!.textContent = heroBubble(mood, s);
+
+    // The jars section splits this month's in-hand
+    document.dispatchEvent(new CustomEvent('lp:ctc', { detail: { lakhs, monthly: s.inhand / 12 } }));
+  }
+
+  range.addEventListener('input', () => setCtc(CTC_STEPS[Number(range.value)]));
+  input.addEventListener('input', () => {
+    const v = parseFloat(input.value);
+    if (!Number.isNaN(v) && v >= 2 && v <= 100) setCtc(v, true);
+  });
+  input.addEventListener('blur', () => setCtc(parseFloat(input.value) || 12));
+
+  setCtc(Number(root.dataset.start));
+</script>
+
+<style>
+  .nav {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: var(--lp-nav-pad);
+  }
+
+  .nav__logo {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    text-decoration: none;
+  }
+
+  .nav__links {
+    display: flex;
+    gap: 36px;
+    font-weight: 500;
+  }
+
+  .nav__links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    text-decoration: none;
+  }
+
+  .nav__links a:hover {
+    text-decoration: underline;
+  }
+
+  .nav__cta {
+    min-height: 44px;
+    padding: 10px 18px;
+    border-radius: 14px;
+  }
+
+  .hero {
+    position: relative;
+    display: flex;
+    gap: 64px;
+    align-items: center;
+    padding: var(--lp-hero-pad);
+  }
+
+  .hero__left {
+    flex: 0 0 540px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+  }
+
+  .chip {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 99px;
+    background: #ffe7b0;
+    border: 2px solid var(--ink);
+    font-weight: 600;
+  }
+
+  h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: var(--lp-h1);
+    line-height: 0.98;
+    letter-spacing: -0.04em;
+  }
+
+  .actually {
+    position: relative;
+    white-space: nowrap;
+  }
+
+  .actually svg {
+    position: absolute;
+    left: -2%;
+    bottom: -0.16em;
+    width: 104%;
+    height: 0.3em;
+    overflow: visible;
+  }
+
+  .ctc {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 20px 22px 14px;
+    border-radius: 24px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 6px 0 var(--ink);
+  }
+
+  .ctc__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .ctc__label {
+    font-weight: 600;
+  }
+
+  .ctc__per {
+    font-weight: 500;
+    color: var(--ink-muted);
+  }
+
+  .ctc__value {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    font-weight: 800;
+    font-size: 34px;
+    letter-spacing: -0.03em;
+  }
+
+  .ctc__input {
+    width: 2.3ch;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+    text-align: right;
+    background: transparent;
+    border: none;
+    border-bottom: 3px dashed var(--mango);
+    -moz-appearance: textfield;
+  }
+
+  .ctc__input::-webkit-outer-spin-button,
+  .ctc__input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  .ctc__ticks {
+    position: relative;
+    height: 20px;
+    font-weight: 500;
+    color: var(--ink-muted);
+  }
+
+  .ctc__ticks span {
+    position: absolute;
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+
+  .ctc__ticks span:first-child {
+    transform: none;
+  }
+
+  .ctc__ticks span:last-child {
+    transform: translateX(-100%);
+  }
+
+  .hero__cta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .hero__cta--narrow {
+    display: none;
+  }
+
+  .hero__btn {
+    min-height: 64px;
+    padding: 16px 28px;
+    border-radius: 20px;
+    font-size: 21px;
+    gap: 12px;
+  }
+
+  .lock-line {
+    margin: 0;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-weight: 500;
+    color: var(--ink-muted);
+  }
+
+  .split {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 26px;
+    border-radius: 28px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 8px 0 var(--ink);
+  }
+
+  .split__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .split__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 22px;
+  }
+
+  .split__tag {
+    padding: 6px 12px;
+    border-radius: 99px;
+    background: var(--paper-deep);
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+
+  .flow {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  .flow path[data-ribbon] {
+    transition: d 0.38s cubic-bezier(0.3, 1.3, 0.5, 1);
+  }
+
+  .flow rect[data-bar] {
+    transition:
+      y 0.38s cubic-bezier(0.3, 1.3, 0.5, 1),
+      height 0.38s cubic-bezier(0.3, 1.3, 0.5, 1);
+  }
+
+  .legend {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .legend__item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 18px;
+    background: var(--paper-deep);
+  }
+
+  .legend__icon {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    border: 2px solid var(--ink);
+    box-sizing: border-box;
+  }
+
+  .legend__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .legend__label {
+    font-weight: 700;
+  }
+
+  .legend__sub {
+    font-size: 14px;
+    line-height: 1.35;
+    color: var(--ink-muted);
+  }
+
+  .legend__sub[hidden] {
+    display: none;
+  }
+
+  .legend__amt {
+    flex: none;
+    font-weight: 800;
+    font-size: 17px;
+  }
+
+  .lands {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+    padding: 18px 20px;
+    border-radius: 22px;
+    background: #e2f8ef;
+    border: 2.5px solid var(--ink);
+  }
+
+  .lands__text {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .lands__label {
+    margin: 0;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-weight: 700;
+    color: #0a6b4d;
+  }
+
+  .lands__amt {
+    margin: 0;
+    font-weight: 800;
+    font-size: var(--lp-big);
+    letter-spacing: -0.045em;
+    line-height: 1;
+  }
+
+  .lands__per {
+    font-size: max(16px, 0.3em);
+    font-weight: 700;
+    letter-spacing: 0;
+    color: var(--ink-muted);
+  }
+
+  .lands__handy {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+  }
+
+  .lands__bubble {
+    margin: 0 0 30px;
+    max-width: 230px;
+    padding: 10px 14px;
+    border-radius: 18px 18px 4px 18px;
+    background: var(--white);
+    border: 2px solid var(--ink);
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  .mood-box {
+    flex: none;
+    line-height: 0;
+  }
+
+  .mood-box > span {
+    display: none;
+  }
+
+  .mood-box[data-mood='happy'] > [data-mood-for='happy'],
+  .mood-box[data-mood='cheer'] > [data-mood-for='cheer'],
+  .mood-box[data-mood='chill'] > [data-mood-for='chill'],
+  .mood-box[data-mood='gasp'] > [data-mood-for='gasp'] {
+    display: block;
+  }
+
+  @media (max-width: 1279px) {
+    .hero {
+      gap: 40px;
+    }
+
+    .hero__left {
+      flex-basis: 460px;
+    }
+  }
+
+  @media (max-width: 1023px) {
+    .hero {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 36px;
+    }
+
+    .hero__left {
+      flex: none;
+      gap: 22px;
+    }
+
+    .split {
+      flex: none;
+      padding: 22px;
+    }
+
+    .lands__bubble {
+      max-width: 210px;
+    }
+
+    .mood-box :global(.handy) {
+      width: 92px !important;
+      height: 92px !important;
+    }
+  }
+
+  @media (max-width: 639px) {
+    .nav__links {
+      display: none;
+    }
+
+    .hero {
+      gap: 24px;
+    }
+
+    .hero__left {
+      gap: 20px;
+    }
+
+    .hero__cta--wide {
+      display: none;
+    }
+
+    .hero__cta--narrow {
+      display: flex;
+      align-items: stretch;
+    }
+
+    .hero__btn {
+      width: 100%;
+      min-height: 60px;
+      font-size: 19px;
+      padding: 14px 20px;
+    }
+
+    .lock-line {
+      justify-content: center;
+    }
+
+    .split {
+      padding: 18px;
+    }
+
+    .legend {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .lands__bubble {
+      max-width: 170px;
+    }
+
+    .mood-box :global(.handy) {
+      width: 80px !important;
+      height: 80px !important;
+    }
+
+    .ctc {
+      padding: 16px 16px 12px;
+    }
+
+    .ctc__value {
+      font-size: 28px;
+    }
+  }
+</style>

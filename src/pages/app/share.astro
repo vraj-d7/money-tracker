@@ -91,6 +91,14 @@ const targets = [
       close: routes.salary,
       file: 'inhandy-salary.png',
     },
+    graveyard: {
+      tag: 'SUBSCRIPTION GRAVEYARD',
+      title: num('count', 0) === 1 ? 'I killed 1 forgotten autopay' : `I killed ${num('count', 0) || 'my'} forgotten autopays`,
+      amount: `${inr(num('saved', 0))} a year saved`,
+      alt: 'and I don’t miss them',
+      close: routes.landing,
+      file: 'inhandy-graveyard.png',
+    },
     streak: {
       tag: 'SUNDAY STREAK',
       title: `${num('weeks', 6)} Sundays in a row`,

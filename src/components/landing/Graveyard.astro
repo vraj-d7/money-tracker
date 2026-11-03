@@ -1,0 +1,496 @@
+---
+// Subscription graveyard: "Kill it" on example autopays, with a running "saved this year" counter.
+import Handy from '../Handy.astro';
+import { routes } from '../../lib/routes';
+import { inr } from '../../lib/format';
+import { GRAVEYARD, GRAVEYARD_YEARLY } from '../../lib/landing';
+---
+
+<section class="lp-sec lp-sec--tight" aria-labelledby="grave-h" data-graveyard>
+  <div class="panel">
+    <div class="petal-box" aria-hidden="true" data-petals></div>
+    <div class="lp-intro">
+      <p class="lp-eyebrow lp-eyebrow--mango">Subscription graveyard</p>
+      <h2 id="grave-h" class="lp-h2">Kill the autopays you forgot about</h2>
+      <p class="lp-lead lp-lead--light">
+        These six everyday autopays add up to <span class="num total">{inr(GRAVEYARD_YEARLY)} a year</span>. Kill the ones you’d never miss.
+      </p>
+    </div>
+    <div class="body">
+      <div class="cards">
+        {
+          GRAVEYARD.map((c) => (
+            <div class="slot" data-sub={c.id} data-yearly={c.monthly * 12}>
+              <div class="card subcard" style={`animation-delay: ${c.delay}`} data-alive>
+                <div class="card__top">
+                  <span class="card__icon" aria-hidden="true">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d={c.icon} />
+                    </svg>
+                  </span>
+                  <div class="card__name">
+                    <span class="card__label">{c.label}</span>
+                    <span class="card__kind">{c.kind}</span>
+                  </div>
+                </div>
+                <div class="card__price">
+                  <span class="num card__monthly">
+                    {inr(c.monthly)}
+                    <span class="card__per">/mo</span>
+                  </span>
+                  <span class="num card__per">{inr(c.monthly * 12)}/yr</span>
+                </div>
+                <p class="card__renew">
+                  <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" />
+                  </svg>
+                  {c.renew}
+                </p>
+                <button type="button" class="btn kill" data-kill aria-label={`Kill ${c.label}, saves ${inr(c.monthly * 12)} a year`}>
+                  <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 3a3 3 0 1 1 0 6 3 3 0 0 1 0-6zM6 15a3 3 0 1 1 0 6 3 3 0 0 1 0-6zM20 4L8.1 15.9M14.5 14.5L20 20M8.1 8.1L12 12" />
+                  </svg>
+                  Kill it
+                </button>
+              </div>
+              <div class="grave" data-dead hidden>
+                <span class="coin" aria-hidden="true" style="left: 30%; top: 40%" />
+                <span class="coin" aria-hidden="true" style="left: 50%; top: 32%; animation-delay: .08s" />
+                <span class="coin" aria-hidden="true" style="left: 66%; top: 44%; animation-delay: .16s" />
+                <span class="grave__rip">R.I.P.</span>
+                <span class="grave__name">{c.label}</span>
+                <span class="num grave__back">+{inr(c.monthly * 12)}/yr back to you</span>
+                <button type="button" class="grave__undo" data-undo>
+                  Undo
+                </button>
+              </div>
+            </div>
+          ))
+        }
+      </div>
+      <div class="counter">
+        <div class="counter__top">
+          <p class="counter__label">Saved this year</p>
+          <p class="num counter__amt" aria-live="polite" data-saved>₹0</p>
+          <p class="counter__line" data-killed-line>Nothing killed yet. Go on, tap one.</p>
+        </div>
+        <div class="mood-box" data-mood="gasp" data-grave-handy>
+          <span data-mood-for="gasp"><Handy mood="gasp" size={110} decorative /></span>
+          <span data-mood-for="cheer"><Handy mood="cheer" size={110} decorative /></span>
+        </div>
+        <a href={`${routes.share}?card=graveyard&saved=0&count=0`} class="btn btn--ink counter__share" data-share>
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"></path><path d="M12 3v12M7 8l5-5 5 5"></path></svg>
+          Share my graveyard
+        </a>
+      </div>
+    </div>
+    <p class="note">Example subscriptions with generic names. Tap “Kill it” to try it.</p>
+  </div>
+</section>
+
+<script>
+  import { inr } from '../../lib/format';
+  import { routes } from '../../lib/routes';
+  import { burstPetals } from '../../scripts/petals';
+  import { replayClass } from '../../scripts/replay-class';
+
+  const root = document.querySelector<HTMLElement>('[data-graveyard]')!;
+  const slots = [...root.querySelectorAll<HTMLElement>('[data-sub]')];
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const killed = new Set<string>();
+  let shown = 0;
+  let raf = 0;
+
+  function countTo(target: number, ms: number) {
+    const el = root.querySelector('[data-saved]')!;
+    cancelAnimationFrame(raf);
+    if (reduceMotion) {
+      shown = target;
+      el.textContent = inr(target);
+      return;
+    }
+    const from = shown;
+    const t0 = performance.now();
+    const step = (now: number) => {
+      const k = Math.min(1, (now - t0) / ms);
+      shown = from + (target - from) * (1 - Math.pow(1 - k, 3));
+      el.textContent = inr(shown);
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+  }
+
+  function render(ms: number) {
+    let saved = 0;
+    slots.forEach((s) => {
+      const dead = killed.has(s.dataset.sub!);
+      s.querySelector<HTMLElement>('[data-alive]')!.hidden = dead;
+      s.querySelector<HTMLElement>('[data-dead]')!.hidden = !dead;
+      if (dead) saved += Number(s.dataset.yearly);
+    });
+    countTo(saved, ms);
+    const n = killed.size;
+    root.querySelector('[data-killed-line]')!.textContent =
+      n === 0 ? 'Nothing killed yet. Go on, tap one.' : `${n} of ${slots.length} buried. ${n === slots.length ? 'Total legend.' : 'Keep going!'}`;
+    root.querySelector<HTMLElement>('[data-grave-handy]')!.dataset.mood = n === 0 ? 'gasp' : 'cheer';
+    root.querySelector<HTMLAnchorElement>('[data-share]')!.href = `${routes.share}?card=graveyard&saved=${saved}&count=${n}`;
+  }
+
+  slots.forEach((s) => {
+    s.querySelector('[data-kill]')!.addEventListener('click', () => {
+      killed.add(s.dataset.sub!);
+      render(700);
+      replayClass(s.querySelector('[data-dead]'), 'crumble-in');
+      replayClass(root.querySelector('[data-grave-handy]'), 'boing');
+      burstPetals(root.querySelector<HTMLElement>('[data-petals]')!, 30, 720);
+      s.querySelector<HTMLButtonElement>('[data-undo]')!.focus();
+    });
+    s.querySelector('[data-undo]')!.addEventListener('click', () => {
+      killed.delete(s.dataset.sub!);
+      render(400);
+      s.querySelector<HTMLButtonElement>('[data-kill]')!.focus();
+    });
+  });
+</script>
+
+<style>
+  .panel {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 36px;
+    padding: var(--lp-panel-pad);
+    border-radius: var(--lp-panel-r);
+    background: var(--ink);
+    border: 2.5px solid var(--ink);
+    color: var(--paper);
+  }
+
+  .petal-box {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  .total {
+    display: inline-block;
+    padding: 0 8px;
+    border: 2px solid var(--mango);
+    border-radius: 8px;
+    color: var(--mango);
+    font-weight: 800;
+  }
+
+  .body {
+    display: flex;
+    gap: 64px;
+    align-items: stretch;
+  }
+
+  .cards {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 22px;
+  }
+
+  .slot {
+    min-height: 236px;
+  }
+
+  .card {
+    height: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    border-radius: 22px;
+    background: var(--white);
+    color: var(--ink);
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 6px 0 #000;
+  }
+
+  .card[hidden],
+  .grave[hidden] {
+    display: none;
+  }
+
+  .subcard {
+    animation: float-smooth 4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+    transition: transform 0.45s cubic-bezier(0.34, 1.3, 0.5, 1);
+  }
+
+  .subcard:hover,
+  .subcard:focus-within {
+    transform: translateY(-4px) rotate(2.5deg);
+  }
+
+  @keyframes float-smooth {
+    0%,
+    100% {
+      translate: 0 0;
+    }
+    50% {
+      translate: 0 -7px;
+    }
+  }
+
+  .card__top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .card__icon {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 13px;
+    background: var(--danger-bg);
+    color: var(--danger);
+  }
+
+  .card__name {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .card__label {
+    font-weight: 800;
+  }
+
+  .card__kind,
+  .card__per {
+    line-height: 1.3;
+    color: var(--ink-muted);
+    font-weight: 600;
+    font-size: 16px;
+  }
+
+  .card__price {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+  }
+
+  .card__monthly {
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.02em;
+  }
+
+  .card__monthly .card__per {
+    letter-spacing: 0;
+  }
+
+  .card__renew {
+    margin: 0;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    font-weight: 700;
+    color: var(--danger);
+  }
+
+  .kill {
+    margin-top: auto;
+    min-height: 44px;
+    border-radius: 14px;
+    background: var(--coral);
+    font-weight: 800;
+    box-shadow: 0 5px 0 var(--ink);
+  }
+
+  .kill:hover {
+    background: var(--white);
+  }
+
+  .grave {
+    position: relative;
+    height: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 26px 14px 14px;
+    border: 2.5px dashed #8d86a0;
+    border-radius: 90px 90px 20px 20px;
+    text-align: center;
+  }
+
+  :global(.crumble-in) {
+    animation: crumble-in 0.5s cubic-bezier(0.3, 1.5, 0.5, 1);
+  }
+
+  @keyframes crumble-in {
+    0% {
+      transform: scale(0.55) rotate(-10deg);
+      opacity: 0;
+      filter: blur(2px);
+    }
+    100% {
+      transform: none;
+      opacity: 1;
+      filter: none;
+    }
+  }
+
+  .coin {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--mango);
+    border: 2px solid var(--ink);
+    opacity: 0;
+    animation: coin 0.8s cubic-bezier(0.5, 0, 0.8, 0.6) forwards;
+  }
+
+  @keyframes coin {
+    0% {
+      opacity: 1;
+      transform: translateY(-30px) scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(110px) scale(0.7);
+    }
+  }
+
+  .grave__rip {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 26px;
+    letter-spacing: 0.04em;
+  }
+
+  .grave__name {
+    font-weight: 600;
+    color: #cfc8da;
+    text-decoration: line-through;
+  }
+
+  .grave__back {
+    font-weight: 800;
+    color: var(--mint);
+  }
+
+  .grave__undo {
+    min-height: 44px;
+    padding: 0 12px;
+    background: transparent;
+    border: none;
+    color: var(--paper);
+    font-size: 16px;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .counter {
+    flex: 0 0 300px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 26px;
+    border-radius: 28px;
+    background: var(--mango);
+    color: var(--ink);
+    border: 3px solid var(--ink);
+    box-shadow: 0 8px 0 #000;
+  }
+
+  .counter__top {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .counter__label,
+  .counter__line {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .counter__label {
+    font-weight: 700;
+  }
+
+  .counter__amt {
+    margin: 0;
+    font-weight: 800;
+    font-size: var(--lp-save-big);
+    letter-spacing: -0.045em;
+    line-height: 1;
+  }
+
+  .mood-box {
+    align-self: center;
+    line-height: 0;
+  }
+
+  .mood-box > span {
+    display: none;
+  }
+
+  .mood-box[data-mood='gasp'] > [data-mood-for='gasp'],
+  .mood-box[data-mood='cheer'] > [data-mood-for='cheer'] {
+    display: block;
+  }
+
+  .counter__share {
+    min-height: 48px;
+    color: var(--paper);
+    box-shadow: 0 5px 0 #000;
+  }
+
+  .note {
+    margin: 0;
+    color: #bbb4c8;
+  }
+
+  @media (max-width: 1279px) {
+    .body {
+      gap: 32px;
+    }
+
+    .cards {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 1023px) {
+    .body {
+      flex-direction: column;
+    }
+
+    .counter {
+      flex: none;
+    }
+  }
+
+  @media (max-width: 639px) {
+    .cards {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 20px;
+    }
+
+    .slot {
+      min-height: 0;
+    }
+  }
+</style>

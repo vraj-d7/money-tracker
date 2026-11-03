@@ -1,0 +1,353 @@
+---
+// "Where your in-hand goes": five jar sliders splitting the hero's monthly in-hand (listens for "lp:ctc").
+import Handy from '../Handy.astro';
+import { inr } from '../../lib/format';
+import { LANDING_JARS, heroSplit, jarPlanMessage } from '../../lib/landing';
+import type { HandyMood } from '../../lib/handy';
+
+const monthly = heroSplit(12).inhand / 12;
+const total = LANDING_JARS.reduce((s, j) => s + j.start, 0);
+const plan = jarPlanMessage(total, monthly);
+const moods: HandyMood[] = ['happy', 'cheer', 'gasp'];
+---
+
+<section id="jars" class="lp-sec" aria-labelledby="jars-h" data-jars data-monthly={monthly}>
+  <div class="lp-intro">
+    <p class="lp-eyebrow">Your salary-day plan</p>
+    <h2 id="jars-h" class="lp-h2">Where your <span class="num inhand" data-jars-inhand>{inr(monthly)}</span> goes</h2>
+    <p class="lp-lead">Your in-hand pours into jars. Drag each slider to make your own plan; Handy keeps the maths honest.</p>
+  </div>
+
+  <div class="jars">
+    {
+      LANDING_JARS.map((j) => (
+        <div class="jar" data-jar={j.k} style={`--jar: ${j.color}`}>
+          <div class="jar__glass" aria-hidden="true">
+            <div class="jar__lid" />
+            <div class="jar__body">
+              <div class="jar__fill" data-fill style={`height: ${Math.min(100, j.start * 2)}%`}>
+                <svg class="jar__wave" viewBox="0 0 240 12" preserveAspectRatio="none">
+                  <path d="M0 6 Q15 0 30 6 T60 6 T90 6 T120 6 T150 6 T180 6 T210 6 T240 6 V12 H0 Z" />
+                </svg>
+              </div>
+              <div class="jar__shine" />
+            </div>
+          </div>
+          <div class="jar__text">
+            <span class="jar__label">
+              <span class="jar__dot" aria-hidden="true" />
+              {j.label}
+            </span>
+            <span class="num jar__amt" data-amt>
+              {inr((monthly * j.start) / 100)}
+            </span>
+            <span class="num jar__pct" data-pct>
+              {j.start}% of in-hand
+            </span>
+          </div>
+          <input
+            class="rng"
+            type="range"
+            min="0"
+            max="60"
+            step="1"
+            value={j.start}
+            aria-label={`${j.label} jar, ${j.start} percent of in-hand`}
+            style={`--p: ${((j.start / 60) * 100).toFixed(1)}%; --c: ${j.color}`}
+            data-slider
+          />
+        </div>
+      ))
+    }
+  </div>
+
+  <div class="summary">
+    <div class="summary__main">
+      <div class="summary__bar" role="img" aria-label={`Planned ${total} percent of in-hand`} data-bar>
+        {LANDING_JARS.map((j) => <div data-seg={j.k} style={`width: ${j.start}%; background: ${j.color}`} />)}
+      </div>
+      <p class:list={['summary__msg', `summary__msg--${plan.tone}`]} data-msg>{plan.msg}</p>
+      <p class="summary__sub" data-sub>{plan.sub}</p>
+    </div>
+    <div class="mood-box" data-mood={plan.mood} data-jars-handy>
+      {
+        moods.map((m) => (
+          <span data-mood-for={m}>
+            <Handy mood={m} size={76} decorative />
+          </span>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<script>
+  import { inr } from '../../lib/format';
+  import { LANDING_JARS, jarPlanMessage } from '../../lib/landing';
+  import { replayClass } from '../../scripts/replay-class';
+
+  const root = document.querySelector<HTMLElement>('[data-jars]')!;
+  const values: Record<string, number> = Object.fromEntries(LANDING_JARS.map((j) => [j.k, j.start]));
+  let monthly = Number(root.dataset.monthly);
+  let lastTone = '';
+
+  function render() {
+    const total = Object.values(values).reduce((s, v) => s + v, 0);
+    const scale = total > 100 ? 100 / total : 1;
+    root.querySelector('[data-jars-inhand]')!.textContent = inr(monthly);
+    for (const j of LANDING_JARS) {
+      const v = values[j.k];
+      const el = root.querySelector<HTMLElement>(`[data-jar="${j.k}"]`)!;
+      el.querySelector<HTMLElement>('[data-fill]')!.style.height = `${Math.min(100, v * 2)}%`;
+      el.querySelector('[data-amt]')!.textContent = inr((monthly * v) / 100);
+      el.querySelector('[data-pct]')!.textContent = `${v}% of in-hand`;
+      const slider = el.querySelector<HTMLInputElement>('[data-slider]')!;
+      slider.style.setProperty('--p', `${((v / 60) * 100).toFixed(1)}%`);
+      slider.setAttribute('aria-label', `${j.label} jar, ${v} percent of in-hand`);
+      root.querySelector<HTMLElement>(`[data-seg="${j.k}"]`)!.style.width = `${v * scale}%`;
+    }
+    root.querySelector('[data-bar]')!.setAttribute('aria-label', `Planned ${Math.round(total)} percent of in-hand`);
+
+    const plan = jarPlanMessage(total, monthly);
+    const msg = root.querySelector<HTMLElement>('[data-msg]')!;
+    msg.textContent = plan.msg;
+    msg.classList.toggle('summary__msg--good', plan.tone === 'good');
+    msg.classList.toggle('summary__msg--bad', plan.tone === 'bad');
+    root.querySelector('[data-sub]')!.textContent = plan.sub;
+    const handy = root.querySelector<HTMLElement>('[data-jars-handy]')!;
+    const state = total > 100 ? 'over' : total === 100 ? 'full' : 'ok';
+    handy.dataset.mood = plan.mood;
+    if (lastTone && state !== lastTone) {
+      replayClass(handy, 'boing');
+      replayClass(msg, 'pop-in');
+    }
+    lastTone = state;
+  }
+
+  root.querySelectorAll<HTMLElement>('[data-jar]').forEach((el) =>
+    el.querySelector('[data-slider]')!.addEventListener('input', (e) => {
+      values[el.dataset.jar!] = Number((e.target as HTMLInputElement).value);
+      render();
+    }),
+  );
+
+  document.addEventListener('lp:ctc', (e) => {
+    monthly = (e as CustomEvent<{ monthly: number }>).detail.monthly;
+    render();
+  });
+
+  render();
+</script>
+
+<style>
+  .inhand {
+    color: #0a6b4d;
+  }
+
+  .jars {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: var(--lp-jar-gap);
+  }
+
+  .jar {
+    width: 150px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .jar__glass {
+    position: relative;
+    width: 120px;
+    height: 176px;
+  }
+
+  .jar__lid {
+    position: absolute;
+    left: 20px;
+    right: 20px;
+    top: 0;
+    height: 18px;
+    border-radius: 8px;
+    background: var(--jar);
+    border: 2.5px solid var(--ink);
+    box-sizing: border-box;
+  }
+
+  .jar__body {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 14px;
+    bottom: 0;
+    border: 3px solid var(--ink);
+    border-radius: 24px 24px 32px 32px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.7);
+  }
+
+  .jar__fill {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--jar);
+    transition: height 0.4s cubic-bezier(0.3, 1.4, 0.5, 1);
+  }
+
+  .jar__wave {
+    position: absolute;
+    left: 0;
+    top: -10px;
+    width: 200%;
+    height: 12px;
+    fill: var(--jar);
+    animation: wave 2.6s linear infinite;
+  }
+
+  @keyframes wave {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  .jar__shine {
+    position: absolute;
+    left: 12px;
+    top: 14px;
+    width: 9px;
+    height: 64px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.55);
+  }
+
+  .jar__text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    text-align: center;
+  }
+
+  .jar__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+  }
+
+  .jar__dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--jar);
+    border: 2px solid var(--ink);
+    box-sizing: border-box;
+  }
+
+  .jar__amt {
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.02em;
+  }
+
+  .jar__pct {
+    color: var(--ink-muted);
+  }
+
+  .summary {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 22px 24px;
+    border-radius: 24px;
+    background: var(--white);
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 6px 0 var(--ink);
+  }
+
+  .summary__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .summary__bar {
+    display: flex;
+    height: 22px;
+    border-radius: 99px;
+    overflow: hidden;
+    border: 2px solid var(--ink);
+    background: #f1e7d3;
+  }
+
+  .summary__bar div {
+    transition: width 0.35s;
+  }
+
+  .summary__msg {
+    margin: 0;
+    font-weight: 800;
+    font-size: 19px;
+  }
+
+  .summary__msg--good {
+    color: #0a6b4d;
+  }
+
+  .summary__msg--bad {
+    color: var(--danger);
+  }
+
+  .summary__sub {
+    margin: 0;
+    line-height: 1.45;
+    color: var(--ink-muted);
+  }
+
+  .mood-box {
+    flex: none;
+    line-height: 0;
+  }
+
+  .mood-box > span {
+    display: none;
+  }
+
+  .mood-box[data-mood='happy'] > [data-mood-for='happy'],
+  .mood-box[data-mood='cheer'] > [data-mood-for='cheer'],
+  .mood-box[data-mood='gasp'] > [data-mood-for='gasp'] {
+    display: block;
+  }
+
+  @media (max-width: 1023px) {
+    .jar {
+      width: 136px;
+    }
+  }
+
+  @media (max-width: 639px) {
+    .jars {
+      flex-direction: column;
+    }
+
+    .jar {
+      width: 150px;
+    }
+
+    .summary {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .mood-box {
+      align-self: center;
+    }
+  }
+</style>

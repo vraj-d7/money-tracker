@@ -230,6 +230,49 @@ textarea:focus-visible {
   }
 }
 
+/* Mango-petal confetti (scripts/petals.ts) */
+.petal {
+  position: absolute;
+  top: -30px;
+  border-radius: 70% 0 70% 0;
+  opacity: 0;
+  animation: petal var(--dur) cubic-bezier(0.25, 0.6, 0.4, 1) var(--delay) forwards;
+}
+
+@keyframes petal {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(0deg);
+  }
+  8% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--fall, 720px)) rotate(var(--rot));
+  }
+}
+
+/* Little "boing" when something changes (Handy reacting, a message updating) */
+.boing {
+  animation: boing 0.5s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+@keyframes boing {
+  0% {
+    transform: scale(0.86) rotate(-9deg);
+  }
+  60% {
+    transform: scale(1.08) rotate(3deg);
+  }
+  100% {
+    transform: none;
+  }
+}
+
 /* Where showToast() puts toasts: bottom centre of the screen */
 .toast-region {
   position: fixed;

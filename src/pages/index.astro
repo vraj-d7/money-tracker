@@ -1,38 +1,190 @@
 ---
-// Temporary start page until the landing page is built.
+// Landing page, from designs/Landing.dc.html (desktop 1440 · tablet 834 · phone 420).
 import Base from '../layouts/Base.astro';
-import Logo from '../components/Logo.astro';
-import { routes } from '../lib/routes';
+import Hero from '../components/landing/Hero.astro';
+import Jars from '../components/landing/Jars.astro';
+import Graveyard from '../components/landing/Graveyard.astro';
+import FaceOff from '../components/landing/FaceOff.astro';
+import Sunday from '../components/landing/Sunday.astro';
+import Modes from '../components/landing/Modes.astro';
+import Trust from '../components/landing/Trust.astro';
+import Pricing from '../components/landing/Pricing.astro';
+import FinalCta from '../components/landing/FinalCta.astro';
 ---
 
-<Base title="Inhandy">
-  <main>
-    <Logo size={48} />
-    <p>The landing page comes later. For now:</p>
-    <div class="links">
-      <a class="btn btn--mango btn--lg" href={routes.home}>Open the app</a>
-      <a class="btn" href={routes.brand}>Brand and components</a>
+<Base title="Inhandy · Where does your salary actually go?">
+  <div class="lp paper-dots">
+    <div class="lp__page">
+      <Hero />
+      <main>
+        <Jars />
+        <Graveyard />
+        <FaceOff />
+        <Sunday />
+        <Modes />
+        <Trust />
+        <Pricing />
+        <FinalCta />
+      </main>
     </div>
-  </main>
+  </div>
 </Base>
 
-<style>
-  main {
-    max-width: 640px;
-    margin: 0 auto;
-    padding: 64px 16px;
+<style is:global>
+  /* Spacing and type sizes per screen size; sections read these */
+  .lp {
+    --lp-nav-pad: 28px 80px;
+    --lp-hero-pad: 36px 80px 72px;
+    --lp-sec: 112px 80px;
+    --lp-sec-tight: 40px 80px;
+    --lp-h1: 84px;
+    --lp-h2: 60px;
+    --lp-lead: 20px;
+    --lp-big: 76px;
+    --lp-jar-gap: 48px;
+    --lp-panel-r: 40px;
+    --lp-panel-pad: 56px;
+    --lp-save-big: 56px;
+    --lp-verdict: 30px;
+    --lp-mode-text: 21px;
+    --lp-cta-pad: 88px 64px;
+    --lp-cta-h: 76px;
+    --lp-foot-pad: 40px 80px 56px;
+    min-height: 100vh;
+    overflow-x: clip;
   }
 
-  p {
-    margin: 24px 0;
-    font-size: 18px;
+  .lp__page {
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+
+  html:has(.lp) {
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html:has(.lp) {
+      scroll-behavior: auto;
+    }
+  }
+
+  .lp-sec {
+    padding: var(--lp-sec);
+    display: flex;
+    flex-direction: column;
+    gap: 44px;
+    scroll-margin-top: 16px;
+  }
+
+  .lp-sec--tight {
+    padding: var(--lp-sec-tight);
+  }
+
+  .lp-band {
+    background: #f3ecdd;
+  }
+
+  .lp-intro {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-width: 780px;
+  }
+
+  .lp-intro--center {
+    align-items: center;
+  }
+
+  .lp-eyebrow {
+    margin: 0;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #8a5800;
+  }
+
+  .lp-eyebrow--mango {
+    color: var(--mango);
+  }
+
+  .lp-h2 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: var(--lp-h2);
+    line-height: 1.02;
+    letter-spacing: -0.035em;
+  }
+
+  .lp-lead {
+    margin: 0;
+    max-width: 560px;
+    font-size: var(--lp-lead);
     line-height: 1.5;
     color: var(--ink-muted);
   }
 
-  .links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
+  .lp-lead--light {
+    color: #cfc8da;
+    max-width: none;
+  }
+
+  @media (max-width: 1279px) {
+    .lp {
+      --lp-nav-pad: 24px 48px;
+      --lp-hero-pad: 28px 48px 64px;
+      --lp-sec: 96px 48px;
+      --lp-sec-tight: 36px 48px;
+      --lp-h1: 72px;
+      --lp-h2: 52px;
+      --lp-big: 68px;
+      --lp-cta-h: 64px;
+      --lp-foot-pad: 36px 48px 48px;
+    }
+  }
+
+  @media (max-width: 1023px) {
+    .lp {
+      --lp-nav-pad: 24px 40px;
+      --lp-hero-pad: 24px 40px 56px;
+      --lp-sec: 80px 40px;
+      --lp-sec-tight: 32px 40px;
+      --lp-h1: 64px;
+      --lp-h2: 46px;
+      --lp-lead: 19px;
+      --lp-big: 64px;
+      --lp-jar-gap: 8px;
+      --lp-panel-r: 36px;
+      --lp-panel-pad: 40px 28px;
+      --lp-save-big: 52px;
+      --lp-verdict: 26px;
+      --lp-mode-text: 19px;
+      --lp-cta-pad: 72px 40px;
+      --lp-cta-h: 58px;
+      --lp-foot-pad: 36px 40px 48px;
+    }
+  }
+
+  @media (max-width: 639px) {
+    .lp {
+      --lp-nav-pad: 18px 16px;
+      --lp-hero-pad: 8px 16px 40px;
+      --lp-sec: 64px 16px;
+      --lp-sec-tight: 24px 10px;
+      --lp-h1: 44px;
+      --lp-h2: 34px;
+      --lp-lead: 17px;
+      --lp-big: 50px;
+      --lp-jar-gap: 36px;
+      --lp-panel-r: 32px;
+      --lp-panel-pad: 32px 16px;
+      --lp-save-big: 48px;
+      --lp-verdict: 23px;
+      --lp-mode-text: 17px;
+      --lp-cta-pad: 56px 22px;
+      --lp-cta-h: 42px;
+      --lp-foot-pad: 32px 16px 44px;
+    }
   }
 </style>

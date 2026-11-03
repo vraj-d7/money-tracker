@@ -1,0 +1,161 @@
+---
+// Coach modes: same week, three voices.
+import Handy from '../Handy.astro';
+import { LANDING_MODES, type LandingMode } from '../../lib/landing';
+
+const start: LandingMode = 'honest';
+const modes = Object.entries(LANDING_MODES) as [LandingMode, (typeof LANDING_MODES)[LandingMode]][];
+---
+
+<section class="lp-sec modes" aria-labelledby="mode-h" data-modes data-all={JSON.stringify(LANDING_MODES)}>
+  <div class="lp-intro lp-intro--center">
+    <p class="lp-eyebrow">Coach modes</p>
+    <h2 id="mode-h" class="lp-h2">Same week. Pick the vibe.</h2>
+  </div>
+  <div class="toggle" role="group" aria-label="Coach mode">
+    {
+      modes.map(([id, m]) => (
+        <button type="button" class="toggle__btn" data-mode={id} aria-pressed={id === start ? 'true' : 'false'}>
+          {m.label}
+        </button>
+      ))
+    }
+  </div>
+  <div class="say" data-say>
+    <div class="say__handy" data-mood={LANDING_MODES[start].mood}>
+      {
+        modes.map(([, m]) => (
+          <span data-mood-for={m.mood}>
+            <Handy mood={m.mood} size={110} decorative />
+          </span>
+        ))
+      }
+    </div>
+    <div class="say__bubble" aria-live="polite">
+      <p class="say__name" data-name>{LANDING_MODES[start].name}</p>
+      <p class="say__msg" data-msg>{LANDING_MODES[start].msg}</p>
+    </div>
+  </div>
+  <p class="muted">Mom mode roasts with love, never shames.</p>
+</section>
+
+<script>
+  import { replayClass } from '../../scripts/replay-class';
+  import type { LANDING_MODES } from '../../lib/landing';
+
+  const root = document.querySelector<HTMLElement>('[data-modes]')!;
+  const all = JSON.parse(root.dataset.all!) as typeof LANDING_MODES;
+  const btns = [...root.querySelectorAll<HTMLButtonElement>('[data-mode]')];
+
+  btns.forEach((b) =>
+    b.addEventListener('click', () => {
+      if (b.getAttribute('aria-pressed') === 'true') return;
+      const m = all[b.dataset.mode as keyof typeof LANDING_MODES];
+      btns.forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      root.querySelector<HTMLElement>('.say__handy')!.dataset.mood = m.mood;
+      root.querySelector('[data-name]')!.textContent = m.name;
+      root.querySelector('[data-msg]')!.textContent = m.msg;
+      replayClass(root.querySelector('[data-say]'), 'pop-in');
+    }),
+  );
+</script>
+
+<style>
+  .modes {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+    text-align: center;
+  }
+
+  .toggle {
+    display: flex;
+    gap: 6px;
+    width: 560px;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 6px;
+    border-radius: 22px;
+    background: var(--paper-deep);
+    border: 2.5px solid var(--ink);
+  }
+
+  .toggle__btn {
+    flex: 1;
+    min-height: 52px;
+    padding: 8px 16px;
+    border-radius: 16px;
+    border: 2.5px solid transparent;
+    background: transparent;
+    color: var(--ink);
+    font-weight: 800;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .toggle__btn[aria-pressed='true'] {
+    background: var(--mango);
+    border-color: var(--ink);
+    box-shadow: 0 4px 0 var(--ink);
+  }
+
+  .say {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    max-width: 720px;
+    text-align: left;
+  }
+
+  .say__handy {
+    flex: none;
+    line-height: 0;
+  }
+
+  .say__handy > span {
+    display: none;
+  }
+
+  .say__handy[data-mood='cheer'] > [data-mood-for='cheer'],
+  .say__handy[data-mood='happy'] > [data-mood-for='happy'],
+  .say__handy[data-mood='sus'] > [data-mood-for='sus'] {
+    display: block;
+  }
+
+  .say__bubble {
+    padding: 20px 22px;
+    border-radius: 26px 26px 26px 6px;
+    background: #eee9ff;
+    border: 2.5px solid var(--ink);
+    box-shadow: 0 6px 0 var(--ink);
+  }
+
+  .say__name {
+    margin: 0 0 6px;
+    font-weight: 800;
+    color: var(--violet);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .say__msg {
+    margin: 0;
+    font-size: var(--lp-mode-text);
+    line-height: 1.45;
+    font-weight: 500;
+  }
+
+  .muted {
+    margin: 0;
+    color: var(--ink-muted);
+  }
+
+  @media (max-width: 639px) {
+    .say__handy :global(.handy) {
+      width: 72px !important;
+      height: 72px !important;
+    }
+  }
+</style>

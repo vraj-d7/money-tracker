@@ -1,0 +1,370 @@
+---
+// Landing version of the offer face-off: two offers, sliders, a verdict and a share link.
+import { routes } from '../../lib/routes';
+import { inr } from '../../lib/format';
+import { OFFER_FIELDS, faceOff, fieldValueLabel, type Offer, type OfferId } from '../../lib/offer';
+
+const start: Record<OfferId, Offer> = {
+  A: { fixed: 12, varPct: 15, bonus: 1 },
+  B: { fixed: 12.6, varPct: 5, bonus: 0 },
+};
+const f = faceOff(start.A, start.B, inr);
+const results = { A: f.a, B: f.b };
+const pct = (v: number, min: number, max: number) => (((v - min) / (max - min)) * 100).toFixed(1) + '%';
+const label = (key: keyof Offer, v: number) => (key === 'fixed' ? `${fieldValueLabel(key, v, inr)}/yr` : fieldValueLabel(key, v, inr));
+---
+
+<section id="vs" class="lp-sec" aria-labelledby="vs-h" data-faceoff data-offers={JSON.stringify(start)}>
+  <div class="lp-intro">
+    <p class="lp-eyebrow">Offer face-off</p>
+    <h2 id="vs-h" class="lp-h2">Two offers. One winner.</h2>
+    <p class="lp-lead">Move the sliders. We do the tax maths and tell you who really pays more, every month and in year one.</p>
+  </div>
+
+  <div class="grid">
+    {
+      (['A', 'B'] as const).map((id) => (
+        <>
+          {id === 'B' && (
+            <div class="vs" aria-hidden="true">
+              <span>VS</span>
+            </div>
+          )}
+          <div class:list={['offer', `offer--${id}`, { 'offer--win': f.winner === id }]} data-offer={id}>
+            <div class="offer__top">
+              <span class="offer__chip">Offer {id}</span>
+              <span class="trophy pop-in" data-winner hidden={f.winner !== id}>
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0z" /><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 20h8" /></svg>
+                Monthly winner
+              </span>
+            </div>
+            {OFFER_FIELDS.map((fd) => (
+              <div class="field-row">
+                <div class="field-row__top">
+                  <label for={`lp-offer-${id}-${fd.key}`}>{fd.key === 'varPct' ? 'Variable pay' : fd.label}</label>
+                  <span class="num field-row__val" data-val={fd.key}>
+                    {label(fd.key, start[id][fd.key])}
+                  </span>
+                </div>
+                <input
+                  id={`lp-offer-${id}-${fd.key}`}
+                  class="rng"
+                  type="range"
+                  min={fd.min}
+                  max={fd.max}
+                  step={fd.step}
+                  value={start[id][fd.key]}
+                  data-field={fd.key}
+                  style={`--p: ${pct(start[id][fd.key], fd.min, fd.max)}`}
+                />
+              </div>
+            ))}
+            <div class="stats">
+              <div class="stat">
+                <span class="stat__label">In-hand / month</span>
+                <span class="num stat__big" data-monthly>
+                  {inr(results[id].monthly)}
+                </span>
+              </div>
+              <div class="stat">
+                <span class="stat__label">Year-1 total</span>
+                <span class="num stat__mid" data-year1>
+                  {inr(results[id].year1)}
+                </span>
+                <span class="stat__label">incl. variable + bonus</span>
+              </div>
+            </div>
+          </div>
+        </>
+      ))
+    }
+  </div>
+
+  <div class="verdict" aria-live="polite" data-verdict-box>
+    <span class="verdict__icon" aria-hidden="true">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0z"></path><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 20h8"></path></svg>
+    </span>
+    <div class="verdict__text">
+      <p class="verdict__big" data-verdict>{f.verdict}</p>
+      <p class="verdict__sub" data-verdict-sub>{f.verdictSub}</p>
+    </div>
+    <a href={`${routes.share}?card=offer&winner=${f.winner}&gap=${Math.round(f.monthlyGap)}`} class="btn btn--mango verdict__share" data-share>Share result card</a>
+  </div>
+</section>
+
+<script>
+  import { inr } from '../../lib/format';
+  import { routes } from '../../lib/routes';
+  import { OFFER_FIELDS, faceOff, fieldValueLabel, type Offer, type OfferId } from '../../lib/offer';
+  import { replayClass } from '../../scripts/replay-class';
+
+  const root = document.querySelector<HTMLElement>('[data-faceoff]')!;
+  const offers = JSON.parse(root.dataset.offers!) as Record<OfferId, Offer>;
+  let lastWinner: OfferId | null = null;
+
+  function render() {
+    const f = faceOff(offers.A, offers.B, inr);
+    const results = { A: f.a, B: f.b };
+    for (const id of ['A', 'B'] as const) {
+      const card = root.querySelector<HTMLElement>(`[data-offer="${id}"]`)!;
+      card.classList.toggle('offer--win', f.winner === id);
+      const badge = card.querySelector<HTMLElement>('[data-winner]')!;
+      if (badge.hidden && f.winner === id) replayClass(badge, 'pop-in');
+      badge.hidden = f.winner !== id;
+      card.querySelector('[data-monthly]')!.textContent = inr(results[id].monthly);
+      card.querySelector('[data-year1]')!.textContent = inr(results[id].year1);
+      for (const fd of OFFER_FIELDS) {
+        const v = offers[id][fd.key];
+        const text = fieldValueLabel(fd.key, v, inr);
+        card.querySelector(`[data-val="${fd.key}"]`)!.textContent = fd.key === 'fixed' ? `${text}/yr` : text;
+        card.querySelector<HTMLElement>(`[data-field="${fd.key}"]`)!.style.setProperty('--p', (((v - fd.min) / (fd.max - fd.min)) * 100).toFixed(1) + '%');
+      }
+    }
+    root.querySelector('[data-verdict]')!.textContent = f.verdict;
+    root.querySelector('[data-verdict-sub]')!.textContent = f.verdictSub;
+    root.querySelector<HTMLAnchorElement>('[data-share]')!.href = `${routes.share}?card=offer&winner=${f.winner}&gap=${Math.round(f.monthlyGap)}`;
+    if (lastWinner && lastWinner !== f.winner) replayClass(root.querySelector('[data-verdict-box]'), 'pop-in');
+    lastWinner = f.winner;
+  }
+
+  root.querySelectorAll<HTMLInputElement>('input[data-field]').forEach((input) => {
+    const id = input.closest<HTMLElement>('[data-offer]')!.dataset.offer as OfferId;
+    input.addEventListener('input', () => {
+      offers[id][input.dataset.field as keyof Offer] = parseFloat(input.value);
+      render();
+    });
+  });
+
+  render();
+</script>
+
+<style>
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 120px minmax(0, 1fr);
+    gap: 20px;
+    align-items: center;
+  }
+
+  .vs {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .vs span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background: var(--mango);
+    border: 3px solid var(--ink);
+    box-shadow: 0 6px 0 var(--ink);
+    box-sizing: border-box;
+    transform: rotate(-8deg);
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 34px;
+  }
+
+  .offer {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 24px;
+    border-radius: 28px;
+    background: var(--white);
+    border: 3px solid var(--ink);
+    box-shadow: 0 8px 0 var(--ink);
+    transition:
+      box-shadow 0.3s,
+      border-color 0.3s;
+  }
+
+  .offer--win {
+    border-color: var(--mango);
+    box-shadow:
+      0 8px 0 var(--ink),
+      0 0 0 6px rgba(255, 178, 30, 0.35);
+  }
+
+  .offer__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    min-height: 40px;
+  }
+
+  .offer__chip {
+    padding: 6px 16px;
+    border-radius: 99px;
+    background: var(--white);
+    border: 2px solid var(--ink);
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 19px;
+  }
+
+  .offer--B .offer__chip {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .trophy {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 99px;
+    background: var(--mango);
+    border: 2px solid var(--ink);
+    font-weight: 800;
+  }
+
+  .trophy[hidden] {
+    display: none;
+  }
+
+  .field-row__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .field-row label {
+    font-weight: 600;
+  }
+
+  .field-row__val {
+    font-weight: 800;
+    font-size: 18px;
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px;
+    border-radius: 18px;
+    background: var(--paper-deep);
+    min-width: 0;
+  }
+
+  .stat__label {
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+
+  .stat__big {
+    font-weight: 800;
+    font-size: 26px;
+    letter-spacing: -0.03em;
+  }
+
+  .stat__mid {
+    font-weight: 800;
+    font-size: 20px;
+    letter-spacing: -0.02em;
+  }
+
+  .verdict {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 24px 26px;
+    border-radius: 26px;
+    background: #fff4da;
+    border: 3px solid var(--ink);
+    box-shadow: 0 8px 0 var(--ink);
+  }
+
+  .verdict__icon {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    border-radius: 20px;
+    background: var(--mango);
+    border: 2.5px solid var(--ink);
+    box-sizing: border-box;
+  }
+
+  .verdict__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .verdict__big {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: var(--lp-verdict);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+
+  .verdict__sub {
+    margin: 0;
+    line-height: 1.5;
+    color: #4a4452;
+  }
+
+  .verdict__share {
+    flex: none;
+    font-weight: 800;
+  }
+
+  @media (max-width: 1023px) {
+    .grid {
+      grid-template-columns: minmax(0, 1fr) 72px minmax(0, 1fr);
+    }
+
+    .vs span {
+      width: 64px;
+      height: 64px;
+      font-size: 26px;
+    }
+
+    .offer {
+      padding: 18px;
+    }
+
+    .stats {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  @media (max-width: 639px) {
+    .grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .stats {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .verdict {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .verdict__icon {
+      align-self: flex-start;
+    }
+  }
+</style>
