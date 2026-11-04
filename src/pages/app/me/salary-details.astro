@@ -1,5 +1,6 @@
 ---
 import AppShell from '../../../layouts/AppShell.astro';
+import FixedPayFields from '../../../components/FixedPayFields.astro';
 import { routes } from '../../../lib/routes';
 import { inr } from '../../../lib/format';
 import { regimesWithDetails } from '../../../lib/salary';
@@ -25,11 +26,27 @@ const fields = [
       Back to Me
     </a>
     <h1>Salary and tax details</h1>
-    <p class="muted">Add what you know. Every answer makes the old vs new regime comparison sharper.</p>
+    <p class="muted">Your pay powers every screen. The more you add, the closer it gets to your payslip.</p>
   </header>
 
   <section class="card form" aria-label="Details" data-details>
-    <div class="two">
+    <fieldset class="group">
+      <legend class="group__label">How do you know your pay?</legend>
+      <div class="chips">
+        <button type="button" class="chip" data-pay="ctc" aria-pressed="true">I know my CTC</button>
+        <button type="button" class="chip" data-pay="fixed" aria-pressed="false">I get a fixed monthly salary</button>
+      </div>
+    </fieldset>
+    <FixedPayFields />
+    <div class="group" data-ctc-only>
+      <label for="sd-ctc" class="group__label">Your CTC (per year)</label>
+      <div class="field">
+        <span class="field__prefix">₹</span>
+        <input id="sd-ctc" class="num" type="text" inputmode="numeric" autocomplete="off" aria-describedby="sd-ctc-error" data-ctc-input />
+      </div>
+      <p class="sd-error" id="sd-ctc-error" role="alert" data-ctc-error hidden>Enter a CTC between ₹2,00,000 and ₹1,00,00,000.</p>
+    </div>
+    <div class="two" data-ctc-only>
       {
         fields.map((f) => (
           <div class="group">
@@ -44,7 +61,7 @@ const fields = [
         ))
       }
     </div>
-    <fieldset class="group">
+    <fieldset class="group" data-ctc-only>
       <legend class="group__label">Do you live in a metro city?</legend>
       <div class="chips">
         <button type="button" class="chip" data-metro="yes" aria-pressed="false">Yes, metro</button>
@@ -55,7 +72,7 @@ const fields = [
     <button type="button" class="btn btn--mango btn--lg" data-save>Save and recalculate</button>
   </section>
 
-  <aside class="result">
+  <aside class="result" data-ctc-only>
     <span class="result__label">With these details</span>
     <p class="num result__verdict" aria-live="polite" data-verdict>Both regimes land at zero tax for you.</p>
     <dl class="num result__list">
@@ -72,17 +89,47 @@ const fields = [
   import { inr } from '../../../lib/format';
   import { routes } from '../../../lib/routes';
   import { regimesWithDetails } from '../../../lib/salary';
-  import { loadProfile, saveProfile, type TaxDetails } from '../../../scripts/profile-store';
+  import { loadProfile, saveProfile, type Profile, type TaxDetails } from '../../../scripts/profile-store';
+  import { wireFixedPay } from '../../../scripts/pay-form';
 
   const root = document.querySelector<HTMLElement>('[data-details]')!;
   const p = loadProfile();
   const tax: TaxDetails = { ...p.tax };
+  let payType: Profile['payType'] = p.payType;
+  let ctc = p.ctc;
+  const fixedPay = wireFixedPay(p);
+  const ctcInput = root.querySelector<HTMLInputElement>('[data-ctc-input]')!;
+  const ctcError = root.querySelector<HTMLElement>('[data-ctc-error]')!;
+  const lakhLabel = (l: number) => (l >= 100 ? '₹1Cr' : `₹${+l.toFixed(2)}L`);
+  ctcInput.value = Math.round(ctc * 100000).toLocaleString('en-IN');
+
+  function showPayType() {
+    root.querySelectorAll<HTMLElement>('[data-pay]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.pay === payType)));
+    fixedPay.show(payType === 'fixed');
+    document.querySelectorAll<HTMLElement>('[data-ctc-only]').forEach((el) => (el.hidden = payType === 'fixed'));
+  }
+  root.querySelectorAll<HTMLElement>('[data-pay]').forEach((b) =>
+    b.addEventListener('click', () => {
+      payType = b.dataset.pay as Profile['payType'];
+      showPayType();
+    }),
+  );
+  ctcInput.addEventListener('input', () => {
+    const rupees = Number(ctcInput.value.split('.')[0].replace(/\D/g, ''));
+    ctcInput.value = rupees ? rupees.toLocaleString('en-IN') : '';
+    const ok = rupees >= 200000 && rupees <= 10000000;
+    ctcError.hidden = ok || !rupees;
+    if (!ok) return;
+    ctc = rupees / 100000;
+    document.querySelector('[data-ctc]')!.textContent = lakhLabel(ctc);
+    render();
+  });
   const inputs = [...root.querySelectorAll<HTMLInputElement>('[data-field]')];
   const num = (v: string) => parseInt(v.replace(/[^0-9]/g, ''), 10) || 0;
 
   function render() {
     root.querySelectorAll<HTMLElement>('[data-metro]').forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.metro === 'yes') === tax.metro)));
-    const r = regimesWithDetails(p.ctc, tax);
+    const r = regimesWithDetails(ctc, tax);
     const out = (k: string, v: number) => (document.querySelector(`[data-out="${k}"]`)!.textContent = inr(v));
     out('hra', r.hraExempt);
     out('c80', r.c80Used);
@@ -116,15 +163,38 @@ const fields = [
   );
 
   root.querySelector('[data-save]')!.addEventListener('click', () => {
-    saveProfile({ tax });
+    if (payType === 'fixed') {
+      if (!fixedPay.validate()) return;
+      saveProfile({ payType, ...fixedPay.values() });
+    } else {
+      const rupees = Number(ctcInput.value.split('.')[0].replace(/\D/g, ''));
+      if (rupees < 200000 || rupees > 10000000) {
+        ctcError.hidden = false;
+        ctcInput.focus();
+        return;
+      }
+      saveProfile({ payType, ctc, tax });
+    }
     window.location.href = `${routes.me}?done=tax`;
   });
 
-  document.querySelector('[data-ctc]')!.textContent = p.ctc >= 100 ? '₹1Cr' : `₹${p.ctc}L`;
+  document.querySelector('[data-ctc]')!.textContent = lakhLabel(ctc);
+  showPayType();
   render();
 </script>
 
 <style>
+  [data-ctc-only][hidden],
+  .sd-error[hidden] {
+    display: none;
+  }
+
+  .sd-error {
+    margin: 0;
+    font-weight: 700;
+    color: var(--danger);
+  }
+
   .muted {
     margin: 0;
     font-size: 16px;

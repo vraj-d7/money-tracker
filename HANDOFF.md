@@ -139,7 +139,8 @@ Where Vraj is in the step-by-step guide:
 - **Reload shift fix (pushed, `3e21097`):** each reload moved the landing page down 18px because scroll anchoring reacted to the load animation's translate. `html { overflow-anchor: none }` in `global.css` fixes it. Keep this in mind when adding other entrance animations.
 - **Landing jars (pushed, `8a98222`):** first time `.jars` scrolls into view, each jar pops in, fills and counts up in turn (`jars--waiting`/`jars--play`, `--i`, `countUp` in `landing/Jars.astro`). Uses `rootMargin`, not a % threshold, so tall shelves on short screens can't stay hidden. Off with reduced motion.
 - **Dark button hover fix (pushed, `3e3323d`):** `.btn--ink` buttons turn white on hover, but four page-level `color: var(--paper)` overrides kept pale text on them (Pricing, Graveyard share, Home payday, Sunday recap). Overrides removed; don't set `color` on `.btn--ink` buttons.
-- **Editable CTC on Salary (not committed yet):** the amount is an input (`data-ctc`); `lakhs` is now the page state, with the slider and +/− moving between `CTC_STEPS`. Limits ₹2L to ₹1Cr, clamped on blur. A typed amount isn't saved to the profile, same as the slider.
+- **Editable CTC on Salary (pushed, `1d3cf3d`):** the amount is an input (`data-ctc`); `lakhs` is now the page state, with the slider and +/− moving between `CTC_STEPS`. Limits ₹2L to ₹1Cr, clamped on blur. A typed amount isn't saved to the profile, same as the slider.
+- **Fixed monthly salary option (not committed yet):** profile gains `payType` (ctc or fixed), `fixedMonthly`, `fixedCuts`. `monthlyInhand` handles both, so Home, Plan, Coach and notifications just work. Welcome and Me → Salary and tax details ask via `FixedPayFields.astro` + `scripts/pay-form.ts`; that settings page is now also where anyone changes their pay (there was no way before). Salary page shows a simple salary, cuts and lands view with a new-regime tax note (`fixedTaxNote`), and hides the CTC breakdown and regime cards. Me shows Salary instead of CTC. Landing hero and Help mention it. Freelancers and variable pay aren't covered. Pay close attention to `$$` in JS `String.replace` when scripting edits.
 - Later options: AI coach (see above), phone sign-in, payments, own email sender (SMTP;
   Supabase's built-in one only allows a few emails an hour, so do this before real users). The PF/ITR
   tools and notifications still use sample content from `src/data/demo-tools.ts` and `demo-notifications.ts`.
@@ -216,6 +217,7 @@ Still pretend or test mode ("heavy tasks", roughly in order):
 
 ## History (newest first)
 
+- `1d3cf3d`: Editable CTC on the Salary page.
 - `3e3323d`: Dark buttons readable on hover.
 - `8a98222`: Landing jars animate one by one.
 - `3e21097`: Page no longer shifts down on reload.

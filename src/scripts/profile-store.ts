@@ -1,7 +1,8 @@
 // What sign-up, onboarding and the Me screens know about the user. Kept in this browser and synced to the account when signed in.
 import type { CoachMode } from '../lib/coach';
 import { noteChange } from './local-state';
-import { compareRegimes } from '../lib/salary';
+import { compareRegimes, newTax } from '../lib/salary';
+import { inr } from '../lib/format';
 
 export type { CoachMode };
 
@@ -31,8 +32,13 @@ export interface Profile {
   email: string;
   /** 10 digits, shown as "98765 43210" */
   phone: string;
+  /** Whether we work from a CTC or from a fixed monthly salary */
+  payType: 'ctc' | 'fixed';
   /** CTC in lakhs per year */
   ctc: number;
+  /** Fixed pay: the monthly salary, and how much is cut from it before it reaches the bank */
+  fixedMonthly: number;
+  fixedCuts: number;
   city: string;
   /** Day of the month salary arrives, or 'last' for the last working day */
   payday: number | 'last';
@@ -48,7 +54,10 @@ export const DEFAULT_PROFILE: Profile = {
   lastName: '',
   email: '',
   phone: '',
+  payType: 'ctc',
   ctc: 12,
+  fixedMonthly: 0,
+  fixedCuts: 0,
   city: 'Bengaluru',
   payday: 7,
   paydayShift: 'before',
@@ -137,10 +146,23 @@ export function paydayCycle(p: Pick<Profile, 'payday' | 'paydayShift'>, today = 
   return { next, daysLeft: daysUntil(next, today), cycleDays: Math.max(1, daysUntil(next, prev)) };
 }
 
-/** Monthly take-home for the saved CTC, under whichever tax regime leaves more */
-export function monthlyInhand(p: Pick<Profile, 'ctc'>): number {
+/**
+ * What lands in the bank each month: salary minus cuts on fixed pay, otherwise
+ * worked out from the CTC under whichever tax regime leaves more.
+ */
+export function monthlyInhand(p: Pick<Profile, 'ctc' | 'payType' | 'fixedMonthly' | 'fixedCuts'>): number {
+  if (p.payType === 'fixed') return Math.max(0, p.fixedMonthly - p.fixedCuts);
   const cmp = compareRegimes(p.ctc);
   return Math.round(cmp[cmp.winner].inhand / 12);
+}
+
+/** A plain note on income tax for someone on a fixed monthly salary (new regime estimate) */
+export function fixedTaxNote(monthly: number): string {
+  const yearly = monthly * 12;
+  const tax = newTax(yearly);
+  return tax > 0
+    ? `On ${inr(yearly)} a year, income tax could be about ${inr(tax)} a year (new regime estimate). If your company doesn’t cut it, you may have to pay it yourself. Not tax advice.`
+    : `On ${inr(yearly)} a year, you shouldn’t owe income tax under the new regime (estimate). Not tax advice.`;
 }
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];

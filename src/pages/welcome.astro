@@ -2,6 +2,7 @@
 // Onboarding: salary → payday → coach vibe. Answers are saved in this browser (scripts/profile-store.ts).
 import HandySplit from '../layouts/HandySplit.astro';
 import Handy from '../components/Handy.astro';
+import FixedPayFields from '../components/FixedPayFields.astro';
 import { routes } from '../lib/routes';
 import { CTC_STEPS, stepIndexOf } from '../lib/salary';
 import type { HandyMood } from '../lib/handy';
@@ -55,7 +56,15 @@ const modes: { id: string; label: string; mood: HandyMood; sample: string }[] = 
           </div>
           <p class="error" id="ob-name-err" role="alert" data-name-error hidden>Add your first name so Handy knows who to cheer for.</p>
         </div>
-        <div class="ctc-card">
+        <fieldset class="group">
+          <legend>How do you know your pay?</legend>
+          <div class="chips">
+            <button type="button" class="chip" data-pay="ctc" aria-pressed="true">I know my CTC</button>
+            <button type="button" class="chip" data-pay="fixed" aria-pressed="false">I get a fixed monthly salary</button>
+          </div>
+        </fieldset>
+        <FixedPayFields />
+        <div class="ctc-card" data-ctc-card>
           <div class="ctc-card__top">
             <label for="ob-ctc">Your CTC</label>
             <span class="num ctc-card__value" data-ctc>₹{startCtc}L</span>
@@ -122,6 +131,7 @@ const modes: { id: string; label: string; mood: HandyMood; sample: string }[] = 
   import { routes } from '../lib/routes';
   import { CTC_STEPS } from '../lib/salary';
   import { daysUntil, loadProfile, nextPayday, saveProfile, type CoachMode, type Profile } from '../scripts/profile-store';
+  import { wireFixedPay } from '../scripts/pay-form';
 
   const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const BUBBLES = [
@@ -137,13 +147,27 @@ const modes: { id: string; label: string; mood: HandyMood; sample: string }[] = 
   const bubble = document.querySelector('[data-bubble]');
   const handyBox = document.querySelector<HTMLElement>('[data-handy-box]');
 
-  const answers: Pick<Profile, 'name' | 'ctc' | 'city' | 'payday' | 'coachMode'> = {
+  const answers: Pick<Profile, 'name' | 'payType' | 'ctc' | 'fixedMonthly' | 'fixedCuts' | 'city' | 'payday' | 'coachMode'> = {
     name: '',
+    payType: 'ctc',
     ctc: 12,
+    fixedMonthly: 0,
+    fixedCuts: 0,
     city: 'Bengaluru',
     payday: 7,
     coachMode: 'honest',
   };
+
+  // CTC or fixed monthly salary: each shows its own questions
+  const fixedPay = wireFixedPay(answers);
+  root.querySelectorAll<HTMLElement>('[data-pay]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      answers.payType = btn.dataset.pay as Profile['payType'];
+      pressOnly('[data-pay]', btn);
+      fixedPay.show(answers.payType === 'fixed');
+      root.querySelector<HTMLElement>('[data-ctc-card]')!.hidden = answers.payType === 'fixed';
+    }),
+  );
 
   // Phone sign-up already asked for a name; start from it
   const nameInput = root.querySelector<HTMLInputElement>('#ob-name')!;
@@ -246,6 +270,10 @@ const modes: { id: string; label: string; mood: HandyMood; sample: string }[] = 
         return;
       }
       answers.name = name;
+      if (answers.payType === 'fixed') {
+        if (!fixedPay.validate()) return;
+        Object.assign(answers, fixedPay.values());
+      }
     }
     if (step < 2) {
       step++;
@@ -426,6 +454,10 @@ const modes: { id: string; label: string; mood: HandyMood; sample: string }[] = 
     margin: 0;
     font-size: 16px;
     color: var(--ink-muted);
+  }
+
+  .ctc-card[hidden] {
+    display: none;
   }
 
   .ctc-card {

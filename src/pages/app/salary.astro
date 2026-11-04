@@ -40,7 +40,7 @@ const ticks = [2, 10, 20, 50, 100].map((l) => ({
   <header class="head">
     <div class="head__text">
       <h1>Your salary, explained</h1>
-      <p class="muted">Click any line to see what it means.</p>
+      <p class="muted" data-salary-sub>Click any line to see what it means.</p>
     </div>
     <a href={shareHref} class="btn head__share" data-share-link>
       <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"></path><path d="M12 3v12M7 8l5-5 5 5"></path></svg>
@@ -87,7 +87,21 @@ const ticks = [2, 10, 20, 50, 100].map((l) => ({
     </div>
   </section>
 
-  <section class="card flow" aria-labelledby="flow-h">
+  <section class="card fixed" aria-labelledby="fixed-h" data-fixed-view hidden>
+    <div class="fixed__top">
+      <h2 id="fixed-h" class="fixed__title">Your monthly salary</h2>
+      <a href={routes.salaryDetails} class="fixed__change">Change</a>
+    </div>
+    <dl class="num fixed__rows">
+      <div><dt>Salary</dt><dd data-fixed-salary></dd></div>
+      <div><dt>Cut before your bank</dt><dd data-fixed-cut-amt></dd></div>
+      <div class="fixed__total"><dt>Lands in your bank</dt><dd data-fixed-lands></dd></div>
+    </dl>
+    <p class="fixed__note" data-fixed-note></p>
+    <p class="fixed__note">Know your CTC instead? <a href={routes.salaryDetails}>Switch to CTC</a> to see tax, PF and a regime comparison.</p>
+  </section>
+
+  <section class="card flow" aria-labelledby="flow-h" data-ctc-view>
     <h2 id="flow-h" class="card__title flow__title">From CTC to your bank, per year</h2>
     {
       FLOW_ROWS.map((r) => {
@@ -126,7 +140,7 @@ const ticks = [2, 10, 20, 50, 100].map((l) => ({
       <div class="inhand__text">
         <span class="inhand__label">Lands in your account</span>
         <span class="num inhand__amount" data-inhand>{inr(b.inhand / 12)}</span>
-        <span class="muted">every month, <span data-regime-name>{startRegime} regime</span></span>
+        <span class="muted" data-inhand-note>every month, <span data-regime-name>{startRegime} regime</span></span>
       </div>
       <div class="inhand__handy" data-handy={mood}>
         <span data-mood="happy"><Handy mood="happy" size={100} /></span>
@@ -135,7 +149,7 @@ const ticks = [2, 10, 20, 50, 100].map((l) => ({
       </div>
     </section>
 
-    <section class="card regime" aria-labelledby="reg-h">
+    <section class="card regime" aria-labelledby="reg-h" data-ctc-view>
       <div class="card__top">
         <h2 id="reg-h" class="card__title">Tax regime</h2>
         <span class="muted">Tap to compare</span>
@@ -174,7 +188,7 @@ const ticks = [2, 10, 20, 50, 100].map((l) => ({
 <script>
   import { inr } from '../../lib/format';
   import { routes } from '../../lib/routes';
-  import { loadProfile } from '../../scripts/profile-store';
+  import { fixedTaxNote, loadProfile, monthlyInhand } from '../../scripts/profile-store';
   import {
     CTC_STEPS,
     FLOW_ROWS,
@@ -341,7 +355,22 @@ const ticks = [2, 10, 20, 50, 100].map((l) => ({
     // Open on the user's own CTC and their better regime (the page is pre-rendered for ₹12L, new regime)
     const profile = loadProfile();
     const ownRegime = compareRegimes(profile.ctc).winner;
-    if (profile.ctc !== lakhs || ownRegime !== regime) {
+    if (profile.payType === 'fixed') {
+      // Fixed pay has no CTC to break down: just salary, what's cut, and what lands
+      const lands = monthlyInhand(profile);
+      root.hidden = true;
+      $$<HTMLElement>('[data-ctc-view]').forEach((el) => (el.hidden = true));
+      $<HTMLElement>('[data-fixed-view]')!.hidden = false;
+      $('[data-salary-sub]')!.textContent = 'What lands in your account each month.';
+      $('[data-fixed-salary]')!.textContent = inr(profile.fixedMonthly);
+      $('[data-fixed-cut-amt]')!.textContent = profile.fixedCuts ? `−${inr(profile.fixedCuts)}` : inr(0);
+      $('[data-fixed-lands]')!.textContent = inr(lands);
+      $('[data-fixed-note]')!.textContent = profile.fixedMonthly ? fixedTaxNote(profile.fixedMonthly) : '';
+      $('[data-inhand]')!.textContent = inr(lands);
+      $('[data-inhand-note]')!.textContent = 'every month';
+      handyBox.dataset.handy = 'happy';
+      $$<HTMLAnchorElement>('[data-share-link]').forEach((a) => (a.href = `${routes.share}?card=salary&inhand=${Math.round(lands)}`));
+    } else if (profile.ctc !== lakhs || ownRegime !== regime) {
       lakhs = profile.ctc;
       // Jump straight to the user's number instead of counting up from the sample one
       shownMonthly = calcSalary(lakhs, ownRegime).inhand / 12;
@@ -415,6 +444,76 @@ const ticks = [2, 10, 20, 50, 100].map((l) => ({
     font-size: 44px;
     letter-spacing: -0.04em;
     line-height: 1.05;
+  }
+
+  .ctc[hidden],
+  [data-ctc-view][hidden],
+  .fixed[hidden] {
+    display: none;
+  }
+
+  .fixed {
+    grid-column: span 7;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .fixed__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .fixed__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 24px;
+  }
+
+  .fixed__change {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    font-weight: 700;
+    color: var(--violet);
+  }
+
+  .fixed__rows {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .fixed__rows > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 14px;
+  }
+
+  .fixed__rows dt {
+    font-weight: 600;
+  }
+
+  .fixed__rows dd {
+    margin: 0;
+    font-weight: 800;
+  }
+
+  .fixed__total {
+    background: var(--paper-deep);
+    font-size: 20px;
+  }
+
+  .fixed__note {
+    margin: 0;
+    line-height: 1.5;
+    color: var(--ink-muted);
   }
 
   /* Looks like the big number it replaced; the dashed line says it can be edited */
@@ -883,6 +982,7 @@ const ticks = [2, 10, 20, 50, 100].map((l) => ({
     }
 
     .flow,
+    .fixed,
     .side {
       grid-column: 1 / -1;
     }

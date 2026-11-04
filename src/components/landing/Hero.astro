@@ -61,6 +61,7 @@ const sliceColors = ['#2ED3A0', '#FF6B5B', '#B9A6FF', '#D8C9A3'];
         {ticks.map((t) => <span style={`left: ${t.left}`}>{t.label}</span>)}
       </div>
     </div>
+    <p class="hero__fixed">On a fixed monthly salary? You can use that instead of CTC when you sign up.</p>
     <div class="hero__cta hero__cta--wide">
       <a href={routes.salary} class="btn btn--mango btn--lg hero__btn">
         Explain my salary in 30 sec
@@ -418,6 +419,12 @@ const sliceColors = ['#2ED3A0', '#FF6B5B', '#B9A6FF', '#D8C9A3'];
 
   .ctc__ticks span:last-child {
     transform: translateX(-100%);
+  }
+
+  .hero__fixed {
+    margin: 0;
+    font-size: 16px;
+    color: var(--ink-muted);
   }
 
   .hero__cta {

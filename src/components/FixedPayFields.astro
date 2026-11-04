@@ -1,0 +1,121 @@
+---
+// The questions for someone on a fixed monthly salary, used in onboarding and in Salary and tax details.
+// scripts/pay-form.ts wires them up.
+---
+
+<div class="pay" data-fixed-pay hidden>
+  <div class="pay__group">
+    <label for="fixed-amount" class="pay__label">Your monthly salary</label>
+    <div class="field">
+      <span class="num pay__prefix" aria-hidden="true">₹</span>
+      <input id="fixed-amount" class="num" type="text" inputmode="numeric" autocomplete="off" placeholder="25,000" aria-describedby="fixed-error" data-fixed-amount />
+    </div>
+    <p class="pay__error" id="fixed-error" role="alert" data-fixed-error hidden></p>
+  </div>
+
+  <fieldset class="pay__group pay__set">
+    <legend class="pay__label">Does anything get cut from this before it reaches your bank?</legend>
+    <p class="pay__hint">Like PF, professional tax or income tax. Your payslip shows these.</p>
+    <div class="pay__chips">
+      <button type="button" class="pay__chip" data-fixed-cut="no" aria-pressed="true">No, I get all of it</button>
+      <button type="button" class="pay__chip" data-fixed-cut="yes" aria-pressed="false">Yes, something is cut</button>
+    </div>
+  </fieldset>
+
+  <div class="pay__group" data-fixed-cuts-box hidden>
+    <label for="fixed-cuts" class="pay__label">About how much is cut each month?</label>
+    <div class="field">
+      <span class="num pay__prefix" aria-hidden="true">₹</span>
+      <input id="fixed-cuts" class="num" type="text" inputmode="numeric" autocomplete="off" placeholder="2,000" data-fixed-cuts />
+    </div>
+  </div>
+
+  <p class="num pay__result" aria-live="polite" data-fixed-result hidden></p>
+  <p class="pay__tax" data-fixed-tax hidden></p>
+</div>
+
+<style>
+  .pay {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .pay[hidden],
+  .pay__group[hidden],
+  .pay__error[hidden],
+  .pay__result[hidden],
+  .pay__tax[hidden] {
+    display: none;
+  }
+
+  .pay__group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .pay__set {
+    margin: 0;
+    padding: 0;
+    border: none;
+  }
+
+  .pay__label {
+    padding: 0;
+    font-weight: 700;
+  }
+
+  .pay__hint {
+    margin: 0;
+    color: var(--ink-muted);
+  }
+
+  .pay__prefix {
+    font-weight: 800;
+  }
+
+  .pay__error {
+    margin: 0;
+    font-weight: 700;
+    color: var(--danger);
+  }
+
+  .pay__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .pay__chip {
+    min-height: 44px;
+    padding: 8px 16px;
+    border-radius: 99px;
+    border: 2.5px solid var(--ink);
+    background: var(--white);
+    color: var(--ink);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .pay__chip[aria-pressed='true'] {
+    background: var(--mango);
+    box-shadow: 0 4px 0 var(--ink);
+  }
+
+  .pay__result {
+    margin: 0;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: #e2f8ef;
+    color: #0a6b4d;
+    font-weight: 800;
+  }
+
+  .pay__tax {
+    margin: 0;
+    line-height: 1.5;
+    color: var(--ink-muted);
+  }
+</style>

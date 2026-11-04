@@ -33,7 +33,7 @@ const icon = {
 };
 
 const settings = [
-  { href: routes.salaryDetails, icon: icon.salary, label: 'Salary and tax details', sub: 'Basic pay, HRA, rent, 80C' },
+  { href: routes.salaryDetails, icon: icon.salary, label: 'Salary and tax details', sub: 'Your pay, rent and deductions' },
   { href: routes.paydaySettings, icon: icon.payday, label: 'Payday', sub: describePayday(p.payday), id: 'payday' },
   { href: routes.help, icon: icon.help, label: 'Help and FAQs', sub: 'How Inhandy works' },
   { href: routes.logout, icon: icon.logout, label: 'Log out', sub: 'You can log back in with your number' },
@@ -57,10 +57,10 @@ const settings = [
         </a>
       </div>
       <dl class="facts">
-        <div class="fact"><dt>CTC</dt><dd class="num" data-fact="ctc">₹{p.ctc}L a year</dd></div>
+        <div class="fact"><dt data-fact-label>CTC</dt><dd class="num" data-fact="ctc">₹{p.ctc}L a year</dd></div>
         <div class="fact"><dt>City</dt><dd data-fact="city">{p.city}</dd></div>
         <div class="fact"><dt>Payday</dt><dd data-fact="payday">{describePayday(p.payday)}</dd></div>
-        <div class="fact">
+        <div class="fact" data-regime-fact>
           <dt>Tax regime</dt>
           <dd class="num" data-fact="regime">{cmp.winner === 'new' ? 'New' : 'Old'} (saves {inr(cmp.monthlyGap)}/mo)</dd>
         </div>
@@ -227,7 +227,13 @@ const settings = [
   set('[data-name]', displayName(p));
   set('[data-initials]', initials(p));
   set('[data-contact]', [p.phone && `+91 ${p.phone}`, p.email].filter(Boolean).join(' · ') || 'Add your email in Edit profile');
-  set('[data-fact="ctc"]', p.ctc >= 100 ? '₹1Cr a year' : `₹${p.ctc}L a year`);
+  if (p.payType === 'fixed') {
+    set('[data-fact-label]', 'Salary');
+    set('[data-fact="ctc"]', `${inr(p.fixedMonthly)} a month`);
+    document.querySelector<HTMLElement>('[data-regime-fact]')!.style.display = 'none';
+  } else {
+    set('[data-fact="ctc"]', p.ctc >= 100 ? '₹1Cr a year' : `₹${+p.ctc.toFixed(2)}L a year`);
+  }
   set('[data-fact="city"]', p.city);
   set('[data-fact="payday"]', describePayday(p.payday));
   set('[data-row-sub="payday"]', describePayday(p.payday));
