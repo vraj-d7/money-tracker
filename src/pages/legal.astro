@@ -90,7 +90,7 @@ const tabs = [
 
         <article class="panel" role="tabpanel" id="panel-contact" aria-labelledby="tab-contact" hidden>
           <h1>Contact us</h1>
-          <p class="text">Questions, bugs or feedback. A human replies within one working day. Email: help@inhandy.app</p>
+          <p class="text">Questions, bugs or feedback. A human replies within one working day. Email: heyvraj.patel@gmail.com</p>
           <form class="form" data-contact-form novalidate>
             <div class="group">
               <label for="ct-mail" class="group__label">Your email</label>
@@ -139,7 +139,7 @@ const tabs = [
 
   // No server yet: both forms hand off to the user's own email app
   const mailto = (subject: string, body: string) =>
-    (window.location.href = `mailto:help@inhandy.app?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+    (window.location.href = `mailto:heyvraj.patel@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
 
   root.querySelector<HTMLFormElement>('[data-delete-form]')!.addEventListener('submit', (e) => {
     e.preventDefault();
