@@ -604,6 +604,14 @@ const sliceColors = ['#2ED3A0', '#FF6B5B', '#B9A6FF', '#D8C9A3'];
     display: block;
   }
 
+  /* Small laptops: the card is too narrow for two columns of label + amount.
+     Starts just above 1023px so zoomed, fractional widths can't slip between this and the next rule. */
+  @media (min-width: 1023.01px) and (max-width: 1365px) {
+    .legend {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
   @media (max-width: 1279px) {
     .hero {
       gap: 40px;
