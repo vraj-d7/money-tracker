@@ -45,6 +45,7 @@ const { title } = Astro.props;
     <script>
       import { backendOn, SIGNED_IN_PATHS } from '../scripts/backend';
       import { routes } from '../lib/routes';
+      import '../scripts/smooth-scroll';
 
       // The Supabase library only loads when a backend is set up
       if (backendOn) {

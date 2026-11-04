@@ -30,7 +30,42 @@ import FinalCta from '../components/landing/FinalCta.astro';
   </div>
 </Base>
 
+<script>
+  // Sections ease in as they scroll into view. Only added here by script, so without it (or with
+  // reduced motion) everything is simply visible.
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && 'IntersectionObserver' in window) {
+    const seen = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          e.target.classList.add('reveal--in');
+          seen.unobserve(e.target);
+        }
+      },
+      { rootMargin: '0px 0px -8% 0px' },
+    );
+    document.querySelectorAll('.lp main > *').forEach((el) => {
+      if (el.getBoundingClientRect().top < window.innerHeight * 0.92) return;
+      el.classList.add('reveal');
+      seen.observe(el);
+    });
+  }
+</script>
+
 <style is:global>
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition:
+      opacity 0.6s var(--ease),
+      transform 0.6s var(--ease);
+  }
+
+  .reveal--in {
+    opacity: 1;
+    transform: none;
+  }
+
   /* Spacing and type sizes per screen size; sections read these */
   .lp {
     --lp-nav-pad: 28px 80px;

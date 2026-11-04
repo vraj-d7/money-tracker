@@ -380,3 +380,36 @@ textarea:focus-visible {
 .sample-tag[hidden] {
   display: none;
 }
+
+/* Smooth page changes: the browser cross-fades between pages. Browsers without this just switch instantly. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+
+  ::view-transition-old(root) {
+    animation: page-out 0.14s var(--ease, ease) both;
+  }
+
+  ::view-transition-new(root) {
+    animation: page-in 0.24s var(--ease, ease) both;
+  }
+
+  @keyframes page-out {
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes page-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+}
+
+/* Lenis does the smoothing; CSS smooth scrolling on top of it would make it lag */
+html.lenis {
+  scroll-behavior: auto !important;
+}
