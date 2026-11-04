@@ -428,3 +428,9 @@ html.arrived-by-transition body {
     opacity: 0;
   }
 }
+
+/* The browser's scroll anchoring treats the load and scroll-in animations as layout shifts and scrolls to
+   "compensate", pushing the page down a little on every reload */
+html {
+  overflow-anchor: none;
+}

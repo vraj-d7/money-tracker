@@ -135,7 +135,8 @@ Where Vraj is in the step-by-step guide:
 - **Hero card fix (pushed, `bb8f35a`):** the labels overlapped their amounts on small laptop widths; `.legend` is now one column from just above 1023px to 1365px.
 - **Page load animation (pushed, `5bc33cc`):** every page gets a 0.35s opacity fade on `body` (opacity only, since a transform would break fixed elements), skipped via `pagereveal` when a view transition already ran. Landing hero builds in with staggered `load-rise` (`pages/index.astro`). Off with reduced motion.
 - **Hero graph motion (pushed, `c50f558`):** on load the salary bar grows, bands sweep left to right, buckets pop in (`flow-sweep`, `flow-grow` in `landing/Hero.astro`). CSS only, plays once, about 2.3s in all, off with reduced motion; the slider keeps its own transitions.
-- **Hero amounts and Handy (not committed yet):** on load the hero card's five amounts count up from ₹0 over 1.5s (`countUpOnLoad` in `landing/Hero.astro`; touching the slider cancels it). Handy and the bubble hop in, then Handy sways gently (`handy-hop`, `handy-sway`). Off with reduced motion. Amounts further down the landing page don't count.
+- **Hero amounts and Handy (pushed, `aa5a972`):** on load the hero card's five amounts count up from ₹0 over 1.5s (`countUpOnLoad` in `landing/Hero.astro`; touching the slider cancels it). Handy and the bubble hop in, then Handy sways gently (`handy-hop`, `handy-sway`). Off with reduced motion. Amounts further down the landing page don't count.
+- **Reload shift fix (not committed yet):** each reload moved the landing page down 18px because scroll anchoring reacted to the load animation's translate. `html { overflow-anchor: none }` in `global.css` fixes it. Keep this in mind when adding other entrance animations.
 - Later options: AI coach (see above), phone sign-in, payments, own email sender (SMTP;
   Supabase's built-in one only allows a few emails an hour, so do this before real users). The PF/ITR
   tools and notifications still use sample content from `src/data/demo-tools.ts` and `demo-notifications.ts`.
@@ -212,6 +213,7 @@ Still pretend or test mode ("heavy tasks", roughly in order):
 
 ## History (newest first)
 
+- `aa5a972`: Hero amounts count up; Handy hops and sways.
 - `c50f558`: Landing salary graph animates on load.
 - `5bc33cc`: Page load fade and landing hero entrance.
 - `bb8f35a`: Hero card labels no longer overlap on small laptops.
