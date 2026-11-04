@@ -123,9 +123,13 @@ const ticks = [2, 10, 20, 50, 100].map((l) => ({
                 <path d="M6 9l6 6 6-6" />
               </svg>
             </button>
-            <p id={`explain-${r.id}`} class="flow-row__explain" hidden={!open}>
-              {r.id === 'tax' ? taxExplainer(startRegime) : r.explain}
-            </p>
+            <div class="flow-row__panel">
+              <div class="flow-row__clip">
+                <p id={`explain-${r.id}`} class="flow-row__explain">
+                  {r.id === 'tax' ? taxExplainer(startRegime) : r.explain}
+                </p>
+              </div>
+            </div>
           </div>
         );
       })
@@ -270,7 +274,6 @@ const ticks = [2, 10, 20, 50, 100].map((l) => ({
         row.querySelector('.flow-row__amt')!.textContent = signed(v);
         const isOpen = open === r.id;
         row.querySelector('.flow-row__btn')!.setAttribute('aria-expanded', String(isOpen));
-        row.querySelector<HTMLElement>('.flow-row__explain')!.hidden = !isOpen;
       }
       $('#explain-tax')!.textContent = taxExplainer(regime);
 
@@ -773,11 +776,34 @@ const ticks = [2, 10, 20, 50, 100].map((l) => ({
   .flow-row__chev {
     grid-area: chev;
     opacity: 0.7;
-    transition: transform 0.2s;
+    transition: transform 0.3s ease;
   }
 
   [aria-expanded='true'] .flow-row__chev {
     transform: rotate(180deg);
+  }
+
+  /* Slides open by growing from no height to the text's height. The button's aria-expanded drives it. */
+  .flow-row__panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    visibility: hidden;
+    opacity: 0;
+    transition:
+      grid-template-rows 0.3s ease,
+      opacity 0.3s ease,
+      visibility 0.3s;
+  }
+
+  [aria-expanded='true'] + .flow-row__panel {
+    grid-template-rows: 1fr;
+    visibility: visible;
+    opacity: 1;
+  }
+
+  .flow-row__clip {
+    min-height: 0;
+    overflow: hidden;
   }
 
   .flow-row__explain {
@@ -787,19 +813,8 @@ const ticks = [2, 10, 20, 50, 100].map((l) => ({
     background: #eee9ff;
     font-size: 16px;
     line-height: 1.5;
-    animation: open-in 0.3s cubic-bezier(0.3, 1.4, 0.5, 1);
   }
 
-  @keyframes open-in {
-    0% {
-      opacity: 0;
-      transform: translateY(-6px);
-    }
-    100% {
-      opacity: 1;
-      transform: none;
-    }
-  }
 
   .flow__fine {
     margin: 14px 6px 0;

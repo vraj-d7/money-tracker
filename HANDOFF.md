@@ -18,7 +18,7 @@ tested on generated statements.
 
 ## Right now
 
-**Latest (2026-11-04): the honesty pass on the site's wording is pushed.** Exact next step: Vraj decides the three open items in the "Honesty pass" entry below (real contact email, Coach plan, Legal page), then fix the small wording leftovers listed there. Vraj's bank statement test is still waiting for when they're ready. Everything below is the history of how the project got here.
+**Latest (2026-11-04): the Salary rows now slide open smoothly (pushed). The honesty pass on the site's wording is pushed.** Next after that: Vraj decides the three open items in the "Honesty pass" entry below (real contact email, Coach plan, Legal page), then fix the small wording leftovers listed there. Vraj's bank statement test is still waiting for when they're ready. Everything below is the history of how the project got here.
 
 **Putting the site online with Cloudflare** (Vraj chose it over Netlify) (see the end of this section for where it stands).
 
@@ -146,6 +146,7 @@ Where Vraj is in the step-by-step guide:
 - **Change-pay links (pushed, `70f9240`):** Salary and tax details is now linked from beside the pay number: Home payday card, Salary page (`?pay=fixed` opens on the fixed questions), Edit plan, and a Change my pay button on Me.
 - **Add-your-pay prompt (pushed, `535a106`):** new `payConfirmed` profile flag, set by finishing onboarding, saving Salary and tax details, or tapping "That's about right". Home shows the prompt until then. People who signed up before the flag existed see it once.
 - **Honesty pass on wording (pushed, 2026-11-04):** Hero and final call-to-action drop "No signup"; logout, plan and Legal drop phone and UPI mandate wording. Trust, Legal, Help and login now say statements stay on the device and are never uploaded; Legal names Supabase and Cloudflare. Pricing drops PF alerts. Me's notification rows describe in-app behaviour and the do-nothing PF toggle is gone. Removed phone `verified` wording and the phone Change link in real mode. **Open decisions for Vraj:** (1) `help@inhandy.app` is used in Help and Legal but may not be a working inbox, so a real contact email is needed; (2) Coach plan features aren't actually limited to paying users and checkout is test mode, yet pricing advertises ₹19 a week; (3) Legal is still a template with [DATE] and bracket placeholders and needs a lawyer before a real launch, and its "within 7 days" and "one working day" promises need Vraj's OK. **Wording still to fix:** `coach-plan/index.astro` says "PF deposit alerts"; `coach-plan/checkout.astro` mentions approving a UPI mandate; the old phone login (`login/index.astro`) mentions a mobile number, but real mode redirects past it.
+- **Smooth Salary rows (pushed, 2026-11-04):** the "From CTC to your bank" rows slide open over 0.3s (`.flow-row__panel` grows with `grid-template-rows`, driven by the button's `aria-expanded`), so they no longer use `hidden`. The Help questions, First ITR form lines and Scan's password help still open instantly; Vraj only asked about Salary.
 - Later options: AI coach (see above), phone sign-in, payments, own email sender (SMTP;
   Supabase's built-in one only allows a few emails an hour, so do this before real users). The PF/ITR
   tools and notifications still use sample content from `src/data/demo-tools.ts` and `demo-notifications.ts`.
