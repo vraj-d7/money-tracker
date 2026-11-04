@@ -25,6 +25,15 @@ Supabase and keeps devices in step (the last change wins).
 Without Supabase keys the app runs in **test mode**: sign-in is simulated and data
 stays in the browser.
 
+## Going live (Cloudflare)
+
+`wrangler.jsonc`, `.node-version` and `public/_headers` hold the settings. In Cloudflare, import
+this repository with the build command `npm run build` and add `PUBLIC_SUPABASE_URL` and
+`PUBLIC_SUPABASE_ANON_KEY` as **build** variables (they're read during the build). Then, in
+Supabase's **URL Configuration**, set **Site URL** to the live address and add
+`<live address>/auth/callback` under **Redirect URLs**. Keep the localhost entry so
+sign-in still works in development.
+
 ## Accounts (Supabase)
 
 1. Create a project at [supabase.com](https://supabase.com).

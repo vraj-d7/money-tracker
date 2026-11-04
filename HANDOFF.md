@@ -10,7 +10,15 @@ _Last updated: 2026-11-04_
 
 ---
 
+## Reminder for Vraj
+
+**Test a real bank statement** once the site is online (Vraj's request): scan one at `/app/scan`,
+then check Home and the Week page. Bring this up again after going live. The reader has only been
+tested on generated statements.
+
 ## Right now
+
+**Putting the site online with Cloudflare** (Vraj chose it over Netlify) (see the end of this section for where it stands).
 
 **Setting up Supabase so sign-in and saved data become real.** The code is done and pushed
 (commit `c88d882`); only the Supabase website setup and the local `.env` file are left.
@@ -86,7 +94,7 @@ Where Vraj is in the step-by-step guide:
     planted autopays were found. The generator is not in the repo.
     **Not yet tested on a real bank PDF.** Vraj should try their own statement; it stays in their
     browser. If something is missed, ask what the row looks like (not the PDF itself).
-- ✅ **Statement reading, stage 2 (not committed yet):** Home, Week and the Sunday recap show real spends.
+- ✅ **Statement reading, stage 2 (pushed, `f872b38`):** Home, Week and the Sunday recap show real spends.
   - `src/lib/spending.ts` (pure): `latestWeek` picks the week to show; `categorize`, `methodOf`,
     `weeklyPlan` and `upcomingRenewals` do the rest. `scan-store.ts` adds `realWeek()` and
     `realRenewals()`, which pages call in their scripts. They return null until there's a real
@@ -107,10 +115,19 @@ Where Vraj is in the step-by-step guide:
   - Tested: 19 logic checks with fixed dates, plus the full flow in the browser (Home, Week, Sunday,
     phone width) with a generated statement and a stand-in session. **Still not tested on a real
     bank PDF; Vraj chose to skip that for now.** The test scripts are not in the repo.
-- ⏳ **Next:** ask Vraj whether to commit and push. Then: test a real statement (recommended before
-  going further), put it online (Netlify or Vercel; then add the live URL to Supabase Site URL and
-  Redirect URLs), real streak tracking, AI coach, phone sign-in, payments. The PF/ITR tools and
-  notifications still use sample content from `src/data/demo-tools.ts` and `demo-notifications.ts`.
+- ⏳ **Going live (current step):** `wrangler.jsonc`, `.node-version` and `public/_headers` are added and a fresh copy builds, but they
+  aren’t pushed yet. Steps left:
+  1. Vraj approves pushing it.
+  2. Vraj creates a free Cloudflare account and imports `vraj-d7/money-tracker` (Workers & Pages), build command `npm run build`.
+  3. Before deploying, add **build** variables `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_ANON_KEY` (the
+     publishable key, same values as the local `.env`). Without them the live site runs in test mode.
+  4. In Supabase → URL Configuration: set Site URL to the live address and add
+     `<live address>/auth/callback`; keep the localhost redirect for development.
+  5. Check the live site: real sign-in, `/app` gate, 404 page, PDF worker loads.
+  6. **Then remind Vraj to test a real statement.**
+- Later options: real streak tracking, AI coach, phone sign-in, payments, own email sender (SMTP;
+  Supabase's built-in one only allows a few emails an hour, so do this before real users). The PF/ITR
+  tools and notifications still use sample content from `src/data/demo-tools.ts` and `demo-notifications.ts`.
 
 ## About Vraj (how to work with them)
 
@@ -184,6 +201,7 @@ Still pretend or test mode ("heavy tasks", roughly in order):
 
 ## History (newest first)
 
+- `f872b38`: Real spends and renewals on Home, Week and Sunday (stage 2).
 - `5f69ca9`: Read real bank statements to find autopays (stage 1).
 - `d4f5d98`: Synced data stored as readable JSON (format 2).
 - `ef8a8c6`: Require sign-in for the app when Supabase is set up.
