@@ -62,6 +62,13 @@ export function loadProfile(): Profile {
     const raw = localStorage.getItem(KEY);
     if (!raw) return structuredClone(DEFAULT_PROFILE);
     const saved = JSON.parse(raw) as Partial<Profile>;
+    // Older saves copied in the old sample person's details; those were never the user's own
+    if (saved.name === 'Aarav' && saved.lastName === 'R.') {
+      saved.name = '';
+      saved.lastName = '';
+    }
+    if (saved.email === 'aarav@example.com') saved.email = '';
+    if (saved.phone === '98765 43210') saved.phone = '';
     return {
       ...DEFAULT_PROFILE,
       ...saved,

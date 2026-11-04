@@ -45,6 +45,17 @@ const streakDone = home.streak.done.filter(Boolean).length;
     </div>
   </header>
 
+  <form class="name-ask" data-name-ask hidden novalidate>
+    <label for="ask-name" class="name-ask__label">What should we call you?</label>
+    <div class="name-ask__row">
+      <div class="field name-ask__field">
+        <input id="ask-name" type="text" placeholder="Your first name" autocomplete="given-name" maxlength="40" aria-describedby="ask-name-err" />
+      </div>
+      <button type="submit" class="btn btn--mango">Save</button>
+    </div>
+    <p class="name-ask__err" id="ask-name-err" role="alert" data-name-err hidden>Type your first name first.</p>
+  </form>
+
   <section class="card payday" aria-label="Days to payday">
     <div class="payday__ring">
       <svg viewBox="0 0 120 120" aria-hidden="true">
@@ -186,7 +197,7 @@ const streakDone = home.streak.done.filter(Boolean).length;
 
 <script>
   import { inr } from '../../lib/format';
-  import { initials, loadProfile, longDate, monthlyInhand, paydayCycle, shortDate } from '../../scripts/profile-store';
+  import { displayName, initials, loadProfile, longDate, monthlyInhand, paydayCycle, saveProfile, shortDate } from '../../scripts/profile-store';
   import { realRenewals, realWeek } from '../../scripts/scan-store';
 
   // Greet whoever is saved in the profile, on today's date
@@ -194,6 +205,29 @@ const streakDone = home.streak.done.filter(Boolean).length;
   const today = new Date();
   document.querySelector('[data-first-name]')!.textContent = profile.name || 'there';
   document.querySelector('[data-initials]')!.textContent = initials(profile);
+
+  // No name yet (an older account, or onboarding was skipped): ask once, right here
+  const nameAsk = document.querySelector<HTMLFormElement>('[data-name-ask]')!;
+  nameAsk.hidden = !!profile.name;
+  nameAsk.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const input = nameAsk.querySelector<HTMLInputElement>('#ask-name')!;
+    const name = input.value.trim();
+    nameAsk.querySelector<HTMLElement>('[data-name-err]')!.hidden = !!name;
+    input.setAttribute('aria-invalid', String(!name));
+    if (!name) {
+      input.focus();
+      return;
+    }
+    saveProfile({ name });
+    const saved = loadProfile();
+    document.querySelector('[data-first-name]')!.textContent = saved.name;
+    document.querySelector('[data-initials]')!.textContent = initials(saved);
+    document.querySelectorAll('[data-nav-name]').forEach((el) => (el.textContent = displayName(saved)));
+    document.querySelectorAll('[data-nav-initials]').forEach((el) => (el.textContent = initials(saved)));
+    nameAsk.hidden = true;
+  });
+
   document.querySelector('[data-today-long]')!.textContent = longDate(today);
   document.querySelector('[data-today-short]')!.textContent = shortDate(today);
 
@@ -305,6 +339,43 @@ const streakDone = home.streak.done.filter(Boolean).length;
     overflow: hidden;
     clip: rect(0 0 0 0);
     white-space: nowrap;
+  }
+
+  /* Asks for a name when none is saved */
+  .name-ask {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 18px 20px;
+    border-radius: 24px;
+    background: var(--cream);
+    border: 2.5px solid var(--ink);
+  }
+
+  .name-ask[hidden],
+  .name-ask__err[hidden] {
+    display: none;
+  }
+
+  .name-ask__label {
+    font-weight: 800;
+  }
+
+  .name-ask__row {
+    display: flex;
+    gap: 10px;
+  }
+
+  .name-ask__field {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .name-ask__err {
+    margin: 0;
+    font-weight: 700;
+    color: var(--danger);
   }
 
   /* Header */

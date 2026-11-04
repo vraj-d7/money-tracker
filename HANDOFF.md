@@ -115,9 +115,11 @@ Where Vraj is in the step-by-step guide:
   - Tested: 19 logic checks with fixed dates, plus the full flow in the browser (Home, Week, Sunday,
     phone width) with a generated statement and a stand-in session. **Still not tested on a real
     bank PDF; Vraj chose to skip that for now.** The test scripts are not in the repo.
-- ⏳ **Going live (current step):** `wrangler.jsonc`, `.node-version` and `public/_headers` are added and a fresh copy builds, but they
-  aren’t pushed yet. Steps left:
-  1. Vraj approves pushing it.
+- ⏳ **Going live (current step):** `wrangler.jsonc`, `.node-version` and `public/_headers` are pushed (`a8b6d41`) and a fresh copy builds.
+  Vraj signed in on the live site with email: it works (step 5 done). **Not committed yet:** Home now asks for a first name when none is saved (older accounts, or Skip on the welcome screen), and `loadProfile` clears leftover sample details ("Aarav R.", sample email and phone) from old saves. Next: push it, then step 6, the real statement test.
+  **First deploy succeeded on Cloudflare** (project `inhandy`, Workers, both build variables set).
+  The live address is now **https://inhandy.vraj-d7.workers.dev** (subdomain changed so Vraj’s email name is out of it). It loads, the PDF worker is served as JavaScript, and `/app` redirects to email sign-in. Steps 2, 3 and 4 below are done (Supabase Site URL and redirect are set; localhost kept). Step 5, the first real sign-in, is done too. The toggles on that Cloudflare page look off, yet the address works.
+  Steps left:
   2. Vraj creates a free Cloudflare account and imports `vraj-d7/money-tracker` (Workers & Pages), build command `npm run build`.
   3. Before deploying, add **build** variables `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_ANON_KEY` (the
      publishable key, same values as the local `.env`). Without them the live site runs in test mode.
@@ -201,6 +203,7 @@ Still pretend or test mode ("heavy tasks", roughly in order):
 
 ## History (newest first)
 
+- `a8b6d41`: Cloudflare settings for going live.
 - `f872b38`: Real spends and renewals on Home, Week and Sunday (stage 2).
 - `5f69ca9`: Read real bank statements to find autopays (stage 1).
 - `d4f5d98`: Synced data stored as readable JSON (format 2).
