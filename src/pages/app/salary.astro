@@ -41,6 +41,7 @@ const ticks = [2, 10, 20, 50, 100].map((l) => ({
     <div class="head__text">
       <h1>Your salary, explained</h1>
       <p class="muted" data-salary-sub>Click any line to see what it means.</p>
+      <p class="muted" data-fixed-offer>On a fixed monthly salary? <a href={`${routes.salaryDetails}?pay=fixed`}>Use that instead</a></p>
     </div>
     <a href={shareHref} class="btn head__share" data-share-link>
       <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"></path><path d="M12 3v12M7 8l5-5 5 5"></path></svg>
@@ -362,6 +363,7 @@ const ticks = [2, 10, 20, 50, 100].map((l) => ({
       $$<HTMLElement>('[data-ctc-view]').forEach((el) => (el.hidden = true));
       $<HTMLElement>('[data-fixed-view]')!.hidden = false;
       $('[data-salary-sub]')!.textContent = 'What lands in your account each month.';
+      $<HTMLElement>('[data-fixed-offer]')!.hidden = true;
       $('[data-fixed-salary]')!.textContent = inr(profile.fixedMonthly);
       $('[data-fixed-cut-amt]')!.textContent = profile.fixedCuts ? `−${inr(profile.fixedCuts)}` : inr(0);
       $('[data-fixed-lands]')!.textContent = inr(lands);

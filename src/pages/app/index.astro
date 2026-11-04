@@ -82,7 +82,7 @@ const underBy = plan - spent;
     <div class="payday__body">
       <p class="eyebrow">To payday</p>
       <h2 class="payday__title" data-payday-title>Salary aa rahi hai!</h2>
-      <p class="num payday__meta"><span data-payday-date>{shortDate(cycle.next)}</span> · <b data-payday-expected>{inr(expected)}</b> expected</p>
+      <p class="num payday__meta"><span data-payday-date>{shortDate(cycle.next)}</span> · <b data-payday-expected>{inr(expected)}</b> expected <a href={routes.salaryDetails} class="payday__change">Not right? Change</a></p>
       <a href={routes.plan} class="btn btn--ink payday__cta">
         <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2ED3A0" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"></path></svg>
         See salary-day plan
@@ -588,6 +588,13 @@ const underBy = plan - spent;
     font-size: 40px;
     line-height: 1;
     letter-spacing: -0.03em;
+  }
+
+  .payday__change {
+    margin-left: 4px;
+    color: inherit;
+    font-weight: 700;
+    white-space: nowrap;
   }
 
   .payday__meta {

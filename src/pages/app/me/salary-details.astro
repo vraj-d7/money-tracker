@@ -95,7 +95,9 @@ const fields = [
   const root = document.querySelector<HTMLElement>('[data-details]')!;
   const p = loadProfile();
   const tax: TaxDetails = { ...p.tax };
-  let payType: Profile['payType'] = p.payType;
+  // Links can open this on a choice with ?pay=fixed
+  const asked = new URLSearchParams(window.location.search).get('pay');
+  let payType: Profile['payType'] = asked === 'fixed' || asked === 'ctc' ? asked : p.payType;
   let ctc = p.ctc;
   const fixedPay = wireFixedPay(p);
   const ctcInput = root.querySelector<HTMLInputElement>('[data-ctc-input]')!;

@@ -10,7 +10,7 @@ const freePct = 100 - DEFAULT_JARS.reduce((s, j) => s + j.pct, 0);
 <SheetPage title="Edit plan" active="plan" closeHref={routes.plan}>
   <div class="intro">
     <h1 id="sheet-title">Edit your salary-day plan</h1>
-    <p class="num muted">Split <span data-inhand>{inr(MONTHLY_INHAND)}</span> across your jars. What’s left is yours to spend.</p>
+    <p class="num muted">Split <span data-inhand>{inr(MONTHLY_INHAND)}</span> across your jars. What’s left is yours to spend. <a href={routes.salaryDetails}>Pay not right? Change it</a></p>
   </div>
 
   {

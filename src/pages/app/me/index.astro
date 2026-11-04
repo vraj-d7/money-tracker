@@ -65,7 +65,8 @@ const settings = [
           <dd class="num" data-fact="regime">{cmp.winner === 'new' ? 'New' : 'Old'} (saves {inr(cmp.monthlyGap)}/mo)</dd>
         </div>
       </dl>
-      <p class="muted">These power your salary maths. Change them any time; every screen updates.</p>
+      <p class="muted">These power your salary maths; every screen updates when they change.</p>
+      <a href={routes.salaryDetails} class="btn facts__change">Change my pay</a>
     </section>
 
     <section class="card" aria-labelledby="notif-h">
@@ -352,6 +353,10 @@ const settings = [
 </script>
 
 <style>
+  .facts__change {
+    align-self: flex-start;
+  }
+
   .muted {
     margin: 0;
     font-size: 16px;
