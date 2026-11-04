@@ -32,6 +32,8 @@ export interface Profile {
   email: string;
   /** 10 digits, shown as "98765 43210" */
   phone: string;
+  /** False until the user has given or confirmed their pay; before that, the amounts are only an example */
+  payConfirmed: boolean;
   /** Whether we work from a CTC or from a fixed monthly salary */
   payType: 'ctc' | 'fixed';
   /** CTC in lakhs per year */
@@ -54,6 +56,7 @@ export const DEFAULT_PROFILE: Profile = {
   lastName: '',
   email: '',
   phone: '',
+  payConfirmed: false,
   payType: 'ctc',
   ctc: 12,
   fixedMonthly: 0,

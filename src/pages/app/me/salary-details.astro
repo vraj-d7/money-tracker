@@ -167,7 +167,7 @@ const fields = [
   root.querySelector('[data-save]')!.addEventListener('click', () => {
     if (payType === 'fixed') {
       if (!fixedPay.validate()) return;
-      saveProfile({ payType, ...fixedPay.values() });
+      saveProfile({ payConfirmed: true, payType, ...fixedPay.values() });
     } else {
       const rupees = Number(ctcInput.value.split('.')[0].replace(/\D/g, ''));
       if (rupees < 200000 || rupees > 10000000) {
@@ -175,7 +175,7 @@ const fields = [
         ctcInput.focus();
         return;
       }
-      saveProfile({ payType, ctc, tax });
+      saveProfile({ payConfirmed: true, payType, ctc, tax });
     }
     window.location.href = `${routes.me}?done=tax`;
   });

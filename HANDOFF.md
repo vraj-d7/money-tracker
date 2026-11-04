@@ -141,7 +141,8 @@ Where Vraj is in the step-by-step guide:
 - **Dark button hover fix (pushed, `3e3323d`):** `.btn--ink` buttons turn white on hover, but four page-level `color: var(--paper)` overrides kept pale text on them (Pricing, Graveyard share, Home payday, Sunday recap). Overrides removed; don't set `color` on `.btn--ink` buttons.
 - **Editable CTC on Salary (pushed, `1d3cf3d`):** the amount is an input (`data-ctc`); `lakhs` is now the page state, with the slider and +/− moving between `CTC_STEPS`. Limits ₹2L to ₹1Cr, clamped on blur. A typed amount isn't saved to the profile, same as the slider.
 - **Fixed monthly salary option (pushed, `8339050`):** profile gains `payType` (ctc or fixed), `fixedMonthly`, `fixedCuts`. `monthlyInhand` handles both, so Home, Plan, Coach and notifications just work. Welcome and Me → Salary and tax details ask via `FixedPayFields.astro` + `scripts/pay-form.ts`; that settings page is now also where anyone changes their pay (there was no way before). Salary page shows a simple salary, cuts and lands view with a new-regime tax note (`fixedTaxNote`), and hides the CTC breakdown and regime cards. Me shows Salary instead of CTC. Landing hero and Help mention it. Freelancers and variable pay aren't covered. Pay close attention to `$$` in JS `String.replace` when scripting edits.
-- **Change-pay links (not committed yet):** Salary and tax details is now linked from beside the pay number: Home payday card, Salary page (`?pay=fixed` opens on the fixed questions), Edit plan, and a Change my pay button on Me.
+- **Change-pay links (pushed, `70f9240`):** Salary and tax details is now linked from beside the pay number: Home payday card, Salary page (`?pay=fixed` opens on the fixed questions), Edit plan, and a Change my pay button on Me.
+- **Add-your-pay prompt (not committed yet):** new `payConfirmed` profile flag, set by finishing onboarding, saving Salary and tax details, or tapping "That's about right". Home shows the prompt until then. People who signed up before the flag existed see it once.
 - Later options: AI coach (see above), phone sign-in, payments, own email sender (SMTP;
   Supabase's built-in one only allows a few emails an hour, so do this before real users). The PF/ITR
   tools and notifications still use sample content from `src/data/demo-tools.ts` and `demo-notifications.ts`.
@@ -218,6 +219,7 @@ Still pretend or test mode ("heavy tasks", roughly in order):
 
 ## History (newest first)
 
+- `70f9240`: Change-pay links beside the pay number.
 - `8339050`: Fixed monthly salary option.
 - `1d3cf3d`: Editable CTC on the Salary page.
 - `3e3323d`: Dark buttons readable on hover.

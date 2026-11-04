@@ -54,6 +54,17 @@ const underBy = plan - spent;
     <p class="name-ask__err" id="ask-name-err" role="alert" data-name-err hidden>Type your first name first.</p>
   </form>
 
+  <section class="pay-ask" aria-labelledby="pay-ask-h" data-pay-ask hidden>
+    <div class="pay-ask__text">
+      <h2 id="pay-ask-h" class="pay-ask__title">Add your pay to make this yours</h2>
+      <p class="pay-ask__body"><b class="num" data-pay-ask-amount></b> is only an example so far. Your plan, jars and coach all work from this number.</p>
+    </div>
+    <div class="pay-ask__actions">
+      <a href={routes.salaryDetails} class="btn btn--mango">Add my pay</a>
+      <button type="button" class="btn" data-pay-ask-ok>That’s about right</button>
+    </div>
+  </section>
+
   <section class="card payday" aria-label="Days to payday">
     <div class="payday__ring">
       <svg viewBox="0 0 120 120" aria-hidden="true">
@@ -229,6 +240,15 @@ const underBy = plan - spent;
     nameAsk.hidden = true;
   });
 
+  // Pay not given yet (onboarding skipped): say the amounts are an example, and ask
+  const payAsk = document.querySelector<HTMLElement>('[data-pay-ask]')!;
+  payAsk.hidden = profile.payConfirmed;
+  payAsk.querySelector('[data-pay-ask-amount]')!.textContent = `${inr(monthlyInhand(profile))} a month`;
+  payAsk.querySelector('[data-pay-ask-ok]')!.addEventListener('click', () => {
+    saveProfile({ payConfirmed: true });
+    payAsk.hidden = true;
+  });
+
   document.querySelector('[data-today-long]')!.textContent = longDate(today);
   document.querySelector('[data-today-short]')!.textContent = shortDate(today);
 
@@ -356,6 +376,52 @@ const underBy = plan - spent;
     overflow: hidden;
     clip: rect(0 0 0 0);
     white-space: nowrap;
+  }
+
+  /* Asks for pay until it's been given or confirmed */
+  .pay-ask {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px 24px;
+    padding: 18px 20px;
+    border-radius: 24px;
+    background: var(--cream);
+    border: 2.5px solid var(--ink);
+  }
+
+  .pay-ask[hidden] {
+    display: none;
+  }
+
+  .pay-ask__text {
+    flex: 1;
+    min-width: min(100%, 280px);
+  }
+
+  .pay-ask__title {
+    margin: 0 0 4px;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 20px;
+  }
+
+  .pay-ask__body {
+    margin: 0;
+    line-height: 1.45;
+    color: var(--ink-muted);
+  }
+
+  .pay-ask__body b {
+    color: var(--ink);
+  }
+
+  .pay-ask__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
   }
 
   /* Asks for a name when none is saved */

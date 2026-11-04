@@ -280,7 +280,7 @@ const modes: { id: string; label: string; mood: HandyMood; sample: string }[] = 
       render();
       return;
     }
-    saveProfile(answers);
+    saveProfile({ ...answers, payConfirmed: true });
     window.location.href = routes.firstDay;
   });
 
