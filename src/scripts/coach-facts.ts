@@ -18,7 +18,7 @@ export function coachFacts(): CoachFacts {
     inhand,
     funJar: Math.round((inhand * jar('fun')) / 100),
     sipJar: Math.round((inhand * jar('sip')) / 100),
-    savePct: jar('sip') + jar('emer'),
+    savePct: Math.round(jar('sip') + jar('emer')),
     daysLeft: cycle.daysLeft,
     payday: shortDate(cycle.next),
     week: week && top ? { title: week.title, spent: week.spent, plan: week.plan, top: top.category, topAmount: top.amount } : null,

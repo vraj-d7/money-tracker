@@ -21,8 +21,20 @@ const freePct = 100 - DEFAULT_JARS.reduce((s, j) => s + j.pct, 0);
             <span class="swatch" aria-hidden="true" style={`background: ${j.color}`} />
             {j.label}
           </label>
-          <span class="num jar-row__val" data-val>
-            {j.pct}% · {inr((MONTHLY_INHAND * j.pct) / 100)}
+          <span class="jar-row__val">
+            <span class="num jar-row__pct" data-val>{j.pct}%</span>
+            <span class="field amount">
+              <span class="num amount__sign" aria-hidden="true">₹</span>
+              <input
+                class="num amount__input"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                aria-label={`${j.label} amount in rupees`}
+                value={Math.round((MONTHLY_INHAND * j.pct) / 100).toLocaleString('en-IN')}
+                data-amount
+              />
+            </span>
           </span>
         </div>
         <input
@@ -69,18 +81,22 @@ const freePct = 100 - DEFAULT_JARS.reduce((s, j) => s + j.pct, 0);
       const pct = state.jars[j.id];
       total += pct;
       const row = document.querySelector<HTMLElement>(`[data-jar="${j.id}"]`)!;
-      const input = row.querySelector<HTMLInputElement>('input')!;
+      const input = row.querySelector<HTMLInputElement>('.rng')!;
       const amt = inr((inhand * pct) / 100);
+      const shown = +pct.toFixed(1);
       input.value = String(pct);
-      input.style.setProperty('--p', ((pct / 50) * 100).toFixed(1) + '%');
-      input.setAttribute('aria-valuetext', `${pct}%, ${amt}`);
-      row.querySelector('[data-val]')!.textContent = `${pct}% · ${amt}`;
+      input.style.setProperty('--p', Math.min(100, (pct / 50) * 100).toFixed(1) + '%');
+      input.setAttribute('aria-valuetext', `${shown}%, ${amt}`);
+      row.querySelector('[data-val]')!.textContent = `${shown}%`;
+      // Leave the box alone while someone is typing in it
+      const box = row.querySelector<HTMLInputElement>('[data-amount]')!;
+      if (document.activeElement !== box) box.value = amt.replace('₹', '');
     }
-    const over = total > 100;
     const free = (inhand * (100 - total)) / 100;
+    const over = Math.round(free) < 0;
     document.querySelector<HTMLElement>('[data-free]')!.classList.toggle('free--over', over);
     document.querySelector('[data-free-label]')!.textContent = over
-      ? `Over by ${total - 100}%. Lower a jar to save.`
+      ? `Over by ${inr(-free)}. Lower a jar to save.`
       : 'For daily spending (food, travel, bills)';
     document.querySelector('[data-free-amt]')!.textContent = over ? '−' + inr(-free) : inr(free);
     save.disabled = over;
@@ -91,6 +107,16 @@ const freePct = 100 - DEFAULT_JARS.reduce((s, j) => s + j.pct, 0);
       state.jars[j.id] = parseInt((e.target as HTMLInputElement).value, 10);
       render();
     });
+    // Typing an exact amount: jars are kept as a share of take-home, so it stays exact to the rupee
+    const box = document.querySelector<HTMLInputElement>(`[data-jar="${j.id}"] [data-amount]`)!;
+    box.addEventListener('input', () => {
+      const rupees = Math.min(inhand, Number(box.value.split('.')[0].replace(/\D/g, '')));
+      state.jars[j.id] = inhand > 0 ? (rupees / inhand) * 100 : 0;
+      render();
+    });
+    box.addEventListener('focus', () => box.select());
+    // Tidy the commas (or fill in ₹0) once they've finished
+    box.addEventListener('blur', () => render());
   }
 
   save.addEventListener('click', () => {
@@ -127,8 +153,38 @@ const freePct = 100 - DEFAULT_JARS.reduce((s, j) => s + j.pct, 0);
   .jar-row__top {
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
+    align-items: center;
     gap: 12px;
+  }
+
+  .jar-row__val {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .jar-row__pct {
+    font-weight: 700;
+    color: var(--ink-muted);
+  }
+
+  .amount {
+    width: 128px;
+    padding: 0 10px;
+    box-sizing: border-box;
+    gap: 2px;
+    border-radius: 12px;
+  }
+
+  .amount__sign {
+    font-weight: 800;
+  }
+
+  .amount__input {
+    width: 100%;
+    min-height: 44px;
+    font-weight: 800;
+    text-align: right;
   }
 
   .jar-row__label {
