@@ -137,7 +137,8 @@ Where Vraj is in the step-by-step guide:
 - **Hero graph motion (pushed, `c50f558`):** on load the salary bar grows, bands sweep left to right, buckets pop in (`flow-sweep`, `flow-grow` in `landing/Hero.astro`). CSS only, plays once, about 2.3s in all, off with reduced motion; the slider keeps its own transitions.
 - **Hero amounts and Handy (pushed, `aa5a972`):** on load the hero card's five amounts count up from ₹0 over 1.5s (`countUpOnLoad` in `landing/Hero.astro`; touching the slider cancels it). Handy and the bubble hop in, then Handy sways gently (`handy-hop`, `handy-sway`). Off with reduced motion. Amounts further down the landing page don't count.
 - **Reload shift fix (pushed, `3e21097`):** each reload moved the landing page down 18px because scroll anchoring reacted to the load animation's translate. `html { overflow-anchor: none }` in `global.css` fixes it. Keep this in mind when adding other entrance animations.
-- **Landing jars (not committed yet):** first time `.jars` scrolls into view, each jar pops in, fills and counts up in turn (`jars--waiting`/`jars--play`, `--i`, `countUp` in `landing/Jars.astro`). Uses `rootMargin`, not a % threshold, so tall shelves on short screens can't stay hidden. Off with reduced motion.
+- **Landing jars (pushed, `8a98222`):** first time `.jars` scrolls into view, each jar pops in, fills and counts up in turn (`jars--waiting`/`jars--play`, `--i`, `countUp` in `landing/Jars.astro`). Uses `rootMargin`, not a % threshold, so tall shelves on short screens can't stay hidden. Off with reduced motion.
+- **Dark button hover fix (not committed yet):** `.btn--ink` buttons turn white on hover, but four page-level `color: var(--paper)` overrides kept pale text on them (Pricing, Graveyard share, Home payday, Sunday recap). Overrides removed; don't set `color` on `.btn--ink` buttons.
 - Later options: AI coach (see above), phone sign-in, payments, own email sender (SMTP;
   Supabase's built-in one only allows a few emails an hour, so do this before real users). The PF/ITR
   tools and notifications still use sample content from `src/data/demo-tools.ts` and `demo-notifications.ts`.
@@ -214,6 +215,7 @@ Still pretend or test mode ("heavy tasks", roughly in order):
 
 ## History (newest first)
 
+- `8a98222`: Landing jars animate one by one.
 - `3e21097`: Page no longer shifts down on reload.
 - `aa5a972`: Hero amounts count up; Handy hops and sways.
 - `c50f558`: Landing salary graph animates on load.
