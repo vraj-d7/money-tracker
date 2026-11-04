@@ -1,10 +1,5 @@
 ---
-import { inr } from '../../lib/format';
-import { coachData } from '../../lib/coach';
-
-const { price, funLeft } = coachData.afford;
-const pct = Math.min(100, Math.round((funLeft / price) * 100));
-const short = Math.max(0, price - funLeft);
+// "Can I afford this?" card under a coach reply. The chat script fills it in for the item asked about.
 ---
 
 <div class="afford">
@@ -12,16 +7,16 @@ const short = Math.max(0, price - funLeft);
     <span class="afford__title">Can I afford this?</span>
     <span class="afford__badge">
       <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
-      {short > 0 ? `Not yet · wait ${coachData.daysToPayday} days` : 'Yes, go for it'}
+      <span data-afford-badge></span>
     </span>
   </div>
-  <div class="afford__bar" role="img" aria-label={`Fun money left ${inr(funLeft)} covers ${pct}% of the ${inr(price)} phone`}>
-    <div class="afford__fill" style={`width: ${pct}%`}></div>
-    <div class="afford__gap" style={`left: ${pct}%`}></div>
+  <div class="afford__bar" role="img" data-afford-bar>
+    <div class="afford__fill" data-afford-fill></div>
+    <div class="afford__gap" data-afford-gap></div>
   </div>
   <div class="num afford__nums">
-    <span><b>{inr(funLeft)}</b> fun money left</span>
-    {short > 0 && <span class="afford__short">{inr(short)} short</span>}
+    <span><b data-afford-fun></b> fun money a month</span>
+    <span class="afford__short" data-afford-short></span>
   </div>
 </div>
 
@@ -85,6 +80,10 @@ const short = Math.max(0, price - funLeft);
     display: flex;
     justify-content: space-between;
     gap: 8px;
+  }
+
+  .afford__short[hidden] {
+    display: none;
   }
 
   .afford__short {

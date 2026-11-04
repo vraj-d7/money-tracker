@@ -116,7 +116,7 @@ Where Vraj is in the step-by-step guide:
     phone width) with a generated statement and a stand-in session. **Still not tested on a real
     bank PDF; Vraj chose to skip that for now.** The test scripts are not in the repo.
 - ⏳ **Going live (current step):** `wrangler.jsonc`, `.node-version` and `public/_headers` are pushed (`a8b6d41`) and a fresh copy builds.
-  Vraj signed in on the live site with email: it works (step 5 done). **Not committed yet:** Home now asks for a first name when none is saved (older accounts, or Skip on the welcome screen), and `loadProfile` clears leftover sample details ("Aarav R.", sample email and phone) from old saves. Next: push it, then step 6, the real statement test.
+  Vraj signed in on the live site with email: it works (step 5 done). Pushed (`7edea30`): Home now asks for a first name when none is saved (older accounts, or Skip on the welcome screen), and `loadProfile` clears leftover sample details ("Aarav R.", sample email and phone) from old saves. Confirmed: pushing to `main` redeploys the live site automatically. Next: step 6, the real statement test.
   **First deploy succeeded on Cloudflare** (project `inhandy`, Workers, both build variables set).
   The live address is now **https://inhandy.vraj-d7.workers.dev** (subdomain changed so Vraj’s email name is out of it). It loads, the PDF worker is served as JavaScript, and `/app` redirects to email sign-in. Steps 2, 3 and 4 below are done (Supabase Site URL and redirect are set; localhost kept). Step 5, the first real sign-in, is done too. The toggles on that Cloudflare page look off, yet the address works.
   Steps left:
@@ -127,6 +127,7 @@ Where Vraj is in the step-by-step guide:
      `<live address>/auth/callback`; keep the localhost redirect for development.
   5. Check the live site: real sign-in, `/app` gate, 404 page, PDF worker loads.
   6. **Then remind Vraj to test a real statement.**
+- **Coach (not committed yet):** replies are still built-in, not AI, but `lib/coach.ts` now takes the item and price from the question (`parseAfford`, `parseAmount`), asks for the price if missing, and uses the user's own numbers (`scripts/coach-facts.ts`): pay, jars, payday, and latest week if scanned. The fake opening chat and sample spend chart (`SpendChart`) are gone; the side panel shows real pay and jars. Fun money is the monthly jar, not what's left this month, since balances aren't tracked.
 - Later options: real streak tracking, AI coach, phone sign-in, payments, own email sender (SMTP;
   Supabase's built-in one only allows a few emails an hour, so do this before real users). The PF/ITR
   tools and notifications still use sample content from `src/data/demo-tools.ts` and `demo-notifications.ts`.
@@ -203,6 +204,7 @@ Still pretend or test mode ("heavy tasks", roughly in order):
 
 ## History (newest first)
 
+- `7edea30`: Home asks for a missing first name; old sample details cleared.
 - `a8b6d41`: Cloudflare settings for going live.
 - `f872b38`: Real spends and renewals on Home, Week and Sunday (stage 2).
 - `5f69ca9`: Read real bank statements to find autopays (stage 1).

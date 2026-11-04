@@ -1,18 +1,13 @@
 ---
 import AppShell from '../../layouts/AppShell.astro';
 import Handy from '../../components/Handy.astro';
-import SpendChart from '../../components/coach/SpendChart.astro';
 import AffordCard from '../../components/coach/AffordCard.astro';
 import { inr } from '../../lib/format';
-import { COACH_MODES, REPLIES, coachData } from '../../lib/coach';
+import { COACH_CHIPS, COACH_MODES } from '../../lib/coach';
+import { DEFAULT_JARS, MONTHLY_INHAND } from '../../data/demo-plan';
 
-// The opening conversation from the design, in the default voice (the script re-voices it to the saved mode)
+// Pre-rendered voice; the script switches to the saved one and fills in the user's numbers
 const startMode = 'honest';
-const opening = [
-  { q: 'Where did my salary go this month?', intent: 'where' as const },
-  { q: 'Can I afford a ₹12,000 phone?', intent: 'afford' as const },
-];
-const spentPct = Math.round((coachData.spent / coachData.inhand) * 100);
 ---
 
 <AppShell title="Coach" active="coach" full>
@@ -48,20 +43,7 @@ const spentPct = Math.round((coachData.spent / coachData.inhand) * 100);
       <div class="log" role="log" aria-label="Conversation" tabindex="0" data-log-scroll>
         <div class="log__inner" data-log>
           <span class="log__date">Today</span>
-          {
-            opening.map((o) => (
-              <>
-                <p class="msg msg--me">{o.q}</p>
-                <div class="reply" data-intent={o.intent}>
-                  <p class="msg msg--handy" data-reply-text>
-                    {REPLIES[o.intent].text[startMode]}
-                  </p>
-                  {o.intent === 'where' && <SpendChart />}
-                  {o.intent === 'afford' && <AffordCard />}
-                </div>
-              </>
-            ))
-          }
+          <div class="reply" data-intent="hello"><p class="msg msg--handy" data-reply-text>Hi. Ask me about your salary, spends, SIPs, PF, or whether you can afford something.</p></div>
         </div>
       </div>
 
@@ -69,7 +51,7 @@ const spentPct = Math.round((coachData.spent / coachData.inhand) * 100);
         <div class="composer__inner">
           <div class="chips">
             {
-              coachData.chips.map((c) => (
+              COACH_CHIPS.map((c) => (
                 <button type="button" class="chip" data-chip>
                   {c}
                 </button>
@@ -92,30 +74,26 @@ const spentPct = Math.round((coachData.spent / coachData.inhand) * 100);
       <h2 class="side__title">What Handy can see</h2>
 
       <section class="side__payday" aria-label="Days to payday">
-        <span class="num side__days">{coachData.daysToPayday}</span>
+        <span class="num side__days" data-side-days></span>
         <span class="side__payday-text">
-          <span class="side__payday-label">days to payday</span>
-          <span class="num">{coachData.payday} · {inr(coachData.inhand)}</span>
+          <span class="side__payday-label" data-side-unit>days to payday</span>
+          <span class="num" data-side-payday></span>
         </span>
       </section>
 
-      <section class="card" aria-label="Left this month">
-        <span class="card__label">Left this month</span>
-        <span class="num side__left">{inr(coachData.left)}</span>
-        <div class="side__bar" role="img" aria-label={`${inr(coachData.spent)} spent, ${spentPct}% of in-hand`}>
-          <div style={`width: ${spentPct}%`}></div>
-        </div>
-        <p class="side__ok">Rent, home and SIP already paid</p>
+      <section class="card" aria-label="Take-home pay">
+        <span class="card__label">Take-home a month</span>
+        <span class="num side__left" data-side-inhand>{inr(MONTHLY_INHAND)}</span>
       </section>
 
       <section class="card" aria-label="Jars">
-        <span class="card__label">Your jars</span>
+        <span class="card__label">Your jars, a month</span>
         {
-          coachData.jars.map((j) => (
+          DEFAULT_JARS.map((j) => (
             <div class="jar">
               <span class="jar__swatch" aria-hidden="true" style={`background: ${j.color}`} />
               <span class="jar__label">{j.label}</span>
-              <span class="num jar__amt">{inr(j.amount)}</span>
+              <span class="num jar__amt" data-side-jar={j.id}>{inr((MONTHLY_INHAND * j.pct) / 100)}</span>
             </div>
           ))
         }
@@ -132,12 +110,15 @@ const spentPct = Math.round((coachData.spent / coachData.inhand) * 100);
   <template id="tpl-typing">
     <div class="typing" aria-label="Handy is typing"><span></span><span></span><span></span></div>
   </template>
-  <template id="tpl-spend-chart"><SpendChart /></template>
   <template id="tpl-afford-card"><AffordCard /></template>
 </AppShell>
 
 <script>
-  import { REPLIES, matchIntent, type CoachMode, type Intent } from '../../lib/coach';
+  import { DEFAULT_JARS } from '../../data/demo-plan';
+  import { inr } from '../../lib/format';
+  import { matchIntent, monthsOfFun, parseAfford, parseAmount, replyText, type AffordAsk, type CoachMode, type Intent } from '../../lib/coach';
+  import { coachFacts } from '../../scripts/coach-facts';
+  import { loadPlan } from '../../scripts/plan-store';
   import { loadProfile, saveProfile } from '../../scripts/profile-store';
 
   const root = document.querySelector<HTMLElement>('[data-coach]')!;
@@ -151,6 +132,39 @@ const spentPct = Math.round((coachData.spent / coachData.inhand) * 100);
     (document.querySelector<HTMLTemplateElement>(`#${id}`)!.content.firstElementChild as HTMLElement).cloneNode(true) as HTMLElement;
 
   let mode = root.dataset.mode as CoachMode;
+  const facts = coachFacts();
+  // What each reply was about, so changing voice can rewrite it
+  const asks = new WeakMap<HTMLElement, AffordAsk | null>();
+  // The latest thing asked about: "Help me save for it" and a bare price both refer back to it
+  let lastAsk: AffordAsk | null = null;
+
+  // The side panel, from the user's own numbers
+  const plan = loadPlan();
+  root.querySelector('[data-side-days]')!.textContent = String(facts.daysLeft);
+  root.querySelector('[data-side-unit]')!.textContent = facts.daysLeft === 1 ? 'day to payday' : 'days to payday';
+  root.querySelector('[data-side-payday]')!.textContent = `${facts.payday} · ${inr(facts.inhand)}`;
+  root.querySelector('[data-side-inhand]')!.textContent = inr(facts.inhand);
+  for (const j of DEFAULT_JARS) {
+    root.querySelector(`[data-side-jar="${j.id}"]`)!.textContent = inr((facts.inhand * (plan.jars[j.id] ?? j.pct)) / 100);
+  }
+
+  /** Fills the "Can I afford this?" card for a priced item */
+  function affordCard(ask: AffordAsk & { price: number }) {
+    const card = tpl('tpl-afford-card');
+    const pct = Math.min(100, Math.round((facts.funJar / ask.price) * 100));
+    const short = Math.max(0, ask.price - facts.funJar);
+    const months = monthsOfFun(ask.price, facts.funJar);
+    card.querySelector('[data-afford-badge]')!.textContent =
+      short === 0 ? 'Fits one month' : isFinite(months) ? `About ${months} months` : 'No fun money planned';
+    card.querySelector('[data-afford-bar]')!.setAttribute('aria-label', `A month of fun money, ${inr(facts.funJar)}, covers ${pct}% of the ${inr(ask.price)} price`);
+    card.querySelector<HTMLElement>('[data-afford-fill]')!.style.width = `${pct}%`;
+    card.querySelector<HTMLElement>('[data-afford-gap]')!.style.left = `${pct}%`;
+    card.querySelector('[data-afford-fun]')!.textContent = inr(facts.funJar);
+    const shortEl = card.querySelector<HTMLElement>('[data-afford-short]')!;
+    shortEl.hidden = short === 0;
+    shortEl.textContent = `${inr(short)} short`;
+    return card;
+  }
 
   function setMode(next: CoachMode, save = true) {
     mode = next;
@@ -159,7 +173,7 @@ const spentPct = Math.round((coachData.spent / coachData.inhand) * 100);
     root.querySelectorAll<HTMLElement>('[data-mode-btn]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.modeBtn === next)));
     // Every Handy reply so far switches to the new voice
     log.querySelectorAll<HTMLElement>('[data-intent]').forEach((r) => {
-      r.querySelector('[data-reply-text]')!.textContent = REPLIES[r.dataset.intent as Intent].text[next];
+      r.querySelector('[data-reply-text]')!.textContent = replyText(r.dataset.intent as Intent, next, facts, asks.get(r) ?? null);
       if (!reduceMotion) {
         r.classList.remove('pop-in');
         void r.offsetWidth;
@@ -193,12 +207,19 @@ const spentPct = Math.round((coachData.spent / coachData.inhand) * 100);
     window.setTimeout(
       () => {
         typing.remove();
-        const intent = matchIntent(text);
+        // Just a price, right after Handy asked for one, answers that question
+        const waitingForPrice = lastAsk && !lastAsk.price;
+        const bare = waitingForPrice ? parseAmount(text) : undefined;
+        const intent: Intent = bare ? 'afford' : matchIntent(text);
+        let ask: AffordAsk | null = null;
+        if (bare) ask = lastAsk = { item: lastAsk!.item, price: bare };
+        else if (intent === 'afford') ask = lastAsk = parseAfford(text);
+        else if (intent === 'help-save') ask = lastAsk;
         const reply = tpl('tpl-reply');
         reply.dataset.intent = intent;
-        reply.querySelector('[data-reply-text]')!.textContent = REPLIES[intent].text[mode];
-        const attach = REPLIES[intent].attach;
-        if (attach) reply.append(tpl(attach === 'spend-chart' ? 'tpl-spend-chart' : 'tpl-afford-card'));
+        asks.set(reply, ask);
+        reply.querySelector('[data-reply-text]')!.textContent = replyText(intent, mode, facts, ask);
+        if (intent === 'afford' && ask?.price) reply.append(affordCard({ ...ask, price: ask.price }));
         log.append(reply);
         scrollToEnd();
       },
@@ -222,7 +243,7 @@ const spentPct = Math.round((coachData.spent / coachData.inhand) * 100);
 
   // Start in the voice picked during onboarding
   const saved = loadProfile().coachMode;
-  if (saved !== mode) setMode(saved, false);
+  setMode(saved, false);
 
   // A question sent from Home (?q=...) is asked straight away
   const q = new URLSearchParams(window.location.search).get('q');
@@ -574,28 +595,6 @@ const spentPct = Math.round((coachData.spent / coachData.inhand) * 100);
     font-size: 36px;
     letter-spacing: -0.04em;
     line-height: 1;
-  }
-
-  .side__bar {
-    height: 14px;
-    border-radius: 99px;
-    background: #f1e7d3;
-    border: 2px solid var(--ink);
-    overflow: hidden;
-  }
-
-  .side__bar div {
-    height: 100%;
-    background: var(--mango);
-  }
-
-  .side__ok {
-    margin: 0;
-    padding: 8px 10px;
-    border-radius: 12px;
-    background: #e2f8ef;
-    color: #0a6b4d;
-    font-weight: 700;
   }
 
   .jar {
