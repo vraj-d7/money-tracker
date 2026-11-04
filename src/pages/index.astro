@@ -53,6 +53,40 @@ import FinalCta from '../components/landing/FinalCta.astro';
 </script>
 
 <style is:global>
+  /* The top of the page builds in on load: nav, then the left column line by line, then the card */
+  .lp .nav,
+  .lp .hero__left > *,
+  .lp .split {
+    animation: load-rise 0.6s var(--ease) backwards;
+  }
+
+  .lp .hero__left > :nth-child(1) {
+    animation-delay: 0.08s;
+  }
+
+  .lp .hero__left > :nth-child(2) {
+    animation-delay: 0.14s;
+  }
+
+  .lp .hero__left > :nth-child(3) {
+    animation-delay: 0.2s;
+  }
+
+  .lp .hero__left > :nth-child(n + 4) {
+    animation-delay: 0.26s;
+  }
+
+  .lp .split {
+    animation-delay: 0.32s;
+  }
+
+  @keyframes load-rise {
+    from {
+      opacity: 0;
+      transform: translateY(18px);
+    }
+  }
+
   .reveal {
     opacity: 0;
     transform: translateY(24px);

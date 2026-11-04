@@ -17,6 +17,12 @@ const { title } = Astro.props;
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
+    <script is:inline>
+      // Arriving by a page change already fades in; the load fade is for fresh opens and refreshes
+      addEventListener('pagereveal', (e) => {
+        if (e.viewTransition) document.documentElement.classList.add('arrived-by-transition');
+      });
+    </script>
     {
       backendOn && (
         // Before anything paints: no saved session on an app page → straight to sign-in.

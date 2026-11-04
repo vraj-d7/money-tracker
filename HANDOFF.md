@@ -132,7 +132,8 @@ Where Vraj is in the step-by-step guide:
 - **Honest content pass (pushed, `3d9eb60`):** PF corner and Email HR carry a `SampleBanner` (no real PF data source exists). Notifications are real (`scripts/notifications.ts`): payday within 7 days, renewals within 7 days from a real scan, and the Sunday recap on Sun/Mon, all following the Me page toggles; in-app only, no phone or email alerts. `demo-notifications.ts` is gone and nav badges start hidden. Streaks are real (`lib/streaks.ts`): finishing the Sunday recap records `inhandy:checkins`; Plan has an "I filled my jars this month" button that records `inhandy:payday:filled`. The Me page PF notification toggle currently does nothing.
 - **AI coach: on hold (Vraj's decision).** Revisit if the site gets more traffic; the coach keeps its built-in replies until then. A working version, tested only with simulated answers, is saved on Vraj's main computer as a git stash (`git stash list`; bring it back with `git stash pop`). It isn't on GitHub. It holds the worker, the daily limit SQL and the chat wiring. Going live would also need an Anthropic key, as a Cloudflare secret, and a model choice (Haiku 5.5 is the cheapest Claude model).
 - **Motion (pushed, `d33d852`):** Lenis smooth wheel scrolling on every page (`scripts/smooth-scroll.ts`; touch stays native; a ResizeObserver re-measures because pages rebuild after load, without which Lenis can refuse to scroll). Page changes cross-fade with native CSS `@view-transition` in `global.css` (chosen over Astro's ClientRouter, which would stop page scripts re-running). Landing sections reveal on scroll (`.reveal` in `pages/index.astro`); app pages don't, so numbers aren't delayed. All off with reduced motion. Safari/Firefox support for page transitions varies; they simply switch instantly. Restoring the AI stash may conflict in `package.json` now that `lenis` is added.
-- **Hero card fix (not committed yet):** the labels overlapped their amounts on small laptop widths; `.legend` is now one column from just above 1023px to 1365px.
+- **Hero card fix (pushed, `bb8f35a`):** the labels overlapped their amounts on small laptop widths; `.legend` is now one column from just above 1023px to 1365px.
+- **Page load animation (not committed yet):** every page gets a 0.35s opacity fade on `body` (opacity only, since a transform would break fixed elements), skipped via `pagereveal` when a view transition already ran. Landing hero builds in with staggered `load-rise` (`pages/index.astro`). Off with reduced motion.
 - Later options: AI coach (see above), phone sign-in, payments, own email sender (SMTP;
   Supabase's built-in one only allows a few emails an hour, so do this before real users). The PF/ITR
   tools and notifications still use sample content from `src/data/demo-tools.ts` and `demo-notifications.ts`.
@@ -209,6 +210,7 @@ Still pretend or test mode ("heavy tasks", roughly in order):
 
 ## History (newest first)
 
+- `bb8f35a`: Hero card labels no longer overlap on small laptops.
 - `d33d852`: Lenis, page transitions, landing reveals.
 - `3d9eb60`: Sample banners on PF, real notifications and streaks.
 - `a132809`: Rupee boxes on Edit plan.

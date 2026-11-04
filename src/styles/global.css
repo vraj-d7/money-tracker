@@ -413,3 +413,18 @@ textarea:focus-visible {
 html.lenis {
   scroll-behavior: auto !important;
 }
+
+/* A soft fade when a page first opens. Opacity only: moving <body> would break fixed elements like toasts. */
+body {
+  animation: page-load 0.35s ease-out;
+}
+
+html.arrived-by-transition body {
+  animation: none;
+}
+
+@keyframes page-load {
+  from {
+    opacity: 0;
+  }
+}
