@@ -137,6 +137,47 @@ const moods: HandyMood[] = ['happy', 'cheer', 'gasp'];
   });
 
   render();
+
+  // The first time the jars scroll into view, they appear and fill one by one, left to right.
+  // Only set up here, so without this script (or with reduced motion) they're simply there.
+  const JAR_GAP = 220;
+  const JAR_START = 200;
+  const COUNT_TIME = 800;
+  const shelf = root.querySelector<HTMLElement>('.jars')!;
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && 'IntersectionObserver' in window) {
+    const jars = [...shelf.querySelectorAll<HTMLElement>('[data-jar]')];
+    jars.forEach((el, i) => el.style.setProperty('--i', String(i)));
+    shelf.classList.add('jars--waiting');
+
+    const countUp = () => {
+      const t0 = performance.now();
+      const step = (now: number) => {
+        let done = true;
+        jars.forEach((el, i) => {
+          const t = Math.max(0, Math.min(1, (now - t0 - JAR_START - i * JAR_GAP) / COUNT_TIME));
+          if (t < 1) done = false;
+          // Worked out fresh each frame, so a slider moved mid-count still lands on the right amount
+          const amount = (monthly * values[el.dataset.jar!]) / 100;
+          el.querySelector('[data-amt]')!.textContent = inr(amount * (1 - Math.pow(1 - t, 3)));
+        });
+        if (!done) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    };
+
+    const seen = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return;
+        seen.disconnect();
+        shelf.classList.replace('jars--waiting', 'jars--play');
+        countUp();
+      },
+      // Starts once the shelf's top is a quarter of the way up the screen. Not a "% visible" rule:
+      // on short screens a tall shelf might never reach it and the jars would stay hidden.
+      { rootMargin: '0px 0px -25% 0px' },
+    );
+    seen.observe(shelf);
+  }
 </script>
 
 <style>
@@ -150,6 +191,34 @@ const moods: HandyMood[] = ['happy', 'cheer', 'gasp'];
     justify-content: center;
     align-items: center;
     gap: var(--lp-jar-gap);
+  }
+
+  /* Waiting off-screen, then each jar in turn pops in and fills (--i is its position, set by the script) */
+  .jars--waiting .jar {
+    opacity: 0;
+  }
+
+  .jars--play .jar {
+    animation: jar-in 0.55s cubic-bezier(0.3, 1.4, 0.5, 1) backwards;
+    animation-delay: calc(0.2s + var(--i) * 0.22s);
+  }
+
+  .jars--play .jar__fill {
+    animation: jar-fill 0.8s cubic-bezier(0.33, 1, 0.68, 1) backwards;
+    animation-delay: calc(0.35s + var(--i) * 0.22s);
+  }
+
+  @keyframes jar-in {
+    from {
+      opacity: 0;
+      transform: translateY(28px) scale(0.92);
+    }
+  }
+
+  @keyframes jar-fill {
+    from {
+      height: 0;
+    }
   }
 
   .jar {
