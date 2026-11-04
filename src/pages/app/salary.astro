@@ -51,7 +51,19 @@ const ticks = [2, 10, 20, 50, 100].map((l) => ({
   <section class="ctc" aria-label="Your CTC" data-salary data-start-idx={idx} data-start-regime={startRegime} data-start-open={startOpen}>
     <div class="ctc__value">
       <label for="ctc-range" class="eyebrow">Your CTC</label>
-      <span class="num ctc__amount" aria-live="polite"><span data-ctc>{inr(b.ctc)}</span><span class="ctc__per"> /year</span></span>
+      <span class="num ctc__amount">
+        <span aria-hidden="true">₹</span><input
+          class="num ctc__input"
+          type="text"
+          inputmode="numeric"
+          autocomplete="off"
+          aria-label="Your CTC in rupees per year"
+          aria-describedby="ctc-hint"
+          value={inr(b.ctc).replace('₹', '')}
+          data-ctc
+        /><span class="ctc__per"> /year</span>
+      </span>
+      <span class="ctc__hint" id="ctc-hint" role="status" data-ctc-hint hidden>Enter between ₹2,00,000 and ₹1,00,00,000 a year</span>
     </div>
     <div class="ctc__slider">
       <input
@@ -183,10 +195,20 @@ const ticks = [2, 10, 20, 50, 100].map((l) => ({
     const handyBox = $<HTMLElement>('.inhand__handy')!;
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    let idx = Number(root.dataset.startIdx);
+    // Any amount can be typed; the slider and +/− buttons move between CTC_STEPS
+    let lakhs = CTC_STEPS[Number(root.dataset.startIdx)];
+    const ctcInput = $<HTMLInputElement>('[data-ctc]')!;
+    const ctcHint = $<HTMLElement>('[data-ctc-hint]')!;
+    // The box is exactly as wide as its digits, so it sits in the row like plain text would
+    function fitCtcInput() {
+      ctcInput.style.width = '0';
+      ctcInput.style.width = `${ctcInput.scrollWidth + 2}px`;
+    }
+    document.fonts.ready.then(fitCtcInput);
+    window.addEventListener('resize', fitCtcInput);
     let regime = root.dataset.startRegime as Regime;
     let open: string | null = root.dataset.startOpen ?? null;
-    let shownMonthly = calcSalary(CTC_STEPS[idx], regime).inhand / 12;
+    let shownMonthly = calcSalary(lakhs, regime).inhand / 12;
     let raf = 0;
 
     const signed = (v: number) => (v < 0 ? '−' : '') + inr(Math.abs(v));
@@ -212,12 +234,14 @@ const ticks = [2, 10, 20, 50, 100].map((l) => ({
     }
 
     function render(regimeChanged = false) {
-      const lakhs = CTC_STEPS[idx];
+      const idx = stepIndexOf(lakhs);
       const b = calcSalary(lakhs, regime);
       const cmp = compareRegimes(lakhs);
 
       // CTC + slider
-      $('[data-ctc]')!.textContent = inr(b.ctc);
+      // Leave the box alone while someone is typing in it
+      if (document.activeElement !== ctcInput) ctcInput.value = inr(b.ctc).replace('₹', '');
+      fitCtcInput();
       range.value = String(idx);
       range.setAttribute('aria-valuetext', `${inr(b.ctc)} per year`);
       range.style.setProperty('--p', ((idx / (CTC_STEPS.length - 1)) * 100).toFixed(1) + '%');
@@ -257,13 +281,43 @@ const ticks = [2, 10, 20, 50, 100].map((l) => ({
     }
 
     range.addEventListener('input', () => {
-      idx = Number(range.value);
+      lakhs = CTC_STEPS[Number(range.value)];
+      render();
+    });
+
+    const MIN_CTC = CTC_STEPS[0] * 100000;
+    const MAX_CTC = CTC_STEPS[CTC_STEPS.length - 1] * 100000;
+    const typedRupees = () => Number(ctcInput.value.split('.')[0].replace(/\D/g, ''));
+
+    ctcInput.addEventListener('focus', () => ctcInput.select());
+    ctcInput.addEventListener('input', () => {
+      const rupees = typedRupees();
+      const ok = rupees >= MIN_CTC && rupees <= MAX_CTC;
+      // Half-typed amounts ("1", "12") just wait, with a hint, until they make sense
+      ctcHint.hidden = ok || !ctcInput.value.trim();
+      fitCtcInput();
+      if (!ok) return;
+      lakhs = rupees / 100000;
+      render();
+    });
+    ctcInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') ctcInput.blur();
+    });
+    // Done typing: keep it within limits and tidy the commas. An empty box goes back to the last amount.
+    ctcInput.addEventListener('blur', () => {
+      const rupees = typedRupees();
+      if (rupees > 0) lakhs = Math.max(MIN_CTC, Math.min(MAX_CTC, rupees)) / 100000;
+      ctcHint.hidden = true;
       render();
     });
 
     for (const btn of $$<HTMLButtonElement>('[data-step]')) {
       btn.addEventListener('click', () => {
-        idx = Math.max(0, Math.min(CTC_STEPS.length - 1, idx + Number(btn.dataset.step)));
+        // To the next step in that direction, even from a typed amount between steps
+        lakhs =
+          Number(btn.dataset.step) > 0
+            ? (CTC_STEPS.find((x) => x > lakhs) ?? lakhs)
+            : (CTC_STEPS.findLast((x) => x < lakhs) ?? lakhs);
         render();
       });
     }
@@ -286,12 +340,11 @@ const ticks = [2, 10, 20, 50, 100].map((l) => ({
 
     // Open on the user's own CTC and their better regime (the page is pre-rendered for ₹12L, new regime)
     const profile = loadProfile();
-    const ownIdx = stepIndexOf(profile.ctc);
-    const ownRegime = compareRegimes(CTC_STEPS[ownIdx]).winner;
-    if (ownIdx !== idx || ownRegime !== regime) {
-      idx = ownIdx;
+    const ownRegime = compareRegimes(profile.ctc).winner;
+    if (profile.ctc !== lakhs || ownRegime !== regime) {
+      lakhs = profile.ctc;
       // Jump straight to the user's number instead of counting up from the sample one
-      shownMonthly = calcSalary(CTC_STEPS[idx], ownRegime).inhand / 12;
+      shownMonthly = calcSalary(lakhs, ownRegime).inhand / 12;
       $('[data-inhand]')!.textContent = inr(shownMonthly);
       const regimeChanged = ownRegime !== regime;
       regime = ownRegime;
@@ -362,6 +415,29 @@ const ticks = [2, 10, 20, 50, 100].map((l) => ({
     font-size: 44px;
     letter-spacing: -0.04em;
     line-height: 1.05;
+  }
+
+  /* Looks like the big number it replaced; the dashed line says it can be edited */
+  .ctc__input {
+    width: 9ch;
+    min-width: 0;
+    padding: 0;
+    border: none;
+    border-bottom: 3px dashed currentColor;
+    border-radius: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    outline-offset: 4px;
+  }
+
+  .ctc__hint {
+    font-weight: 700;
+  }
+
+  .ctc__hint[hidden] {
+    display: none;
   }
 
   .ctc__per {
