@@ -6,6 +6,8 @@ export type SpendCategory = 'Food' | 'Travel' | 'Fun' | 'Other';
 export type SpendMethod = 'UPI' | 'Card' | 'Cash' | 'Bank' | 'Added by you';
 
 export const CATEGORIES: SpendCategory[] = ['Food', 'Travel', 'Fun', 'Other'];
+/** The ways to pay someone can pick when adding a spend by hand */
+export const ADD_METHODS = ['UPI', 'Cash', 'Card'] as const;
 
 export interface Spend {
   /** Only on spends the user added themselves, so they can be removed */
@@ -24,6 +26,8 @@ export interface AddedSpend {
   amount: number;
   what: string;
   category: SpendCategory;
+  /** Missing on spends added before this was asked */
+  method?: (typeof ADD_METHODS)[number];
 }
 
 export interface SpendWeek {
@@ -71,12 +75,13 @@ const sameDay = (a: Date, b: Date) => toIso(a) === toIso(b);
 
 /**
  * Added spends a statement hasn't already covered. A debit of the same amount within a day counts as
- * the same spend, so scanning later doesn't double it; cash spends never match, so they stay.
+ * the same spend, so scanning later doesn't double it. Cash never shows on a statement, so it never matches.
  */
 export function unmatchedSpends(added: AddedSpend[], txns: Txn[]): AddedSpend[] {
   const debits = txns.filter((t) => t.type === 'debit');
   const used = new Set<Txn>();
   return added.filter((a) => {
+    if (a.method === 'Cash') return true;
     const match = debits.find(
       (t) =>
         !used.has(t) &&
@@ -131,7 +136,7 @@ export function latestWeek(txns: Txn[], today = new Date(), added: AddedSpend[] 
   for (const a of extra) {
     if (a.date < from || a.date > to) continue;
     const list = byDay.get(a.date) ?? [];
-    list.push({ id: a.id, what: a.what, category: a.category, method: 'Added by you', amount: Math.round(a.amount) });
+    list.push({ id: a.id, what: a.what, category: a.category, method: a.method ?? 'Added by you', amount: Math.round(a.amount) });
     byDay.set(a.date, list);
   }
 

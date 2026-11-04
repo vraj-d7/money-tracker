@@ -2,7 +2,7 @@
 // Type in a spend by hand, so the week stays useful between statement scans.
 import SheetPage from '../../../layouts/SheetPage.astro';
 import { routes } from '../../../lib/routes';
-import { CATEGORIES } from '../../../lib/spending';
+import { ADD_METHODS, CATEGORIES } from '../../../lib/spending';
 ---
 
 <SheetPage title="Add a spend" active="home" closeHref={routes.week} width={520}>
@@ -33,6 +33,19 @@ import { CATEGORIES } from '../../../lib/spending';
       </div>
     </fieldset>
 
+    <fieldset class="group">
+      <legend class="group__label">How did you pay?</legend>
+      <div class="choices">
+        {
+          ADD_METHODS.map((m, i) => (
+            <button type="button" class="choice" data-method={m} aria-pressed={i === 0 ? 'true' : 'false'}>
+              {m}
+            </button>
+          ))
+        }
+      </div>
+    </fieldset>
+
     <div class="group">
       <label for="s-what" class="group__label">What was it? (optional)</label>
       <div class="field"><input id="s-what" type="text" maxlength="40" placeholder="e.g. Lunch with team" autocomplete="off" /></div>
@@ -54,7 +67,7 @@ import { CATEGORIES } from '../../../lib/spending';
 
 <script>
   import { routes } from '../../../lib/routes';
-  import { toIso, type SpendCategory } from '../../../lib/spending';
+  import { toIso, type AddedSpend, type SpendCategory } from '../../../lib/spending';
   import { addSpend } from '../../../scripts/scan-store';
 
   const form = document.querySelector<HTMLFormElement>('[data-spend-form]')!;
@@ -63,18 +76,27 @@ import { CATEGORIES } from '../../../lib/spending';
   const dateInput = form.querySelector<HTMLInputElement>('#s-date')!;
   const error = form.querySelector<HTMLElement>('[data-error]')!;
   const cats = [...form.querySelectorAll<HTMLElement>('[data-category]')];
+  const methods = [...form.querySelectorAll<HTMLElement>('[data-method]')];
 
   const todayIso = toIso(new Date());
   dateInput.value = todayIso;
   dateInput.max = todayIso;
 
   let category = cats[0].dataset.category as SpendCategory;
+  let method = methods[0].dataset.method as AddedSpend['method'];
   let amount = 0;
 
   cats.forEach((btn) =>
     btn.addEventListener('click', () => {
       category = btn.dataset.category as SpendCategory;
       cats.forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+    }),
+  );
+
+  methods.forEach((btn) =>
+    btn.addEventListener('click', () => {
+      method = btn.dataset.method as AddedSpend['method'];
+      methods.forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
     }),
   );
 
@@ -95,7 +117,7 @@ import { CATEGORIES } from '../../../lib/spending';
     if (amount <= 0) return fail('Enter how much you spent.', amtInput);
     if (amount > 1000000) return fail('That’s more than ₹10,00,000. Check the amount.', amtInput);
     if (!dateInput.value || dateInput.value > todayIso) return fail('Pick today or a past date.', dateInput);
-    addSpend({ date: dateInput.value, amount, what: whatInput.value.trim() || category, category });
+    addSpend({ date: dateInput.value, amount, what: whatInput.value.trim() || category, category, method });
     window.location.href = routes.week;
   });
 </script>

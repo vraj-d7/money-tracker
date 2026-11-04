@@ -18,7 +18,7 @@ tested on generated statements.
 
 ## Right now
 
-**Latest (2026-11-04): monthly scan reminder and quick-add spends are pushed.** Real-time bank data was discussed and not built: Account Aggregator needs a regulated partner, and Axio reads bank SMS in an Android app, which a website can't do. The next steps need Vraj: buy a domain (then own email sender and a real contact address), do the bank statement test, or decide the Legal page. Everything below is the history of how the project got here.
+**Latest (2026-11-04): sample spends and renewals are gone from Home and the Week page, replaced by empty messages, and Add a spend asks how you paid (both pushed). Vraj confirmed adding a spend works on the live site. Monthly scan reminder and quick-add spends are pushed.** Real-time bank data was discussed and not built: Account Aggregator needs a regulated partner, and Axio reads bank SMS in an Android app, which a website can't do. The next steps need Vraj: buy a domain (then own email sender and a real contact address), do the bank statement test, or decide the Legal page. Everything below is the history of how the project got here.
 
 **Putting the site online with Cloudflare** (Vraj chose it over Netlify) (see the end of this section for where it stands).
 
@@ -151,9 +151,11 @@ Where Vraj is in the step-by-step guide:
 - **Smooth dropdowns everywhere (pushed, 2026-11-04):** Help questions and First ITR lines use the same panel as Salary. Scan's password help uses `::details-content`, so browsers without support open it instantly. Old phone login wording was checked and left alone: it only shows in test mode, where it really asks for a number.
 - **Quick-add spends (pushed, 2026-11-04):** new page `/app/week/add`, linked from Home's week card and the Week page. Saved as `inhandy:spends` (synced with the account, unlike statement transactions, and trimmed to 120 days). `latestWeek` takes them as a third argument; `unmatchedSpends` drops any with a statement debit of the same amount within a day, so scanning later doesn't double count, and cash spends stay. They show "Added by you" with a remove button.
 - **Monthly scan reminder (pushed, 2026-11-04):** `scanReminder` in `scan-store.ts`: for 7 days after salary day, unless a statement was scanned since (new synced `scan:at`). Needs `payConfirmed`; switch is in Me → Notifications (`scan`, on by default). Shows in Notifications and as a line in Home's week card when there are real spends. In the app only; nothing is sent to phones or email.
+- **No fake spends (pushed, 2026-11-04):** Home's week and renewal cards and the Week page show an empty message until there are real spends or a scan, and no longer render sample data at all. Still labelled Sample by design: the Sunday recap preview, the sample scan results and the PF corner. `demo-home` and `demo-week` are still used by the recap.
+- **Payment method on added spends (pushed, 2026-11-04):** UPI (default), Cash or Card on `/app/week/add` (`ADD_METHODS`, optional `method` on `AddedSpend`). Cash never matches a statement debit in `unmatchedSpends`. Spends added before this still show "Added by you".
 - Later options: AI coach (see above), phone sign-in, payments, own email sender (SMTP;
   Supabase's built-in one only allows a few emails an hour, so do this before real users). The PF corner
-  and spends use sample content until there's real data, and each is labelled Sample. Notifications and streaks are already real. The First ITR form lines are a labelled ₹12L example.
+  and Sunday recap use sample content until there's real data, and each is labelled Sample. Notifications and streaks are already real. The First ITR form lines are a labelled ₹12L example.
 
 ## About Vraj (how to work with them)
 
