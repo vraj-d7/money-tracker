@@ -11,10 +11,9 @@ const p = DEFAULT_PROFILE;
 const cmp = compareRegimes(p.ctc);
 
 const toggles = [
-  { key: 'sunday', label: 'Sunday check-in', sub: 'A 1-minute recap at 9 AM' },
-  { key: 'renew', label: 'Renewal alerts', sub: '2 days before an autopay charges' },
-  { key: 'pf', label: 'PF deposit alerts', sub: 'If your employer misses a month' },
-  { key: 'payday', label: 'Payday countdown', sub: 'A nudge 3 days before salary day' },
+  { key: 'sunday', label: 'Sunday check-in', sub: 'Your recap, on Sunday and Monday' },
+  { key: 'renew', label: 'Renewal alerts', sub: 'When an autopay is due within 7 days' },
+  { key: 'payday', label: 'Payday countdown', sub: 'When salary day is within 7 days' },
 ] as const;
 
 const samples: Record<string, string> = {
@@ -36,7 +35,7 @@ const settings = [
   { href: routes.salaryDetails, icon: icon.salary, label: 'Salary and tax details', sub: 'Your pay, rent and deductions' },
   { href: routes.paydaySettings, icon: icon.payday, label: 'Payday', sub: describePayday(p.payday), id: 'payday' },
   { href: routes.help, icon: icon.help, label: 'Help and FAQs', sub: 'How Inhandy works' },
-  { href: routes.logout, icon: icon.logout, label: 'Log out', sub: 'You can log back in with your number' },
+  { href: routes.logout, icon: icon.logout, label: 'Log out', sub: 'You can log back in any time' },
 ];
 ---
 
@@ -71,6 +70,7 @@ const settings = [
 
     <section class="card" aria-labelledby="notif-h">
       <h2 id="notif-h" class="card__title">Notifications</h2>
+      <p class="muted">These show inside the app. Phone and email alerts aren’t on yet.</p>
       {
         toggles.map((t) => (
           <div class="toggle">

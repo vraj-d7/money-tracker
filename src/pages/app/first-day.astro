@@ -14,7 +14,7 @@ const tasks = [
   { label: 'Set my payday', sub: '7th of every month', href: routes.paydaySettings, done: true, cta: '', payday: true },
   { label: 'Plan salary day', sub: 'Split it into jars before you spend', href: routes.planEdit, done: false, cta: 'Start' },
   { label: 'Scan a statement', sub: 'Find forgotten autopays', href: routes.scan, done: false, cta: 'Start' },
-  { label: 'First Sunday check-in', sub: 'Arrives this Sunday, 9 AM', href: routes.sunday, done: false, cta: 'Preview' },
+  { label: 'First Sunday check-in', sub: 'Ready this Sunday', href: routes.sunday, done: false, cta: 'Preview' },
 ];
 const doneCount = tasks.filter((t) => t.done).length;
 ---

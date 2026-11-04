@@ -18,9 +18,9 @@ const docs = {
   privacy: {
     title: 'Privacy policy',
     sections: [
-      ['What we collect', 'Mobile number, name, salary details you enter, and statement PDFs you upload. [Full list.]'],
-      ['Statements', 'Read once to find patterns, then deleted. We keep only the results (merchant, amount, date). [Retention period.]'],
-      ['Who sees it', 'Nobody outside Inhandy. We don’t sell data or share it with lenders or advertisers. [Processors list.]'],
+      ['What we collect', 'Your email, name, the pay and salary details you enter, your jars and goals, and the list of autopays a scan finds. [Full list.]'],
+      ['Statements', 'Read in your browser and never uploaded. Transactions stay on your device until you log out or delete them. Only the list of autopays found is saved to your account. [Retention period.]'],
+      ['Who sees it', 'We don’t sell data or share it with lenders or advertisers. Your account is stored with Supabase and the site runs on Cloudflare. [Processors list.]'],
       ['Your rights', 'Access, correct, download or delete your data any time from Me, under India’s DPDP Act. [Grievance officer contact.]'],
     ],
   },
@@ -73,7 +73,7 @@ const tabs = [
           <h1>Delete my data</h1>
           <p class="text">
             You can delete everything Inhandy holds about you, any time. Logged in? Do it yourself from Me → Delete my account. Can’t log in? Send
-            this form from the email or number on your account and we’ll delete it within 7 days.
+            this form from the email on your account and we’ll delete it within 7 days.
           </p>
           <form class="form" data-delete-form novalidate>
             <div class="group">
@@ -146,7 +146,7 @@ const tabs = [
     const who = root.querySelector<HTMLInputElement>('#dl-id')!;
     const status = root.querySelector('[data-delete-status]')!;
     if (!who.value.trim()) {
-      status.textContent = 'Add the email or mobile number on your account.';
+      status.textContent = 'Add the email on your account.';
       who.focus();
       return;
     }

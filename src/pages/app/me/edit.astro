@@ -1,6 +1,7 @@
 ---
 import AppShell from '../../../layouts/AppShell.astro';
 import { routes } from '../../../lib/routes';
+import { backendOn } from '../../../scripts/backend';
 import { DEFAULT_PROFILE, initials } from '../../../scripts/profile-store';
 
 const p = DEFAULT_PROFILE;
@@ -40,7 +41,7 @@ const cities = ['Bengaluru', 'Mumbai', 'Delhi NCR', 'Pune', 'Hyderabad', 'Chenna
       <span class="group__label">Mobile number</span>
       <div class="num phone">
         <span data-phone></span>
-        <a href={routes.auth} class="link">Change</a>
+        {!backendOn && <a href={routes.auth} class="link">Change</a>}
       </div>
     </div>
     <fieldset class="group">
@@ -76,7 +77,7 @@ const cities = ['Bengaluru', 'Mumbai', 'Delhi NCR', 'Pune', 'Hyderabad', 'Chenna
   first.value = p.name;
   last.value = p.lastName;
   mail.value = p.email;
-  form.querySelector('[data-phone]')!.textContent = p.phone ? `+91 ${p.phone} · verified` : 'Not added yet';
+  form.querySelector('[data-phone]')!.textContent = p.phone ? `+91 ${p.phone}` : 'Not added yet';
 
   const showInitials = () => (form.querySelector('[data-initials]')!.textContent = initials({ name: first.value, lastName: last.value }));
   first.addEventListener('input', showInitials);
