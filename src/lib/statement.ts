@@ -24,6 +24,10 @@ export interface FoundAutopay {
   flag?: boolean;
   why: string;
   where: string;
+  /** Usually worth keeping (bills, investments, loans, rent) */
+  keep?: boolean;
+  /** YYYY-MM-DD of the latest charge */
+  lastCharged?: string;
 }
 
 // ---------- Dates and amounts ----------
@@ -219,6 +223,11 @@ const KNOWN: Known[] = [
   { match: /mutual\s?fund|\bsip\b|zerodha|groww|kuvera|coin\b|\bbse\b|\bamc\b/i, label: 'SIP / mutual fund', where: 'your investing app', keep: true },
   { match: /\bemi\b|loan|bajaj\s?fin/i, label: 'Loan EMI', where: 'your lender’s app', keep: true },
   { match: /\brent\b|landlord|nobroker|housing\.com/i, label: 'Rent', where: 'your landlord', keep: true },
+  // Everyday brands: mainly so spends get a clean name (a one-off order isn't an autopay)
+  ...[
+    'Swiggy', 'Zomato', 'Blinkit', 'Zepto', 'BigBasket', 'Dominos', 'Uber', 'Rapido', 'IRCTC', 'BookMyShow', 'Amazon', 'Flipkart', 'Myntra', 'Ajio', 'Nykaa',
+  ].map((label) => ({ match: new RegExp(label, 'i'), label, where: `the ${label} app` })),
+  { match: /\bola\b|olacabs/i, label: 'Ola', where: 'the Ola app' },
 ];
 
 const MANDATE = /\bnach\b|\bach\b|e-?mandate|mandate|autopay|auto\s?pay|\bsi\b|standing instruction|recurring/i;
@@ -308,6 +317,8 @@ export function findAutopays(txns: Txn[]): FoundAutopay[] {
       flag: flag || undefined,
       why,
       where: g.known?.where ?? `the ${g.label} app or website, or your UPI app’s Autopay list`,
+      keep: keep || undefined,
+      lastCharged: last.date,
     });
   }
   return found.sort((a, b) => b.monthly - a.monthly).slice(0, 20);

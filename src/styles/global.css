@@ -376,3 +376,7 @@ textarea:focus-visible {
   line-height: 1.45;
   color: var(--ink-muted);
 }
+
+.sample-tag[hidden] {
+  display: none;
+}

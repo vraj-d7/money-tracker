@@ -14,9 +14,9 @@ const filters: ('all' | SpendCategory)[] = ['all', 'Food', 'Travel', 'Fun', 'Oth
       <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
       Back to Home
     </a>
-    <h1 class="num">This week: {inr(weekSpent)} of {inr(WEEK.plan)}</h1>
+    <h1 class="num" data-week-h1>This week: {inr(weekSpent)} of {inr(WEEK.plan)}</h1>
     <p class="muted">
-      {WEEK.range} · {under >= 0 ? `${inr(under)} under plan` : `${inr(-under)} over plan`} <span class="sample-tag">Sample</span>
+      <span data-week-sub>{WEEK.range} · {under >= 0 ? `${inr(under)} under plan` : `${inr(-under)} over plan`}</span> <span class="sample-tag" data-week-tag>Sample</span>
     </p>
   </header>
 
@@ -31,6 +31,24 @@ const filters: ('all' | SpendCategory)[] = ['all', 'Food', 'Travel', 'Fun', 'Oth
       }
     </div>
 
+    <template id="day-row">
+      <section class="day" data-day>
+        <h2 class="num day__head">
+          <span data-day-label></span>
+          <span data-day-total></span>
+        </h2>
+      </section>
+    </template>
+    <template id="spend-row">
+      <div class="spend" data-cat>
+        <span class="spend__swatch" aria-hidden="true" data-swatch></span>
+        <span class="spend__text">
+          <span class="spend__what" data-what></span>
+          <span class="spend__meta" data-meta></span>
+        </span>
+        <span class="num spend__amt" data-amt></span>
+      </div>
+    </template>
     {
       WEEK.days.map((d) => (
         <section class="day" aria-label={d.label} data-day>
@@ -62,30 +80,76 @@ const filters: ('all' | SpendCategory)[] = ['all', 'Food', 'Travel', 'Fun', 'Oth
         weekByCategory.map((c) => {
           const pct = Math.round((c.amount / weekSpent) * 100);
           return (
-            <div class="split">
+            <div class="split" data-split={c.category}>
               <div class="num split__top">
                 <b>{c.category}</b>
-                <span>
+                <span data-split-text>
                   {inr(c.amount)} · {pct}%
                 </span>
               </div>
               <div class="split__track" aria-hidden="true">
-                <div style={`width: ${pct}%; background: ${CATEGORY_COLORS[c.category]}`} />
+                <div data-split-bar style={`width: ${pct}%; background: ${CATEGORY_COLORS[c.category]}`} />
               </div>
             </div>
           );
         })
       }
     </section>
-    {under > 0 && <p class="note">{inr(under)} under plan. Move it to your Emergency jar on Sunday?</p>}
-    <p class="muted">From your last statement scan. Wrong category? Tap a spend to fix it, and Handy learns.</p>
+    <p class="note" data-week-note>{inr(under)} under plan. Move it to your Emergency jar on Sunday?</p>
+    <p class="muted" data-week-source>Sample spends. <a href={routes.scan}>Scan a statement</a> to see yours.</p>
   </aside>
 </AppShell>
 
 <script>
   import { inr } from '../../lib/format';
+  import { CATEGORY_COLORS } from '../../data/demo-week';
+  import { realWeek } from '../../scripts/scan-store';
 
   const root = document.querySelector<HTMLElement>('[data-week]');
+
+  // Spends from the user's own statement, once one has been scanned on this device
+  const week = realWeek();
+  if (root && week) {
+    const under = week.plan - week.spent;
+    document.querySelector('[data-week-h1]')!.textContent = `${week.title}: ${inr(week.spent)} of ${inr(week.plan)}`;
+    document.querySelector('[data-week-sub]')!.textContent =
+      `${week.range} · ${under >= 0 ? `${inr(under)} under plan` : `${inr(-under)} over plan`}`;
+    document.querySelector<HTMLElement>('[data-week-tag]')!.hidden = true;
+
+    root.querySelectorAll('[data-day]').forEach((d) => d.remove());
+    const dayTpl = root.querySelector<HTMLTemplateElement>('#day-row')!;
+    const spendTpl = root.querySelector<HTMLTemplateElement>('#spend-row')!;
+    for (const d of week.days) {
+      const day = (dayTpl.content.firstElementChild as HTMLElement).cloneNode(true) as HTMLElement;
+      day.setAttribute('aria-label', d.label);
+      day.querySelector('[data-day-label]')!.textContent = d.label;
+      day.querySelector('[data-day-total]')!.textContent = inr(d.spends.reduce((s, x) => s + x.amount, 0));
+      for (const s of d.spends) {
+        const row = (spendTpl.content.firstElementChild as HTMLElement).cloneNode(true) as HTMLElement;
+        row.dataset.cat = s.category;
+        row.dataset.amount = String(s.amount);
+        row.querySelector<HTMLElement>('[data-swatch]')!.style.background = CATEGORY_COLORS[s.category];
+        row.querySelector('[data-what]')!.textContent = s.what;
+        row.querySelector('[data-meta]')!.textContent = `${s.category} · ${s.method}`;
+        row.querySelector('[data-amt]')!.textContent = inr(s.amount);
+        day.append(row);
+      }
+      root.append(day);
+    }
+
+    for (const c of week.byCategory) {
+      const pct = week.spent ? Math.round((c.amount / week.spent) * 100) : 0;
+      const split = document.querySelector(`[data-split="${c.category}"]`)!;
+      split.querySelector('[data-split-text]')!.textContent = `${inr(c.amount)} · ${pct}%`;
+      split.querySelector<HTMLElement>('[data-split-bar]')!.style.width = `${pct}%`;
+    }
+    const note = document.querySelector<HTMLElement>('[data-week-note]')!;
+    note.hidden = under <= 0;
+    note.textContent = `${inr(under)} under plan. Move it to your Emergency jar on Sunday?`;
+    document.querySelector('[data-week-source]')!.textContent =
+      'From your last statement scan. Rent, SIPs, EMIs and bills are left out: your jars already cover those.';
+  }
+
   if (root) {
     root.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((btn) =>
       btn.addEventListener('click', () => {

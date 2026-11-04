@@ -85,44 +85,49 @@ const streakDone = home.streak.done.filter(Boolean).length;
 
   <section class="card week" aria-labelledby="week-h">
     <div class="card__top">
-      <h2 id="week-h" class="card__title">This week <span class="sample-tag">Sample</span></h2>
+      <h2 id="week-h" class="card__title"><span data-week-title>This week</span> <span class="sample-tag" data-week-tag>Sample</span></h2>
       <a href={routes.week} class="link">Details</a>
     </div>
     <p class="num week__total">
-      <span class="week__spent" data-count-from="0" data-count-to={spent} data-format="inr">{inr(spent)}</span> of {inr(plan)} plan
+      <span class="week__spent" data-count-from="0" data-count-to={spent} data-format="inr">{inr(spent)}</span> of <span data-week-plan>{inr(plan)}</span> plan
     </p>
-    <div class="bar" role="img" aria-label={`Spent ${inr(spent)} of a ${inr(plan)} plan`}>
-      <div class="bar__fill" style={`width: ${spentPct}%`}></div>
+    <div class="bar" role="img" aria-label={`Spent ${inr(spent)} of a ${inr(plan)} plan`} data-week-bar>
+      <div class="bar__fill" style={`width: ${spentPct}%`} data-week-fill></div>
     </div>
     <div class="week__cats">
       {
         home.week.categories.map((c) => (
           <div class="cat">
             <span class="cat__label">{c.label}</span>
-            <span class="num cat__amt">{inr(c.amount)}</span>
+            <span class="num cat__amt" data-cat-amt={c.label}>{inr(c.amount)}</span>
           </div>
         ))
       }
     </div>
-    {
-      underBy >= 0 ? (
-        <p class="note note--good">
-          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"></path></svg>
-          {inr(underBy)} under plan. Chill, you’re on track.
-        </p>
-      ) : (
-        <p class="note note--bad">{inr(-underBy)} over plan this week.</p>
-      )
-    }
-    <p class="sample-note">Sample spends. Yours show up here once Inhandy can read your bank statements.</p>
+    <p class:list={['note', underBy >= 0 ? 'note--good' : 'note--bad']} data-week-note>
+      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" data-week-tick><path d="M5 12l4 4 10-10"></path></svg>
+      <span data-week-note-text>{inr(Math.abs(underBy))} under plan. Chill, you’re on track.</span>
+    </p>
+    <p class="sample-note" data-week-sample>Sample spends. <a href={routes.scan}>Scan a statement</a> to see yours.</p>
   </section>
 
   <section class="card renewals" aria-labelledby="renew-h">
-    <h2 id="renew-h" class="card__title">Upcoming renewals <span class="sample-tag">Sample</span></h2>
-    <span class="num renewals__total">{inr(home.renewals.monthTotal)} this month</span>
+    <h2 id="renew-h" class="card__title">Upcoming renewals <span class="sample-tag" data-renew-tag>Sample</span></h2>
+    <span class="num renewals__total" data-renew-total>{inr(home.renewals.monthTotal)} this month</span>
+    <p class="sample-note" data-renew-none hidden>Nothing renewing that we can see. Nice.</p>
+    <template id="renewal-row">
+      <div class="renewal" data-renew-row>
+        <span class="renewal__icon" aria-hidden="true" data-renew-initial></span>
+        <div class="renewal__text">
+          <span class="renewal__label" data-renew-label></span>
+          <span class="renewal__note" data-renew-note></span>
+        </div>
+        <span class="num renewal__amt" data-renew-amt></span>
+      </div>
+    </template>
     {
       home.renewals.items.map((r) => (
-        <div class="renewal">
+        <div class="renewal" data-renew-row>
           <span class:list={['renewal__icon', { 'renewal__icon--warn': r.warn }]} aria-hidden="true">
             {r.icon === 'tv' && (
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="3" /><path d="M8 21h8M10 10.5v3l3-1.5z" /></svg>
@@ -182,6 +187,7 @@ const streakDone = home.streak.done.filter(Boolean).length;
 <script>
   import { inr } from '../../lib/format';
   import { initials, loadProfile, longDate, monthlyInhand, paydayCycle, shortDate } from '../../scripts/profile-store';
+  import { realRenewals, realWeek } from '../../scripts/scan-store';
 
   // Greet whoever is saved in the profile, on today's date
   const profile = loadProfile();
@@ -205,6 +211,51 @@ const streakDone = home.streak.done.filter(Boolean).length;
   const ringTo = (314.16 * (cycle.daysLeft / cycle.cycleDays)).toFixed(1);
   ring.dataset.ringTo = ringTo;
   ring.setAttribute('stroke-dashoffset', ringTo);
+
+  // Spends from the user's own statement, once one has been scanned on this device
+  const week = realWeek();
+  if (week) {
+    const under = week.plan - week.spent;
+    const spentEl = document.querySelector<HTMLElement>('.week__spent')!;
+    spentEl.dataset.countTo = String(week.spent);
+    spentEl.textContent = inr(week.spent);
+    document.querySelector('[data-week-title]')!.textContent = week.title;
+    document.querySelector<HTMLElement>('[data-week-tag]')!.hidden = true;
+    document.querySelector<HTMLElement>('[data-week-sample]')!.hidden = true;
+    document.querySelector('[data-week-plan]')!.textContent = inr(week.plan);
+    document.querySelector('[data-week-bar]')!.setAttribute('aria-label', `Spent ${inr(week.spent)} of a ${inr(week.plan)} plan`);
+    document.querySelector<HTMLElement>('[data-week-fill]')!.style.width = `${Math.min(100, week.plan ? (week.spent / week.plan) * 100 : 100).toFixed(1)}%`;
+    for (const c of week.byCategory) document.querySelector(`[data-cat-amt="${c.category}"]`)!.textContent = inr(c.amount);
+    const note = document.querySelector<HTMLElement>('[data-week-note]')!;
+    note.classList.toggle('note--good', under >= 0);
+    note.classList.toggle('note--bad', under < 0);
+    document.querySelector<SVGElement>('[data-week-tick]')!.style.display = under >= 0 ? '' : 'none';
+    document.querySelector('[data-week-note-text]')!.textContent =
+      under >= 0 ? `${inr(under)} under plan. Chill, you’re on track.` : `${inr(-under)} over plan this week.`;
+  }
+
+  // Renewals from a real scan: the next three, soonest first
+  const renewals = realRenewals();
+  if (renewals) {
+    const box = document.querySelector<HTMLElement>('.renewals')!;
+    const row = box.querySelector<HTMLTemplateElement>('#renewal-row')!;
+    box.querySelectorAll('[data-renew-row]').forEach((r) => r.remove());
+    box.querySelector<HTMLElement>('[data-renew-tag]')!.hidden = true;
+    box.querySelector('[data-renew-total]')!.textContent = `${inr(renewals.monthTotal)} a month`;
+    box.querySelector<HTMLElement>('[data-renew-none]')!.hidden = renewals.items.length > 0;
+    for (const r of renewals.items.slice(0, 3)) {
+      const el = (row.content.firstElementChild as HTMLElement).cloneNode(true) as HTMLElement;
+      const icon = el.querySelector('[data-renew-initial]')!;
+      icon.textContent = r.label.charAt(0).toUpperCase();
+      icon.classList.toggle('renewal__icon--warn', r.flag);
+      el.querySelector('[data-renew-label]')!.textContent = r.label;
+      const noteEl = el.querySelector('[data-renew-note]')!;
+      noteEl.textContent = r.note;
+      noteEl.classList.toggle('renewal__note--warn', r.flag);
+      el.querySelector('[data-renew-amt]')!.textContent = inr(r.amount);
+      box.append(el);
+    }
+  }
 
   // Chips fill the question box
   const input = document.getElementById('ask-input') as HTMLInputElement | null;
@@ -588,6 +639,7 @@ const streakDone = home.streak.done.filter(Boolean).length;
   }
 
   .renewal__icon {
+    font-weight: 800;
     flex: none;
     display: inline-flex;
     align-items: center;

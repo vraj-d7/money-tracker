@@ -6,7 +6,7 @@
 > **For Vraj:** on a new Claude account, open this folder (`C:\Users\mevra\money-tracker`)
 > in Claude Code and say: *"Read HANDOFF.md and continue from where it left off."*
 
-_Last updated: 2026-11-03_
+_Last updated: 2026-11-04_
 
 ---
 
@@ -66,7 +66,7 @@ Where Vraj is in the step-by-step guide:
   Rows without `_format` (the old JSON-string-per-value style) still load. An account converts the
   next time it saves anything. Tested round trips for both formats.
 - ✅ All three "before others use it" items are done.
-- ✅ **Statement reading, stage 1 (not committed yet):** the Autopay scan reads real statements.
+- ✅ **Statement reading, stage 1 (pushed, `5f69ca9`):** the Autopay scan reads real statements.
   - `src/lib/statement.ts` holds the pure logic. `parseTransactions(lines)` finds rows that start
     with a date; it works out money in vs out from the column headings, Cr/Dr tags or the running
     balance; and it joins wrapped descriptions. `findAutopays(txns)` finds payees charged the same
@@ -86,10 +86,30 @@ Where Vraj is in the step-by-step guide:
     planted autopays were found. The generator is not in the repo.
     **Not yet tested on a real bank PDF.** Vraj should try their own statement; it stays in their
     browser. If something is missed, ask what the row looks like (not the PDF itself).
-- ⏳ **Next:** ask Vraj whether to commit and push, and to try a real statement. Then **stage 2**:
-  use `loadTransactions()` for the SAMPLE-tagged cards (Home "This week", renewals, the Week
-  page, the Sunday recap). Other options: put it online (Netlify or Vercel; then add the live URL to
-  Supabase Site URL and Redirect URLs), AI coach, phone sign-in, payments. The PF/ITR tools and
+- ✅ **Statement reading, stage 2 (not committed yet):** Home, Week and the Sunday recap show real spends.
+  - `src/lib/spending.ts` (pure): `latestWeek` picks the week to show; `categorize`, `methodOf`,
+    `weeklyPlan` and `upcomingRenewals` do the rest. `scan-store.ts` adds `realWeek()` and
+    `realRenewals()`, which pages call in their scripts. They return null until there's a real
+    scan, and the sample content and SAMPLE tags stay in that case.
+  - Which week: the latest Monday-to-Sunday with spends. If the statement ends mid-week and that
+    isn't the current week, it uses the last full week, so a stub doesn't look like a very cheap
+    week. The title is "This week" only when it's the current week, otherwise "Week of 19 Oct".
+  - Spends leave out rent, SIPs, EMIs, insurance and bills (`KNOWN` entries with `keep`), because
+    the jars cover those. The weekly plan is what's left after the jars, ÷ (52/12).
+  - Renewals assume a monthly repeat from `lastCharged` (new field on found autopays). They're
+    synced, so they also work on other devices. Spends need the device-only transactions.
+    Anyone who scanned before this change needs to rescan to get `lastCharged`.
+  - Sunday "Move to jar" is now real: it moves the real leftover, creates an Emergency fund goal if
+    there is none (the old code silently did nothing once sample goals were removed), and moves
+    only once per week (`inhandy:sunday:moved`). With sample data the button just says Next.
+  - Still SAMPLE: check-in streaks (Home, Sunday) and the payday streak (Plan), because nothing
+    tracks them yet. Removed a false line on the Week page about tapping a spend to re-categorise.
+  - Tested: 19 logic checks with fixed dates, plus the full flow in the browser (Home, Week, Sunday,
+    phone width) with a generated statement and a stand-in session. **Still not tested on a real
+    bank PDF; Vraj chose to skip that for now.** The test scripts are not in the repo.
+- ⏳ **Next:** ask Vraj whether to commit and push. Then: test a real statement (recommended before
+  going further), put it online (Netlify or Vercel; then add the live URL to Supabase Site URL and
+  Redirect URLs), real streak tracking, AI coach, phone sign-in, payments. The PF/ITR tools and
   notifications still use sample content from `src/data/demo-tools.ts` and `demo-notifications.ts`.
 
 ## About Vraj (how to work with them)
@@ -164,6 +184,7 @@ Still pretend or test mode ("heavy tasks", roughly in order):
 
 ## History (newest first)
 
+- `5f69ca9`: Read real bank statements to find autopays (stage 1).
 - `d4f5d98`: Synced data stored as readable JSON (format 2).
 - `ef8a8c6`: Require sign-in for the app when Supabase is set up.
 - `32d0098`: Screens use the user's own details; SAMPLE tags; payday date fix.

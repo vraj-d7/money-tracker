@@ -10,6 +10,9 @@ export interface Subscription {
   /** Why to cancel, and where (for the cancel guide) */
   why: string;
   where: string;
+  keep?: boolean;
+  /** YYYY-MM-DD of the latest charge (real scans only) */
+  lastCharged?: string;
 }
 
 // What a statement scan "finds" until real statement reading exists

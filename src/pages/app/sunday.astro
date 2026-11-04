@@ -27,7 +27,7 @@ const slides: {
   action: 'next' | 'jar' | 'share';
 }[] = [
   { eyebrow: 'This week', title: 'You spent', big: inr(weekSpent), body: `Chill, that’s ${inr(saved)} under your weekly plan.`, bg: '#FFB21E', accent: '#15131C', mood: 'happy', cta: 'Next', action: 'next' },
-  { eyebrow: 'Saved', title: 'You kept', big: inr(saved), body: 'Move it to your Emergency jar? Future you says thanks.', bg: '#FFE7B0', accent: '#0A6B4D', mood: 'cheer', cta: 'Move to jar', action: 'jar' },
+  { eyebrow: 'Saved', title: 'You kept', big: inr(saved), body: 'Leftover money can go to your Emergency jar. Future you says thanks.', bg: '#FFE7B0', accent: '#0A6B4D', mood: 'cheer', cta: 'Next', action: 'jar' },
   { eyebrow: 'Heads up', title: 'Renewing this week', big: inr(renewingTotal), body: `${renewing.length === 2 ? 'Two' : renewing.length} autopays coming. Still using both?`, bg: '#FFE7B0', accent: '#B3362A', mood: 'gasp', cta: 'Review them', action: 'next' },
   { eyebrow: 'Streak', title: `${streak} Sundays in a row`, big: `${streak} weeks`, body: 'See you next Sunday. Chai pe milte hain.', bg: '#FFB21E', accent: '#15131C', mood: 'chai', cta: 'Share streak', action: 'share' },
 ];
@@ -38,7 +38,6 @@ const moods = [...new Set(slides.map((s) => s.mood))];
   <div
     class="stage"
     data-recap
-    data-saved={saved}
     data-backgrounds={JSON.stringify(slides.map((s) => s.bg))}
     data-moods={JSON.stringify(slides.map((s) => s.mood))}>
     <a href={routes.home} class="btn stage__close" aria-label="Close recap">
@@ -59,8 +58,8 @@ const moods = [...new Set(slides.map((s) => s.mood))];
         <div class="story__who">
           <Handy mood="chai" size={40} decorative />
           <span class="story__who-text">
-            <span class="story__who-name">Sunday recap <span class="sample-tag">Sample</span></span>
-            <span class="story__who-date">{WEEK.shortRange}</span>
+            <span class="story__who-name">Sunday recap <span class="sample-tag" data-recap-tag>Sample</span></span>
+            <span class="story__who-date" data-recap-date>{WEEK.shortRange}</span>
           </span>
         </div>
       </div>
@@ -71,27 +70,27 @@ const moods = [...new Set(slides.map((s) => s.mood))];
       {
         slides.map((s, i) => (
           <div class="slide" data-slide={i} hidden={i !== 0} aria-live="polite">
-            <p class="slide__eyebrow">{s.eyebrow}</p>
-            <h1 class="slide__title">{s.title}</h1>
-            <p class="num slide__big" style={`color: ${s.accent}`}>
+            <p class="slide__eyebrow"><span data-s-eyebrow>{s.eyebrow}</span>{i === 3 && <span class="sample-tag" data-streak-tag hidden>Sample</span>}</p>
+            <h1 class="slide__title" data-s-title>{s.title}</h1>
+            <p class="num slide__big" style={`color: ${s.accent}`} data-s-big>
               {s.big}
             </p>
-            <p class="slide__body">{s.body}</p>
+            <p class="slide__body" data-s-body>{s.body}</p>
 
             {i === 0 && (
               <div class="panel">
                 <div class="panel__row">
                   <span>Spent</span>
-                  <span class="num">
+                  <span class="num" data-panel-text>
                     {spentPct}% of {inr(WEEK.plan)} plan
                   </span>
                 </div>
                 <div class="panel__bar">
-                  <div style={`width: ${spentPct}%`} />
+                  <div style={`width: ${spentPct}%`} data-panel-bar />
                 </div>
                 <div class="panel__chips">
                   {topCats.map((c) => (
-                    <span class="num pill">
+                    <span class="num pill" data-chip={c.category}>
                       {c.category} {inr(c.amount)}
                     </span>
                   ))}
@@ -99,9 +98,15 @@ const moods = [...new Set(slides.map((s) => s.mood))];
               </div>
             )}
             {i === 2 && (
-              <div class="renewals">
+              <div class="renewals" data-renewals>
+                <template id="recap-renewal">
+                  <div class="renewal" data-renewal>
+                    <span data-r-label />
+                    <span class="num" data-r-amt />
+                  </div>
+                </template>
                 {renewing.map((r) => (
-                  <div class="renewal">
+                  <div class="renewal" data-renewal>
                     <span>{r.label}</span>
                     <span class="num">
                       {r.note.match(/(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/)?.[0]} · {inr(r.amount)}
@@ -162,7 +167,10 @@ const moods = [...new Set(slides.map((s) => s.mood))];
 
 <script>
   import { inr } from '../../lib/format';
+  import { readLocal, writeLocal } from '../../scripts/local-state';
   import { loadPlan, savePlan } from '../../scripts/plan-store';
+  import { loadProfile, monthlyInhand } from '../../scripts/profile-store';
+  import { realRenewals, realWeek } from '../../scripts/scan-store';
   import { showToast } from '../../scripts/toast';
 
   const root = document.querySelector<HTMLElement>('[data-recap]')!;
@@ -170,6 +178,65 @@ const moods = [...new Set(slides.map((s) => s.mood))];
   const moodsBySlide = JSON.parse(root.dataset.moods!) as string[];
   const story = root.querySelector<HTMLElement>('[data-story]')!;
   const count = backgrounds.length;
+
+  const slide = (i: number) => root.querySelector<HTMLElement>(`[data-slide="${i}"]`)!;
+  const fill = (i: number, key: 'eyebrow' | 'title' | 'big' | 'body', text: string) => {
+    slide(i).querySelector(`[data-s-${key}]`)!.textContent = text;
+  };
+
+  // The user's own week, once a statement has been scanned on this device
+  const week = realWeek();
+  let leftover = 0;
+  if (week) {
+    leftover = Math.max(0, week.plan - week.spent);
+    const pct = week.plan ? Math.round((week.spent / week.plan) * 100) : 0;
+    root.querySelector('[data-recap-date]')!.textContent = week.shortRange;
+    root.querySelector<HTMLElement>('[data-recap-tag]')!.hidden = true;
+    // The streak isn't tracked yet, so that slide alone stays marked as a sample
+    root.querySelector<HTMLElement>('[data-streak-tag]')!.hidden = false;
+
+    fill(0, 'eyebrow', week.title);
+    fill(0, 'big', inr(week.spent));
+    fill(0, 'body', week.spent <= week.plan
+      ? `Chill, that’s ${inr(week.plan - week.spent)} under your weekly plan.`
+      : `That’s ${inr(week.spent - week.plan)} over your weekly plan. Next week’s a fresh start.`);
+    slide(0).querySelector('[data-panel-text]')!.textContent = `${pct}% of ${inr(week.plan)} plan`;
+    slide(0).querySelector<HTMLElement>('[data-panel-bar]')!.style.width = `${Math.min(100, pct)}%`;
+    for (const c of week.byCategory) {
+      const chip = slide(0).querySelector(`[data-chip="${c.category}"]`);
+      if (chip) chip.textContent = `${c.category} ${inr(c.amount)}`;
+    }
+
+    fill(1, 'big', inr(leftover));
+    if (leftover > 0) {
+      fill(1, 'body', 'Move it to your Emergency jar? Future you says thanks.');
+    } else {
+      fill(1, 'title', 'Nothing left over');
+      fill(1, 'body', 'No stress. Check Salary-day plan if this keeps happening.');
+    }
+    // One move per week, even if the recap is opened again
+    if (readLocal('sunday:moved', '') === week.range) leftover = 0;
+    else if (leftover > 0) root.querySelector('[data-cta="1"]')!.textContent = 'Move to jar';
+  }
+
+  // Autopays due in the next 7 days, from a real scan
+  const renewals = realRenewals();
+  if (renewals) {
+    const soon = renewals.items.filter((r) => r.daysLeft <= 7);
+    const box = slide(2).querySelector<HTMLElement>('[data-renewals]')!;
+    const tpl = box.querySelector<HTMLTemplateElement>('#recap-renewal')!;
+    box.querySelectorAll('[data-renewal]').forEach((r) => r.remove());
+    for (const r of soon) {
+      const el = (tpl.content.firstElementChild as HTMLElement).cloneNode(true) as HTMLElement;
+      el.querySelector('[data-r-label]')!.textContent = r.label;
+      el.querySelector('[data-r-amt]')!.textContent = `${r.short} · ${inr(r.amount)}`;
+      box.append(el);
+    }
+    fill(2, 'big', inr(soon.reduce((s, r) => s + r.amount, 0)));
+    fill(2, 'body', soon.length === 0
+      ? 'Nothing due in the next 7 days. Enjoy the quiet.'
+      : soon.length === 1 ? 'One autopay coming. Still using it?' : `${soon.length} autopays coming. Still using them?`);
+  }
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let idx = 0;
   let timer = 0;
@@ -224,17 +291,20 @@ const moods = [...new Set(slides.map((s) => s.mood))];
 
   root.querySelectorAll<HTMLButtonElement>('button[data-action]').forEach((b) =>
     b.addEventListener('click', () => {
-      if (b.dataset.action === 'jar') {
-        // Put this week's leftover into the Emergency fund goal
-        const amount = Number(root.dataset.saved);
+      if (b.dataset.action === 'jar' && week && leftover > 0) {
+        // Put this week's real leftover into the Emergency fund goal, starting one if needed
         const plan = loadPlan();
-        const emergency = plan.goals.find((g) => g.id === 'emer');
-        if (emergency && !b.dataset.done) {
-          emergency.saved = Math.min(emergency.target, emergency.saved + amount);
-          savePlan(plan);
-          b.dataset.done = 'true';
-          showToast(`${inr(amount)} moved to your Emergency fund`);
+        let emergency = plan.goals.find((g) => g.id === 'emer');
+        if (!emergency) {
+          emergency = { id: 'emer', label: 'Emergency fund', sub: '3 months of take-home pay', icon: 'shield', target: monthlyInhand(loadProfile()) * 3, saved: 0 };
+          plan.goals.push(emergency);
         }
+        emergency.saved = Math.min(emergency.target, emergency.saved + leftover);
+        savePlan(plan);
+        writeLocal('sunday:moved', week.range);
+        showToast(`${inr(leftover)} moved to your Emergency fund`);
+        leftover = 0;
+        b.textContent = 'Next';
       }
       go(idx + 1);
     }),
