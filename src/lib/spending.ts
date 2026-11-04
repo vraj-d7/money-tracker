@@ -3,15 +3,27 @@
 import { merchantOf, type Txn } from './statement';
 
 export type SpendCategory = 'Food' | 'Travel' | 'Fun' | 'Other';
-export type SpendMethod = 'UPI' | 'Card' | 'Cash' | 'Bank';
+export type SpendMethod = 'UPI' | 'Card' | 'Cash' | 'Bank' | 'Added by you';
 
 export const CATEGORIES: SpendCategory[] = ['Food', 'Travel', 'Fun', 'Other'];
 
 export interface Spend {
+  /** Only on spends the user added themselves, so they can be removed */
+  id?: string;
   what: string;
   category: SpendCategory;
   method: SpendMethod;
   amount: number;
+}
+
+/** A spend the user typed in themselves */
+export interface AddedSpend {
+  id: string;
+  /** yyyy-mm-dd */
+  date: string;
+  amount: number;
+  what: string;
+  category: SpendCategory;
 }
 
 export interface SpendWeek {
@@ -52,16 +64,38 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 
 /** Dates as plain local days, so time zones can't move them */
 const toDate = (iso: string) => new Date(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10));
-const toIso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+export const toIso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const dayMonth = (d: Date) => `${d.getDate()} ${MONTHS[d.getMonth()]}`;
 const dayLabel = (d: Date) => `${DAYS[d.getDay()]}, ${dayMonth(d)}`;
 const sameDay = (a: Date, b: Date) => toIso(a) === toIso(b);
 
+/**
+ * Added spends a statement hasn't already covered. A debit of the same amount within a day counts as
+ * the same spend, so scanning later doesn't double it; cash spends never match, so they stay.
+ */
+export function unmatchedSpends(added: AddedSpend[], txns: Txn[]): AddedSpend[] {
+  const debits = txns.filter((t) => t.type === 'debit');
+  const used = new Set<Txn>();
+  return added.filter((a) => {
+    const match = debits.find(
+      (t) =>
+        !used.has(t) &&
+        Math.round(t.amount) === Math.round(a.amount) &&
+        Math.abs(toDate(t.date).getTime() - toDate(a.date).getTime()) <= 86400000 * 1.5,
+    );
+    if (match) used.add(match);
+    return !match;
+  });
+}
+
 /** The Monday-to-Sunday week holding the latest day-to-day spend; null when there are none */
-export function latestWeek(txns: Txn[], today = new Date()): SpendWeek | null {
+export function latestWeek(txns: Txn[], today = new Date(), added: AddedSpend[] = []): SpendWeek | null {
   const everyday = txns.filter(isEveryday);
-  if (!everyday.length) return null;
-  const latest = (list: Txn[]) => list.reduce((max, t) => (t.date > max ? t.date : max), list[0].date);
+  const extra = unmatchedSpends(added, txns);
+  const spendDates = [...everyday.map((t) => t.date), ...extra.map((a) => a.date)];
+  if (!spendDates.length) return null;
+  const allDates = [...txns.map((t) => t.date), ...extra.map((a) => a.date)];
+  const latest = (list: string[]) => list.reduce((max, d) => (d > max ? d : max), list[0]);
   const mondayOf = (iso: string) => {
     const d = toDate(iso);
     d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
@@ -69,13 +103,13 @@ export function latestWeek(txns: Txn[], today = new Date()): SpendWeek | null {
   };
   const sundayOf = (m: Date) => new Date(m.getFullYear(), m.getMonth(), m.getDate() + 6);
 
-  let monday = mondayOf(latest(everyday));
+  let monday = mondayOf(latest(spendDates));
   // A statement often ends mid-week. That stub would look like a very cheap week, so use the last
   // full one instead (unless it's the week we're in now, which is meant to be partial).
   const todayIso = toIso(today);
   const inProgress = todayIso >= toIso(monday) && todayIso <= toIso(sundayOf(monday));
-  if (!inProgress && latest(txns) < toIso(sundayOf(monday))) {
-    const earlier = everyday.filter((t) => t.date < toIso(monday));
+  if (!inProgress && latest(allDates) < toIso(sundayOf(monday))) {
+    const earlier = spendDates.filter((d) => d < toIso(monday));
     if (earlier.length) monday = mondayOf(latest(earlier));
   }
   const sunday = sundayOf(monday);
@@ -93,6 +127,12 @@ export function latestWeek(txns: Txn[], today = new Date()): SpendWeek | null {
       amount: Math.round(t.amount),
     });
     byDay.set(t.date, list);
+  }
+  for (const a of extra) {
+    if (a.date < from || a.date > to) continue;
+    const list = byDay.get(a.date) ?? [];
+    list.push({ id: a.id, what: a.what, category: a.category, method: 'Added by you', amount: Math.round(a.amount) });
+    byDay.set(a.date, list);
   }
 
   const days = [...byDay.entries()]

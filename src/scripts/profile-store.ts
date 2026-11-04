@@ -8,7 +8,7 @@ export type { CoachMode };
 
 const KEY = 'inhandy:profile';
 
-export type NotificationKey = 'sunday' | 'renew' | 'pf' | 'payday';
+export type NotificationKey = 'sunday' | 'renew' | 'pf' | 'payday' | 'scan';
 
 export interface TaxDetails {
   /** Basic pay as % of CTC */
@@ -65,7 +65,7 @@ export const DEFAULT_PROFILE: Profile = {
   payday: 7,
   paydayShift: 'before',
   coachMode: 'honest',
-  notifications: { sunday: true, renew: true, pf: true, payday: false },
+  notifications: { sunday: true, renew: true, pf: true, payday: false, scan: true },
   tax: { basicPct: 50, hra: 24000, rent: 25000, c80: 0, d80: 0, pt: 2400, metro: false },
 };
 

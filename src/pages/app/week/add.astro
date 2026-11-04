@@ -1,0 +1,205 @@
+---
+// Type in a spend by hand, so the week stays useful between statement scans.
+import SheetPage from '../../../layouts/SheetPage.astro';
+import { routes } from '../../../lib/routes';
+import { CATEGORIES } from '../../../lib/spending';
+---
+
+<SheetPage title="Add a spend" active="home" closeHref={routes.week} width={520}>
+  <div class="intro">
+    <h1 id="sheet-title">Add a spend</h1>
+    <p class="muted">Cash, or anything your last statement doesn’t show yet.</p>
+  </div>
+
+  <form class="spend-form" data-spend-form novalidate>
+    <div class="group">
+      <label for="s-amt" class="group__label">How much?</label>
+      <div class="field">
+        <span class="field__prefix">₹</span>
+        <input id="s-amt" class="num" type="text" inputmode="numeric" placeholder="200" autocomplete="off" />
+      </div>
+    </div>
+
+    <fieldset class="group">
+      <legend class="group__label">What kind?</legend>
+      <div class="choices">
+        {
+          CATEGORIES.map((c, i) => (
+            <button type="button" class="choice" data-category={c} aria-pressed={i === 0 ? 'true' : 'false'}>
+              {c}
+            </button>
+          ))
+        }
+      </div>
+    </fieldset>
+
+    <div class="group">
+      <label for="s-what" class="group__label">What was it? (optional)</label>
+      <div class="field"><input id="s-what" type="text" maxlength="40" placeholder="e.g. Lunch with team" autocomplete="off" /></div>
+    </div>
+
+    <div class="group">
+      <label for="s-date" class="group__label">When?</label>
+      <div class="field"><input id="s-date" type="date" /></div>
+    </div>
+
+    <p class="error" role="alert" data-error hidden></p>
+
+    <div class="actions">
+      <button type="submit" class="btn btn--mango btn--lg actions__add">Add spend</button>
+      <a href={routes.week} class="btn">Cancel</a>
+    </div>
+  </form>
+</SheetPage>
+
+<script>
+  import { routes } from '../../../lib/routes';
+  import { toIso, type SpendCategory } from '../../../lib/spending';
+  import { addSpend } from '../../../scripts/scan-store';
+
+  const form = document.querySelector<HTMLFormElement>('[data-spend-form]')!;
+  const amtInput = form.querySelector<HTMLInputElement>('#s-amt')!;
+  const whatInput = form.querySelector<HTMLInputElement>('#s-what')!;
+  const dateInput = form.querySelector<HTMLInputElement>('#s-date')!;
+  const error = form.querySelector<HTMLElement>('[data-error]')!;
+  const cats = [...form.querySelectorAll<HTMLElement>('[data-category]')];
+
+  const todayIso = toIso(new Date());
+  dateInput.value = todayIso;
+  dateInput.max = todayIso;
+
+  let category = cats[0].dataset.category as SpendCategory;
+  let amount = 0;
+
+  cats.forEach((btn) =>
+    btn.addEventListener('click', () => {
+      category = btn.dataset.category as SpendCategory;
+      cats.forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+    }),
+  );
+
+  // Keep the amount formatted with Indian commas as you type
+  amtInput.addEventListener('input', () => {
+    amount = parseInt(amtInput.value.replace(/[^0-9]/g, ''), 10) || 0;
+    amtInput.value = amount ? amount.toLocaleString('en-IN') : '';
+  });
+
+  const fail = (text: string, field: HTMLElement) => {
+    error.textContent = text;
+    error.hidden = false;
+    field.focus();
+  };
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (amount <= 0) return fail('Enter how much you spent.', amtInput);
+    if (amount > 1000000) return fail('That’s more than ₹10,00,000. Check the amount.', amtInput);
+    if (!dateInput.value || dateInput.value > todayIso) return fail('Pick today or a past date.', dateInput);
+    addSpend({ date: dateInput.value, amount, what: whatInput.value.trim() || category, category });
+    window.location.href = routes.week;
+  });
+</script>
+
+<style>
+  .intro {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-right: 48px;
+  }
+
+  h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 32px;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+  }
+
+  .muted {
+    margin: 0;
+    font-size: 16px;
+    color: var(--ink-muted);
+  }
+
+  .spend-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    min-width: 0;
+  }
+
+  .group__label {
+    padding: 0;
+    margin-bottom: 2px;
+    font-weight: 700;
+    font-size: 16px;
+  }
+
+  fieldset .group__label {
+    margin-bottom: 8px;
+  }
+
+  .field__prefix {
+    font-weight: 800;
+  }
+
+  .choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .choice {
+    min-height: 44px;
+    padding: 0 16px;
+    border: 2.5px solid var(--ink);
+    border-radius: 99px;
+    background: var(--white);
+    color: var(--ink);
+    font-weight: 700;
+    font-size: 16px;
+    cursor: pointer;
+  }
+
+  .choice[aria-pressed='true'] {
+    background: var(--mango);
+    box-shadow: 0 3px 0 var(--ink);
+  }
+
+  .error {
+    margin: 0;
+    color: var(--danger);
+    font-weight: 700;
+  }
+
+  .error[hidden] {
+    display: none;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .actions__add {
+    flex: 1;
+  }
+
+  @media (max-width: 639px) {
+    h1 {
+      font-size: 26px;
+    }
+  }
+</style>

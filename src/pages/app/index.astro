@@ -106,7 +106,10 @@ const underBy = plan - spent;
   <section class="card week" aria-labelledby="week-h">
     <div class="card__top">
       <h2 id="week-h" class="card__title"><span data-week-title>This week</span> <span class="sample-tag" data-week-tag>Sample</span></h2>
-      <a href={routes.week} class="link">Details</a>
+      <span class="card__links">
+        <a href={routes.addSpend} class="link">Add a spend</a>
+        <a href={routes.week} class="link">Details</a>
+      </span>
     </div>
     <p class="num week__total">
       <span class="week__spent" data-count-from="0" data-count-to={spent} data-format="inr">{inr(spent)}</span> of <span data-week-plan>{inr(plan)}</span> plan
@@ -129,6 +132,7 @@ const underBy = plan - spent;
       <span data-week-note-text>{inr(Math.abs(underBy))} under plan. Chill, you’re on track.</span>
     </p>
     <p class="sample-note" data-week-sample>Sample spends. <a href={routes.scan}>Scan a statement</a> to see yours.</p>
+    <p class="sample-note" data-scan-due hidden>Salary’s in. <a href={routes.scan}>Scan your latest statement</a> to update your spends.</p>
   </section>
 
   <section class="card renewals" aria-labelledby="renew-h">
@@ -210,7 +214,7 @@ const underBy = plan - spent;
   import { checkinStreak, recentWeeks, weekKey } from '../../lib/streaks';
   import { readLocal } from '../../scripts/local-state';
   import { unreadCount } from '../../scripts/notifications';
-  import { realRenewals, realWeek } from '../../scripts/scan-store';
+  import { realRenewals, realWeek, scanReminder } from '../../scripts/scan-store';
 
   // Greet whoever is saved in the profile, on today's date
   const profile = loadProfile();
@@ -277,6 +281,7 @@ const underBy = plan - spent;
     document.querySelector('[data-week-title]')!.textContent = week.title;
     document.querySelector<HTMLElement>('[data-week-tag]')!.hidden = true;
     document.querySelector<HTMLElement>('[data-week-sample]')!.hidden = true;
+    document.querySelector<HTMLElement>('[data-scan-due]')!.hidden = !scanReminder();
     document.querySelector('[data-week-plan]')!.textContent = inr(week.plan);
     document.querySelector('[data-week-bar]')!.setAttribute('aria-label', `Spent ${inr(week.spent)} of a ${inr(week.plan)} plan`);
     document.querySelector<HTMLElement>('[data-week-fill]')!.style.width = `${Math.min(100, week.plan ? (week.spent / week.plan) * 100 : 100).toFixed(1)}%`;
@@ -559,8 +564,15 @@ const underBy = plan - spent;
 
   .card__top {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: baseline;
+    gap: 4px 12px;
+  }
+
+  .card__links {
+    display: flex;
+    gap: 14px;
   }
 
   .card__title {

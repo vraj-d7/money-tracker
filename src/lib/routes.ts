@@ -11,6 +11,7 @@ export const routes = {
   legal: '/legal',
   home: '/app',
   week: '/app/week',
+  addSpend: '/app/week/add',
   salary: '/app/salary',
   offer: '/app/offer',
   plan: '/app/plan',

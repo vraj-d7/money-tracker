@@ -18,6 +18,7 @@ const filters: ('all' | SpendCategory)[] = ['all', 'Food', 'Travel', 'Fun', 'Oth
     <p class="muted">
       <span data-week-sub>{WEEK.range} · {under >= 0 ? `${inr(under)} under plan` : `${inr(-under)} over plan`}</span> <span class="sample-tag" data-week-tag>Sample</span>
     </p>
+    <a href={routes.addSpend} class="btn btn--mango head__add">Add a spend</a>
   </header>
 
   <div class="list" data-week>
@@ -47,6 +48,9 @@ const filters: ('all' | SpendCategory)[] = ['all', 'Food', 'Travel', 'Fun', 'Oth
           <span class="spend__meta" data-meta></span>
         </span>
         <span class="num spend__amt" data-amt></span>
+        <button type="button" class="spend__remove" data-remove hidden>
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+        </button>
       </div>
     </template>
     {
@@ -103,7 +107,7 @@ const filters: ('all' | SpendCategory)[] = ['all', 'Food', 'Travel', 'Fun', 'Oth
 <script>
   import { inr } from '../../lib/format';
   import { CATEGORY_COLORS } from '../../data/demo-week';
-  import { realWeek } from '../../scripts/scan-store';
+  import { loadTransactions, realWeek, removeSpend } from '../../scripts/scan-store';
 
   const root = document.querySelector<HTMLElement>('[data-week]');
 
@@ -132,6 +136,15 @@ const filters: ('all' | SpendCategory)[] = ['all', 'Food', 'Travel', 'Fun', 'Oth
         row.querySelector('[data-what]')!.textContent = s.what;
         row.querySelector('[data-meta]')!.textContent = `${s.category} · ${s.method}`;
         row.querySelector('[data-amt]')!.textContent = inr(s.amount);
+        if (s.id) {
+          const remove = row.querySelector<HTMLButtonElement>('[data-remove]')!;
+          remove.hidden = false;
+          remove.setAttribute('aria-label', `Remove ${s.what}, ${inr(s.amount)}`);
+          remove.addEventListener('click', () => {
+            removeSpend(s.id!);
+            window.location.reload();
+          });
+        }
         day.append(row);
       }
       root.append(day);
@@ -146,8 +159,9 @@ const filters: ('all' | SpendCategory)[] = ['all', 'Food', 'Travel', 'Fun', 'Oth
     const note = document.querySelector<HTMLElement>('[data-week-note]')!;
     note.hidden = under <= 0;
     note.textContent = `${inr(under)} under plan. Move it to your Emergency jar on Sunday?`;
-    document.querySelector('[data-week-source]')!.textContent =
-      'From your last statement scan. Rent, SIPs, EMIs and bills are left out: your jars already cover those.';
+    document.querySelector('[data-week-source]')!.textContent = loadTransactions().length
+      ? 'From your last statement scan and any spends you added. Rent, SIPs, EMIs and bills are left out: your jars already cover those.'
+      : 'Spends you added yourself. Scan a statement to fill in the rest.';
   }
 
   if (root) {
@@ -195,6 +209,11 @@ const filters: ('all' | SpendCategory)[] = ['all', 'Food', 'Travel', 'Fun', 'Oth
     font-weight: 700;
     text-decoration: none;
     color: var(--violet);
+  }
+
+  .head__add {
+    align-self: flex-start;
+    margin-top: 6px;
   }
 
   h1 {
@@ -265,6 +284,8 @@ const filters: ('all' | SpendCategory)[] = ['all', 'Food', 'Travel', 'Fun', 'Oth
     align-items: center;
     gap: 14px;
     min-height: 60px;
+    padding: 8px 0;
+    box-sizing: border-box;
     border-top: 2px dashed var(--line);
   }
 
@@ -294,6 +315,29 @@ const filters: ('all' | SpendCategory)[] = ['all', 'Food', 'Travel', 'Fun', 'Oth
 
   .spend__amt {
     font-weight: 800;
+  }
+
+  .spend__remove {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    margin-right: -10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 99px;
+    background: none;
+    color: var(--ink-muted);
+    cursor: pointer;
+  }
+
+  .spend__remove:hover {
+    color: var(--danger);
+  }
+
+  .spend__remove[hidden] {
+    display: none;
   }
 
   .side {
@@ -333,6 +377,7 @@ const filters: ('all' | SpendCategory)[] = ['all', 'Food', 'Travel', 'Fun', 'Oth
   .split__top {
     display: flex;
     justify-content: space-between;
+    gap: 8px;
   }
 
   .split__track {

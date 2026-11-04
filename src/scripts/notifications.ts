@@ -4,7 +4,7 @@ import { routes } from '../lib/routes';
 import { weekKey } from '../lib/streaks';
 import { readLocal } from './local-state';
 import { loadProfile, monthlyInhand, paydayCycle } from './profile-store';
-import { realRenewals, realWeek } from './scan-store';
+import { realRenewals, realWeek, scanReminder } from './scan-store';
 
 export type NotificationKind = 'money' | 'renew' | 'coach';
 
@@ -65,6 +65,21 @@ export function buildNotifications(today = new Date()): AppNotification[] {
         tile: '#FFE4E0',
       });
     }
+  }
+
+  const salaryDay = scanReminder(today);
+  if (salaryDay) {
+    out.push({
+      id: `scan-${salaryDay.toDateString()}`,
+      group: 'This week',
+      kind: 'money',
+      title: 'Salary’s in. Time for this month’s scan',
+      body: 'Scan your latest bank statement to bring your spends and autopays up to date.',
+      cta: 'Scan now',
+      href: routes.scan,
+      icon: ICON.renew,
+      tile: '#E2F8EF',
+    });
   }
 
   // The recap is ready on Sunday and Monday, until it's been opened
