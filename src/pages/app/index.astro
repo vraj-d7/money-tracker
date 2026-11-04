@@ -1,7 +1,6 @@
 ---
 import AppShell from '../../layouts/AppShell.astro';
 import Handy from '../../components/Handy.astro';
-import { demoUser } from '../../data/demo-user';
 import { demoHome as home } from '../../data/demo-home';
 import { routes } from '../../lib/routes';
 import { inr } from '../../lib/format';
@@ -20,7 +19,6 @@ const { spent, plan } = home.week;
 const spentPct = Math.min(100, (spent / plan) * 100).toFixed(1);
 const underBy = plan - spent;
 
-const streakDone = home.streak.done.filter(Boolean).length;
 ---
 
 <AppShell title="Home" active="home">
@@ -38,9 +36,9 @@ const streakDone = home.streak.done.filter(Boolean).length;
         <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7 8l5-5 5 5M4 14v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"></path></svg>
         Scan a statement
       </a>
-      <a href={routes.notifications} class="icon-btn" aria-label={`Notifications, ${demoUser.newNotifications} new`}>
+      <a href={routes.notifications} class="icon-btn" aria-label="Notifications" data-bell>
         <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"></path></svg>
-        <span class="icon-btn__dot" aria-hidden="true"></span>
+        <span class="icon-btn__dot" aria-hidden="true" data-bell-dot hidden></span>
       </a>
     </div>
   </header>
@@ -163,11 +161,11 @@ const streakDone = home.streak.done.filter(Boolean).length;
   <section class="card streak" aria-label="Check-in streak">
     <svg class="flick" aria-hidden="true" width="52" height="60" viewBox="0 0 24 28"><path d="M12 27c5 0 8.5-3.5 8.5-8.5 0-6-6-8.5-6-14.5-3.5 2.4-6 6-6 9.6-1.2-1.2-2.4-2.4-2.4-4.8-2.4 2.4-2.6 6-2.6 9.7C3.5 23.5 7 27 12 27z" fill="#FFB21E" stroke="#15131C" stroke-width="1.6" stroke-linejoin="round"></path><path d="M12 25c2.5 0 4.2-1.8 4.2-4.2 0-3-3-4.4-3-7.4-2 1.4-4.5 3.8-4.5 7 0 2.8 1.2 4.6 3.3 4.6z" fill="#FFD27A"></path></svg>
     <div class="streak__body">
-      <p class="streak__title">{home.streak.weeks}-week check-in streak <span class="sample-tag">Sample</span></p>
-      <div class="streak__weeks" role="img" aria-label={`${streakDone} of ${home.streak.done.length} weeks done, this Sunday pending`}>
-        {home.streak.done.map((d) => <span class:list={['streak__week', { 'streak__week--done': d }]} />)}
+      <p class="streak__title" data-streak-title>Start your check-in streak</p>
+      <div class="streak__weeks" role="img" aria-label="Check-ins over the last 7 weeks" data-streak-weeks>
+        {Array.from({ length: 7 }, () => <span class="streak__week" />)}
       </div>
-      <p class="streak__next">Next check-in: Sunday. Don’t break it now!</p>
+      <p class="streak__next" data-streak-next>Your first check-in: the Sunday recap.</p>
     </div>
   </section>
 
@@ -198,6 +196,9 @@ const streakDone = home.streak.done.filter(Boolean).length;
 <script>
   import { inr } from '../../lib/format';
   import { displayName, initials, loadProfile, longDate, monthlyInhand, paydayCycle, saveProfile, shortDate } from '../../scripts/profile-store';
+  import { checkinStreak, recentWeeks, weekKey } from '../../lib/streaks';
+  import { readLocal } from '../../scripts/local-state';
+  import { unreadCount } from '../../scripts/notifications';
   import { realRenewals, realWeek } from '../../scripts/scan-store';
 
   // Greet whoever is saved in the profile, on today's date
@@ -290,6 +291,22 @@ const streakDone = home.streak.done.filter(Boolean).length;
       box.append(el);
     }
   }
+
+  // The real check-in streak, from Sunday recaps the user has finished
+  const checkins = readLocal<string[]>('checkins', []);
+  const streak = checkinStreak(checkins);
+  const doneThisWeek = checkins.includes(weekKey(new Date()));
+  document.querySelector('[data-streak-title]')!.textContent = streak ? `${streak}-week check-in streak` : 'Start your check-in streak';
+  document.querySelector('[data-streak-next]')!.textContent = streak
+    ? doneThisWeek ? 'Done for this week. See you Sunday!' : 'Next check-in: Sunday. Don’t break it now!'
+    : 'Your first check-in: the Sunday recap.';
+  const dots = document.querySelectorAll<HTMLElement>('.streak__week');
+  recentWeeks(checkins).forEach((done, i) => dots[i].classList.toggle('streak__week--done', done));
+  document.querySelector('[data-streak-weeks]')!.setAttribute('aria-label', `${recentWeeks(checkins).filter(Boolean).length} check-ins in the last 7 weeks`);
+
+  const unread = unreadCount(readLocal<string[]>('notifications:read', []));
+  document.querySelector<HTMLElement>('[data-bell-dot]')!.hidden = unread === 0;
+  document.querySelector('[data-bell]')!.setAttribute('aria-label', unread ? `Notifications, ${unread} new` : 'Notifications');
 
   // Chips fill the question box
   const input = document.getElementById('ask-input') as HTMLInputElement | null;
@@ -793,6 +810,10 @@ const streakDone = home.streak.done.filter(Boolean).length;
     border-radius: 8px;
     border: 2px solid var(--ink-muted);
     box-sizing: border-box;
+  }
+
+  .icon-btn__dot[hidden] {
+    display: none;
   }
 
   .streak__week--done {

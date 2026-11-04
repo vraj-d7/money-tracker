@@ -128,8 +128,9 @@ Where Vraj is in the step-by-step guide:
   5. Check the live site: real sign-in, `/app` gate, 404 page, PDF worker loads.
   6. **Then remind Vraj to test a real statement.**
 - **Coach (pushed, `c438238`):** replies are still built-in, not AI, but `lib/coach.ts` now takes the item and price from the question (`parseAfford`, `parseAmount`), asks for the price if missing, and uses the user's own numbers (`scripts/coach-facts.ts`): pay, jars, payday, and latest week if scanned. The fake opening chat and sample spend chart (`SpendChart`) are gone; the side panel shows real pay and jars. Fun money is the monthly jar, not what's left this month, since balances aren't tracked.
-- **Edit plan (not committed yet):** each jar has a rupee box as well as the slider. Typed amounts are stored as an exact share of take-home, so `state.jars` percentages can now be decimals; display them rounded. If the CTC changes, jars scale with it. The slider still tops out at 50% and moves in 1% steps; the box allows up to the full take-home.
-- Later options: real streak tracking, AI coach, phone sign-in, payments, own email sender (SMTP;
+- **Edit plan (pushed, `a132809`):** each jar has a rupee box as well as the slider. Typed amounts are stored as an exact share of take-home, so `state.jars` percentages can now be decimals; display them rounded. If the CTC changes, jars scale with it. The slider still tops out at 50% and moves in 1% steps; the box allows up to the full take-home.
+- **Honest content pass (not committed yet):** PF corner and Email HR carry a `SampleBanner` (no real PF data source exists). Notifications are real (`scripts/notifications.ts`): payday within 7 days, renewals within 7 days from a real scan, and the Sunday recap on Sun/Mon, all following the Me page toggles; in-app only, no phone or email alerts. `demo-notifications.ts` is gone and nav badges start hidden. Streaks are real (`lib/streaks.ts`): finishing the Sunday recap records `inhandy:checkins`; Plan has an "I filled my jars this month" button that records `inhandy:payday:filled`. The Me page PF notification toggle currently does nothing.
+- Later options: AI coach, phone sign-in, payments, own email sender (SMTP;
   Supabase's built-in one only allows a few emails an hour, so do this before real users). The PF/ITR
   tools and notifications still use sample content from `src/data/demo-tools.ts` and `demo-notifications.ts`.
 
@@ -205,6 +206,7 @@ Still pretend or test mode ("heavy tasks", roughly in order):
 
 ## History (newest first)
 
+- `a132809`: Rupee boxes on Edit plan.
 - `c438238`: Coach uses the asked item and the user's own numbers.
 - `7edea30`: Home asks for a missing first name; old sample details cleared.
 - `a8b6d41`: Cloudflare settings for going live.

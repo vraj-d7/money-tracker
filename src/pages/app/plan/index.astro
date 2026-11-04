@@ -5,7 +5,7 @@ import GoalCard from '../../../components/GoalCard.astro';
 import { routes } from '../../../lib/routes';
 import { inr } from '../../../lib/format';
 import { GOAL_ICONS } from '../../../lib/goal-icons';
-import { DEFAULT_JARS, MONTHLY_INHAND, nextPayday, paydayStreak } from '../../../data/demo-plan';
+import { DEFAULT_JARS, MONTHLY_INHAND, nextPayday } from '../../../data/demo-plan';
 
 const jarFill = (pct: number) => Math.min(100, pct * 2.6) + '%';
 const freePct = 100 - DEFAULT_JARS.reduce((s, j) => s + j.pct, 0);
@@ -60,19 +60,18 @@ const freePct = 100 - DEFAULT_JARS.reduce((s, j) => s + j.pct, 0);
     </section>
 
     <section class="streak" aria-label="Salary-day streak">
-      <div class="streak__flames" aria-hidden="true">
-        {
-          Array.from({ length: paydayStreak }, (_, i) => (
-            <svg class:list={{ flick: i === paydayStreak - 1 }} width="30" height="36" viewBox="0 0 24 28">
-              <path d="M12 27c5 0 8.5-3.5 8.5-8.5 0-6-6-8.5-6-14.5-3.5 2.4-6 6-6 9.6-1.2-1.2-2.4-2.4-2.4-4.8-2.4 2.4-2.6 6-2.6 9.7C3.5 23.5 7 27 12 27z" fill="#FFB21E" stroke="#15131C" stroke-width="1.6" stroke-linejoin="round" />
-              <path d="M12 25c2.5 0 4.2-1.8 4.2-4.2 0-3-3-4.4-3-7.4-2 1.4-4.5 3.8-4.5 7 0 2.8 1.2 4.6 3.3 4.6z" fill="#FFD27A" />
-            </svg>
-          ))
-        }
+      <div class="streak__flames" aria-hidden="true" data-flames>
+        <template id="flame">
+          <svg width="30" height="36" viewBox="0 0 24 28">
+            <path d="M12 27c5 0 8.5-3.5 8.5-8.5 0-6-6-8.5-6-14.5-3.5 2.4-6 6-6 9.6-1.2-1.2-2.4-2.4-2.4-4.8-2.4 2.4-2.6 6-2.6 9.7C3.5 23.5 7 27 12 27z" fill="#FFB21E" stroke="#15131C" stroke-width="1.6" stroke-linejoin="round"></path>
+            <path d="M12 25c2.5 0 4.2-1.8 4.2-4.2 0-3-3-4.4-3-7.4-2 1.4-4.5 3.8-4.5 7 0 2.8 1.2 4.6 3.3 4.6z" fill="#FFD27A"></path>
+          </svg>
+        </template>
       </div>
       <div class="streak__text">
-        <span class="streak__title">{paydayStreak} paydays in a row <span class="sample-tag">Sample</span></span>
-        <span class="streak__sub">You filled your jars on salary day. Keep it going on <span data-next-payday-short>{nextPayday.short}</span>.</span>
+        <span class="streak__title" data-streak-title>Start your payday streak</span>
+        <span class="streak__sub" data-streak-sub></span>
+        <button type="button" class="btn streak__btn" data-filled>I filled my jars this month</button>
       </div>
     </section>
   </div>
@@ -110,6 +109,8 @@ const freePct = 100 - DEFAULT_JARS.reduce((s, j) => s + j.pct, 0);
   import { GOAL_ICONS } from '../../../lib/goal-icons';
   import { DEFAULT_JARS, type Goal } from '../../../data/demo-plan';
   import { loadProfile, monthlyInhand, paydayCycle, shortDate } from '../../../scripts/profile-store';
+  import { monthKey, paydayStreak } from '../../../lib/streaks';
+  import { readLocal, writeLocal } from '../../../scripts/local-state';
   import { loadPlan, savePlan } from '../../../scripts/plan-store';
 
   const state = loadPlan();
@@ -122,7 +123,33 @@ const freePct = 100 - DEFAULT_JARS.reduce((s, j) => s + j.pct, 0);
   document.querySelector('[data-month-kicker]')!.textContent = `${new Date().toLocaleString('en-IN', { month: 'long' })} plan`;
   document.querySelector('[data-inhand]')!.textContent = inr(inhand);
   document.querySelector('[data-next-payday]')!.textContent = shortDate(next);
-  document.querySelector('[data-next-payday-short]')!.textContent = shortDate(next).split(', ')[1];
+
+  // The real payday streak: months the user says they filled their jars
+  const filled = readLocal<string[]>('payday:filled', []);
+  function renderStreak() {
+    const n = paydayStreak(filled);
+    const box = document.querySelector<HTMLElement>('[data-flames]')!;
+    const flame = box.querySelector<HTMLTemplateElement>('#flame')!;
+    box.querySelectorAll('svg').forEach((s) => s.remove());
+    for (let i = 0; i < Math.min(n, 12); i++) {
+      const svg = (flame.content.firstElementChild as SVGElement).cloneNode(true) as SVGElement;
+      svg.classList.toggle('flick', i === Math.min(n, 12) - 1);
+      box.append(svg);
+    }
+    const done = filled.includes(monthKey(new Date()));
+    const when = shortDate(next).split(', ')[1];
+    document.querySelector('[data-streak-title]')!.textContent = n === 0 ? 'Start your payday streak' : n === 1 ? '1 payday in a row' : `${n} paydays in a row`;
+    document.querySelector('[data-streak-sub]')!.textContent = done
+      ? `Jars filled this month. Keep it going on ${when}.`
+      : `On salary day, move money into your jars, then tap below. Next salary day: ${when}.`;
+    document.querySelector<HTMLElement>('[data-filled]')!.hidden = done;
+  }
+  document.querySelector('[data-filled]')!.addEventListener('click', () => {
+    filled.push(monthKey(new Date()));
+    writeLocal('payday:filled', filled);
+    renderStreak();
+  });
+  renderStreak();
 
   // Jars and daily-spending money from the saved split
   let used = 0;
@@ -470,6 +497,16 @@ const freePct = 100 - DEFAULT_JARS.reduce((s, j) => s + j.pct, 0);
     border-radius: 24px;
     background: #ffe7b0;
     border: 2.5px solid var(--ink);
+  }
+
+  .streak__btn {
+    align-self: flex-start;
+    margin-top: 6px;
+    min-height: 44px;
+  }
+
+  .streak__btn[hidden] {
+    display: none;
   }
 
   .streak__flames {

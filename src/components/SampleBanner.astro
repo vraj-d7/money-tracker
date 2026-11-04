@@ -1,0 +1,35 @@
+---
+// A clear notice that what's on a page is an example, not the user's own data.
+---
+
+<aside class="sample-banner">
+  <span class="sample-tag">Sample</span>
+  <p><slot /></p>
+</aside>
+
+<style>
+  .sample-banner {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 10px 12px;
+    padding: 14px 18px;
+    border-radius: 18px;
+    background: var(--cream);
+    border: 2px dashed var(--ink);
+  }
+
+  .sample-banner .sample-tag {
+    margin-left: 0;
+    flex: none;
+  }
+
+  .sample-banner p {
+    flex: 1;
+    min-width: min(100%, 240px);
+    margin: 0;
+    font-weight: 600;
+    line-height: 1.45;
+  }
+</style>

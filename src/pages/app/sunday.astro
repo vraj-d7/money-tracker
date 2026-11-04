@@ -11,7 +11,8 @@ import type { HandyMood } from '../../lib/handy';
 const saved = WEEK.plan - weekSpent;
 const renewing = demoHome.renewals.items.filter((r) => !r.warn);
 const renewingTotal = renewing.reduce((s, r) => s + r.amount, 0);
-const streak = demoHome.streak.weeks;
+// The streak slide is filled in by the script from real check-ins
+const streak = 1;
 const spentPct = Math.round((weekSpent / WEEK.plan) * 100);
 const topCats = [...weekByCategory].filter((c) => c.category !== 'Other').sort((a, b) => b.amount - a.amount);
 
@@ -70,7 +71,7 @@ const moods = [...new Set(slides.map((s) => s.mood))];
       {
         slides.map((s, i) => (
           <div class="slide" data-slide={i} hidden={i !== 0} aria-live="polite">
-            <p class="slide__eyebrow"><span data-s-eyebrow>{s.eyebrow}</span>{i === 3 && <span class="sample-tag" data-streak-tag hidden>Sample</span>}</p>
+            <p class="slide__eyebrow"><span data-s-eyebrow>{s.eyebrow}</span></p>
             <h1 class="slide__title" data-s-title>{s.title}</h1>
             <p class="num slide__big" style={`color: ${s.accent}`} data-s-big>
               {s.big}
@@ -167,6 +168,8 @@ const moods = [...new Set(slides.map((s) => s.mood))];
 
 <script>
   import { inr } from '../../lib/format';
+  import { checkinStreak, weekKey } from '../../lib/streaks';
+  import { routes } from '../../lib/routes';
   import { readLocal, writeLocal } from '../../scripts/local-state';
   import { loadPlan, savePlan } from '../../scripts/plan-store';
   import { loadProfile, monthlyInhand } from '../../scripts/profile-store';
@@ -184,6 +187,18 @@ const moods = [...new Set(slides.map((s) => s.mood))];
     slide(i).querySelector(`[data-s-${key}]`)!.textContent = text;
   };
 
+  // Finishing this recap counts as this week's check-in, so the streak slide includes it
+  const checkins = readLocal<string[]>('checkins', []);
+  const thisWeek = weekKey(new Date());
+  const streakNow = checkinStreak([...checkins, thisWeek]);
+  fill(3, 'title', streakNow === 1 ? 'Your first Sunday' : `${streakNow} Sundays in a row`);
+  fill(3, 'big', streakNow === 1 ? '1 week' : `${streakNow} weeks`);
+  slide(3).querySelectorAll('.flames svg').forEach((flame, i) => {
+    flame.classList.toggle('flick', i === Math.min(streakNow, 7) - 1);
+    flame.classList.toggle('dim', i >= streakNow);
+  });
+  root.querySelector<HTMLAnchorElement>('[data-cta="3"]')!.href = `${routes.share}?card=streak&weeks=${streakNow}`;
+
   // The user's own week, once a statement has been scanned on this device
   const week = realWeek();
   let leftover = 0;
@@ -192,8 +207,6 @@ const moods = [...new Set(slides.map((s) => s.mood))];
     const pct = week.plan ? Math.round((week.spent / week.plan) * 100) : 0;
     root.querySelector('[data-recap-date]')!.textContent = week.shortRange;
     root.querySelector<HTMLElement>('[data-recap-tag]')!.hidden = true;
-    // The streak isn't tracked yet, so that slide alone stays marked as a sample
-    root.querySelector<HTMLElement>('[data-streak-tag]')!.hidden = false;
 
     fill(0, 'eyebrow', week.title);
     fill(0, 'big', inr(week.spent));
@@ -256,6 +269,10 @@ const moods = [...new Set(slides.map((s) => s.mood))];
     root.querySelectorAll<HTMLElement>('[data-cta]').forEach((c) => (c.hidden = Number(c.dataset.cta) !== idx));
     root.querySelector<HTMLElement>('.story__handy')!.dataset.handy = moodsBySlide[idx];
     root.querySelector('[data-progress]')!.setAttribute('aria-valuenow', String(idx + 1));
+    if (idx === count - 1 && !checkins.includes(thisWeek)) {
+      checkins.push(thisWeek);
+      writeLocal('checkins', checkins);
+    }
     root.querySelectorAll<HTMLElement>('[data-seg]').forEach((seg) => {
       const i = Number(seg.dataset.seg);
       seg.classList.remove('seg__fill--run');

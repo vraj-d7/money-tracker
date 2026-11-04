@@ -74,7 +74,7 @@ export const PF = {
     { title: 'Check your KYC', body: 'Aadhaar, PAN and bank account should be linked and verified on the EPFO member portal.' },
     { title: 'Request the transfer online', body: 'On the member portal, choose “One member, one EPF account” and pick your old account.' },
     { title: 'Employer approves', body: 'Your old or new employer approves it online. Nudge HR if it sits for more than a week.' },
-    { title: 'Track until it lands', body: 'We’ll watch your passbook and ping you when the money shows up.' },
+    { title: 'Track until it lands', body: 'Check your passbook on the EPFO portal until the money shows up.' },
   ],
 };
 

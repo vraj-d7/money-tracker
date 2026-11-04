@@ -5,6 +5,7 @@ import Handy from '../../../components/Handy.astro';
 import { routes } from '../../../lib/routes';
 import { inr } from '../../../lib/format';
 import { PF } from '../../../data/demo-tools';
+import SampleBanner from '../../../components/SampleBanner.astro';
 import { DEFAULT_PROFILE } from '../../../scripts/profile-store';
 
 const m = PF.missing;
@@ -29,8 +30,12 @@ const facts = [
       Back to PF corner
     </a>
     <h1>Email HR about the missing PF</h1>
-    <p class="muted">Handy drafted it. Check the details, then send it from your own email.</p>
+    <p class="muted">A ready-made draft for when a PF deposit really is missing. Send it from your own email.</p>
   </header>
+
+  <SampleBanner>
+    The month, amounts and UAN in this draft are examples. Replace them with your own details before sending.
+  </SampleBanner>
 
   <section class="card draft" aria-label="Email draft" data-hr data-drafts={JSON.stringify(drafts)}>
     <div class="tone-row">

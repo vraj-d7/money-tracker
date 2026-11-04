@@ -2,24 +2,20 @@
 import AppShell from '../../layouts/AppShell.astro';
 import Handy from '../../components/Handy.astro';
 import { routes } from '../../lib/routes';
-import { NOTIFICATIONS, unreadCount } from '../../data/demo-notifications';
-
 const filters = [
   ['all', 'All'],
   ['money', 'Money'],
   ['renew', 'Renewals'],
-  ['pf', 'PF'],
   ['coach', 'Coach'],
 ] as const;
 const groups = ['Today', 'This week'] as const;
-const unread = unreadCount([]);
 ---
 
 <AppShell title="Notifications" active="notifications">
   <header class="head">
     <div class="head__text">
       <h1>Notifications</h1>
-      <p class="num muted" aria-live="polite" data-unread-text>{unread ? `${unread} new` : 'You’re all caught up'}</p>
+      <p class="num muted" aria-live="polite" data-unread-text></p>
     </div>
     <button type="button" class="btn" data-mark-all>
       <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"></path></svg>
@@ -40,37 +36,31 @@ const unread = unreadCount([]);
 
     {
       groups.map((g) => (
-        <section class="group" aria-label={g} data-group>
+        <section class="group" aria-label={g} data-group={g}>
           <h2 class="group__title">{g}</h2>
-          {NOTIFICATIONS.filter((n) => n.group === g).map((n) => (
-            <a href={n.href} class:list={['rowlink', 'notif', { 'notif--unread': n.unread }]} data-notif={n.id} data-kind={n.kind}>
-              <span class="notif__tile" aria-hidden="true" style={`background: ${n.tile}`}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d={n.icon} />
-                </svg>
-              </span>
-              <span class="notif__text">
-                <span class="notif__top">
-                  <span class="notif__title">{n.title}</span>
-                  <span class="num notif__time">{n.time}</span>
-                </span>
-                <span class="notif__body">{n.body}</span>
-                <span class="notif__cta">{n.cta} →</span>
-              </span>
-              <span class="visually-hidden" data-unread-label hidden={!n.unread}>
-                Unread.
-              </span>
-              <span class="notif__dot" aria-hidden="true" />
-            </a>
-          ))}
         </section>
       ))
     }
 
+    <template id="notif-row">
+      <a class="rowlink notif" data-notif>
+        <span class="notif__tile" aria-hidden="true" data-tile>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path data-icon></path></svg>
+        </span>
+        <span class="notif__text">
+          <span class="notif__top"><span class="notif__title" data-title></span></span>
+          <span class="notif__body" data-body></span>
+          <span class="notif__cta"><span data-cta></span> →</span>
+        </span>
+        <span class="visually-hidden" data-unread-label>Unread.</span>
+        <span class="notif__dot" aria-hidden="true"></span>
+      </a>
+    </template>
+
     <div class="empty" data-empty hidden>
       <Handy mood="chill" size={96} decorative />
       <p class="empty__title">All quiet here</p>
-      <p class="muted">Nothing in this filter. Handy will ping you when something needs you.</p>
+      <p class="muted">Nothing needs you right now. Payday, renewals and your Sunday recap show up here when they’re close.</p>
     </div>
   </div>
 
@@ -79,23 +69,37 @@ const unread = unreadCount([]);
       <Handy mood="chai" size={64} decorative />
       <h2 class="side__title">Only what matters</h2>
     </div>
-    <p class="side__text">Handy pings you about money moments only: payday, renewals before they charge, missing PF deposits and your Sunday recap.</p>
+    <p class="side__text">Handy flags money moments only: payday, renewals before they charge, and your Sunday recap. They show here in the app for now; phone and email alerts aren’t on yet.</p>
     <a href={routes.me} class="btn">Notification settings</a>
   </aside>
 </AppShell>
 
 <script>
-  import { NOTIFICATIONS, unreadCount } from '../../data/demo-notifications';
   import { readLocal, writeLocal } from '../../scripts/local-state';
+  import { buildNotifications, unreadCount } from '../../scripts/notifications';
 
   const root = document.querySelector<HTMLElement>('[data-notifs]')!;
   const read = new Set<string>(readLocal<string[]>('notifications:read', []));
+  const items = buildNotifications();
   let filter = 'all';
+
+  const rowTpl = root.querySelector<HTMLTemplateElement>('#notif-row')!;
+  for (const n of items) {
+    const a = (rowTpl.content.firstElementChild as HTMLAnchorElement).cloneNode(true) as HTMLAnchorElement;
+    a.href = n.href;
+    a.dataset.notif = n.id;
+    a.dataset.kind = n.kind;
+    a.querySelector<HTMLElement>('[data-tile]')!.style.background = n.tile;
+    a.querySelector('[data-icon]')!.setAttribute('d', n.icon);
+    a.querySelector('[data-title]')!.textContent = n.title;
+    a.querySelector('[data-body]')!.textContent = n.body;
+    a.querySelector('[data-cta]')!.textContent = n.cta;
+    root.querySelector(`[data-group="${n.group}"]`)!.append(a);
+  }
 
   function render() {
     root.querySelectorAll<HTMLElement>('[data-notif]').forEach((a) => {
-      const n = NOTIFICATIONS.find((x) => x.id === a.dataset.notif)!;
-      const isUnread = n.unread && !read.has(n.id);
+      const isUnread = !read.has(a.dataset.notif!);
       a.classList.toggle('notif--unread', isUnread);
       a.querySelector<HTMLElement>('[data-unread-label]')!.hidden = !isUnread;
       a.hidden = filter !== 'all' && a.dataset.kind !== filter;
@@ -138,7 +142,7 @@ const unread = unreadCount([]);
   );
 
   document.querySelector('[data-mark-all]')!.addEventListener('click', () => {
-    NOTIFICATIONS.forEach((n) => read.add(n.id));
+    items.forEach((n) => read.add(n.id));
     save();
     render();
   });

@@ -23,6 +23,5 @@ export const demoHome = {
       { label: 'Gym pass', note: 'Sat 14 Nov · unused 41 days', amount: 999, icon: 'gym', warn: true },
     ],
   },
-  streak: { weeks: 6, done: [true, true, true, true, true, true, false] },
   coachPrompts: ['Can I afford a ₹12,000 phone?', 'Where did my salary go?', 'Start my first SIP'],
 } as const;

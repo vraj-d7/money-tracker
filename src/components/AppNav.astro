@@ -10,7 +10,7 @@ interface Props {
 
 const { active = 'home' } = Astro.props;
 
-const items: { id: AppSection; label: string; href: string; d: string; badge?: number; badgeLabel?: string }[] = [
+const items: { id: AppSection; label: string; href: string; d: string; badge?: boolean }[] = [
   { id: 'home', label: 'Home', href: routes.home, d: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z' },
   { id: 'salary', label: 'Salary', href: routes.salary, d: 'M7 5h10M7 9h10M7 5c4 0 5 2 5 4s-1 4-5 4l8 7' },
   { id: 'offer', label: 'Offer face-off', href: routes.offer, d: 'M4 7h12l-3-3M20 17H8l3 3' },
@@ -21,8 +21,7 @@ const items: { id: AppSection; label: string; href: string; d: string; badge?: n
     label: 'Autopay scan',
     href: routes.scan,
     d: 'M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M4 12h16',
-    badge: demoUser.autopaysToReview,
-    badgeLabel: `${demoUser.autopaysToReview} autopays to review`,
+    badge: true,
   },
   { id: 'itr', label: 'First ITR', href: routes.itr, d: 'M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6' },
   { id: 'pf', label: 'PF corner', href: routes.pf, d: 'M5 10l7-6 7 6M6 10v9h12v-9M10 19v-5h4v5' },
@@ -31,8 +30,7 @@ const items: { id: AppSection; label: string; href: string; d: string; badge?: n
     label: 'Notifications',
     href: routes.notifications,
     d: 'M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0',
-    badge: demoUser.newNotifications,
-    badgeLabel: `${demoUser.newNotifications} new`,
+    badge: true,
   },
 ];
 ---
@@ -52,7 +50,6 @@ const items: { id: AppSection; label: string; href: string; d: string; badge?: n
               href={it.href}
               class:list={['navlink', { 'navlink--on': on }]}
               aria-current={on ? 'page' : undefined}
-              aria-label={it.badgeLabel ? `${it.label}, ${it.badgeLabel}` : undefined}
               title={it.label}
               data-nav-item={it.id}
             >
@@ -61,9 +58,7 @@ const items: { id: AppSection; label: string; href: string; d: string; badge?: n
               </svg>
               <span class="nav-text">{it.label}</span>
               {it.badge ? (
-                <span class="nav-badge" aria-hidden="true" data-nav-badge>
-                  {it.badge}
-                </span>
+                <span class="nav-badge" aria-hidden="true" data-nav-badge hidden />
               ) : null}
             </a>
           </li>
@@ -95,8 +90,9 @@ const items: { id: AppSection; label: string; href: string; d: string; badge?: n
 </nav>
 
 <script>
-  import { unreadCount } from '../data/demo-notifications';
+  import { unreadCount } from '../scripts/notifications';
   import { displayName, initials, loadProfile } from '../scripts/profile-store';
+  import { SCAN_RESULTS } from '../data/demo-tools';
   import { readLocal } from '../scripts/local-state';
   import { hasCoachPlan, loadSubscription } from '../scripts/subscription-store';
 
@@ -117,7 +113,7 @@ const items: { id: AppSection; label: string; href: string; d: string; badge?: n
   const found = readLocal<unknown[] | null>('scan:subs', null);
   document.querySelectorAll<HTMLElement>('[data-nav-item="scan"]').forEach((link) => {
     const badge = link.querySelector<HTMLElement>('[data-nav-badge]');
-    const count = !scanned ? 0 : found ? found.length : Number(badge?.textContent);
+    const count = !scanned ? 0 : found ? found.length : SCAN_RESULTS.length;
     if (badge) {
       badge.textContent = String(count);
       badge.hidden = count === 0;

@@ -30,4 +30,3 @@ export interface Goal {
 }
 
 export const nextPayday = { label: 'Sat, 7 Nov', short: '7 Nov' };
-export const paydayStreak = 4;
