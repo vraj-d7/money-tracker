@@ -215,6 +215,33 @@ const sliceColors = ['#2ED3A0', '#FF6B5B', '#B9A6FF', '#D8C9A3'];
     document.dispatchEvent(new CustomEvent('lp:ctc', { detail: { lakhs, monthly: s.inhand / 12 } }));
   }
 
+  // On load every amount on the card counts up from ₹0, alongside the graph's sweep.
+  // Touching the slider mid-count cancels it, because countTo shares the same frame handle.
+  function countUpOnLoad(lakhs: number) {
+    const split = heroSplit(lakhs);
+    const amounts = (['inhand', 'tax', 'pf', 'other'] as const).map((k) => ({
+      el: root.querySelector(`[data-amt="${k}"]`)!,
+      target: split[k] / 12,
+    }));
+    const lands = root.querySelector('[data-inhand]')!;
+    const target = split.inhand / 12;
+    cancelAnimationFrame(raf);
+    shown = 0;
+    lands.textContent = inr(0);
+    amounts.forEach((a) => (a.el.textContent = inr(0)));
+
+    const start = performance.now() + 700;
+    const step = (now: number) => {
+      const t = Math.max(0, Math.min(1, (now - start) / 1500));
+      const k = 1 - Math.pow(1 - t, 3);
+      shown = target * k;
+      lands.textContent = inr(shown);
+      amounts.forEach((a) => (a.el.textContent = inr(a.target * k)));
+      if (t < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+  }
+
   range.addEventListener('input', () => setCtc(CTC_STEPS[Number(range.value)]));
   input.addEventListener('input', () => {
     const v = parseFloat(input.value);
@@ -223,6 +250,7 @@ const sliceColors = ['#2ED3A0', '#FF6B5B', '#B9A6FF', '#D8C9A3'];
   input.addEventListener('blur', () => setCtc(parseFloat(input.value) || 12));
 
   setCtc(Number(root.dataset.start));
+  if (!reduceMotion) countUpOnLoad(Number(root.dataset.start));
 </script>
 
 <style>
@@ -643,6 +671,36 @@ const sliceColors = ['#2ED3A0', '#FF6B5B', '#B9A6FF', '#D8C9A3'];
     border: 2px solid var(--ink);
     font-weight: 500;
     line-height: 1.4;
+  }
+
+  /* Handy and the bubble hop in as the numbers finish counting, then Handy keeps gently swaying */
+  .lands__handy {
+    animation: handy-hop 0.7s cubic-bezier(0.3, 1.6, 0.5, 1) 1.7s backwards;
+  }
+
+  .mood-box > span {
+    transform-origin: 50% 100%;
+    animation: handy-sway 3.6s ease-in-out 2.4s infinite;
+  }
+
+  @keyframes handy-hop {
+    from {
+      opacity: 0;
+      transform: translateY(26px) scale(0.8);
+    }
+  }
+
+  @keyframes handy-sway {
+    0%,
+    100% {
+      transform: none;
+    }
+    30% {
+      transform: translateY(-5px) rotate(-3deg);
+    }
+    70% {
+      transform: translateY(-2px) rotate(3deg);
+    }
   }
 
   .mood-box {

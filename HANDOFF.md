@@ -134,7 +134,8 @@ Where Vraj is in the step-by-step guide:
 - **Motion (pushed, `d33d852`):** Lenis smooth wheel scrolling on every page (`scripts/smooth-scroll.ts`; touch stays native; a ResizeObserver re-measures because pages rebuild after load, without which Lenis can refuse to scroll). Page changes cross-fade with native CSS `@view-transition` in `global.css` (chosen over Astro's ClientRouter, which would stop page scripts re-running). Landing sections reveal on scroll (`.reveal` in `pages/index.astro`); app pages don't, so numbers aren't delayed. All off with reduced motion. Safari/Firefox support for page transitions varies; they simply switch instantly. Restoring the AI stash may conflict in `package.json` now that `lenis` is added.
 - **Hero card fix (pushed, `bb8f35a`):** the labels overlapped their amounts on small laptop widths; `.legend` is now one column from just above 1023px to 1365px.
 - **Page load animation (pushed, `5bc33cc`):** every page gets a 0.35s opacity fade on `body` (opacity only, since a transform would break fixed elements), skipped via `pagereveal` when a view transition already ran. Landing hero builds in with staggered `load-rise` (`pages/index.astro`). Off with reduced motion.
-- **Hero graph motion (not committed yet):** on load the salary bar grows, bands sweep left to right, buckets pop in (`flow-sweep`, `flow-grow` in `landing/Hero.astro`). CSS only, plays once, about 2.3s in all, off with reduced motion; the slider keeps its own transitions.
+- **Hero graph motion (pushed, `c50f558`):** on load the salary bar grows, bands sweep left to right, buckets pop in (`flow-sweep`, `flow-grow` in `landing/Hero.astro`). CSS only, plays once, about 2.3s in all, off with reduced motion; the slider keeps its own transitions.
+- **Hero amounts and Handy (not committed yet):** on load the hero card's five amounts count up from ₹0 over 1.5s (`countUpOnLoad` in `landing/Hero.astro`; touching the slider cancels it). Handy and the bubble hop in, then Handy sways gently (`handy-hop`, `handy-sway`). Off with reduced motion. Amounts further down the landing page don't count.
 - Later options: AI coach (see above), phone sign-in, payments, own email sender (SMTP;
   Supabase's built-in one only allows a few emails an hour, so do this before real users). The PF/ITR
   tools and notifications still use sample content from `src/data/demo-tools.ts` and `demo-notifications.ts`.
@@ -211,6 +212,7 @@ Still pretend or test mode ("heavy tasks", roughly in order):
 
 ## History (newest first)
 
+- `c50f558`: Landing salary graph animates on load.
 - `5bc33cc`: Page load fade and landing hero entrance.
 - `bb8f35a`: Hero card labels no longer overlap on small laptops.
 - `d33d852`: Lenis, page transitions, landing reveals.
