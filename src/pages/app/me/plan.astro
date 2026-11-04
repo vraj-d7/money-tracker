@@ -67,12 +67,16 @@ import { PLAN_PRICE } from '../../../scripts/subscription-store';
   import {
     accessUntil,
     fullDate,
+    PAID_PLANS_ON,
     hasCoachPlan,
     loadSubscription,
     nextCharge,
     saveSubscription,
     shortDate,
   } from '../../../scripts/subscription-store';
+
+  // Everything is free for now, so there's no plan to manage
+  if (!PAID_PLANS_ON) window.location.replace('/app/me');
 
   const root = document.querySelector<HTMLElement>('[data-manage]')!;
   const sub = loadSubscription();

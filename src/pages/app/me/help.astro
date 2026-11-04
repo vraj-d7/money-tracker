@@ -8,7 +8,7 @@ const faqs = [
   ['I don’t have a CTC. Can I still use Inhandy?', 'Yes. Pick “I get a fixed monthly salary” in Salary and tax details and enter what you’re paid. Jars, goals, payday and the coach all work from that amount.'],
   ['How accurate is the in-hand estimate?', 'It assumes basic is 50% of CTC, standard PF and professional tax. Add your real numbers in Salary and tax details and it gets close to your payslip.'],
   ['Is this financial advice?', 'No. Inhandy explains and estimates. For big decisions, talk to a SEBI-registered adviser or a chartered accountant.'],
-  ['How do I cancel the Coach plan?', 'Me → Your plan → Cancel my plan. One click, no calls. You keep it until the end of the week you paid for.'],
+  ['Does Inhandy cost anything?', 'Not right now. Everything is free while we’re getting started, and no card or UPI is needed.'],
   ['Can Inhandy cancel subscriptions for me?', 'Not yet. We find them and walk you through cancelling each one, including the UPI mandate.'],
   ['What does each coach mode do?', 'Hype celebrates, Honest sticks to facts, Mom roasts you with love. Same numbers, different tone. Switch any time.'],
 ];
@@ -34,9 +34,13 @@ const faqs = [
               <path d="M6 9l6 6 6-6" />
             </svg>
           </button>
-          <p id={`faq-${i}`} class="faq__a" hidden={i !== 0}>
-            {a}
-          </p>
+          <div class="faq__panel">
+            <div class="faq__clip">
+              <p id={`faq-${i}`} class="faq__a">
+                {a}
+              </p>
+            </div>
+          </div>
         </div>
       ))
     }
@@ -59,7 +63,6 @@ const faqs = [
         const on = x === f && opening;
         x.classList.toggle('faq--open', on);
         x.querySelector('button')!.setAttribute('aria-expanded', String(on));
-        x.querySelector<HTMLElement>('.faq__a')!.hidden = !on;
       });
     }),
   );
@@ -135,11 +138,34 @@ const faqs = [
 
   .faq__q svg {
     flex: none;
-    transition: transform 0.2s;
+    transition: transform 0.3s ease;
   }
 
   .faq--open .faq__q svg {
     transform: rotate(180deg);
+  }
+
+  /* Slides open by growing from no height to the text's height. The button's aria-expanded drives it. */
+  .faq__panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    visibility: hidden;
+    opacity: 0;
+    transition:
+      grid-template-rows 0.3s ease,
+      opacity 0.3s ease,
+      visibility 0.3s;
+  }
+
+  [aria-expanded='true'] + .faq__panel {
+    grid-template-rows: 1fr;
+    visibility: visible;
+    opacity: 1;
+  }
+
+  .faq__clip {
+    min-height: 0;
+    overflow: hidden;
   }
 
   .faq__a {
@@ -147,7 +173,6 @@ const faqs = [
     padding: 0 18px 16px;
     line-height: 1.55;
     color: var(--ink-muted);
-    animation: pop-in 0.35s cubic-bezier(0.3, 1.4, 0.5, 1);
   }
 
   .side {

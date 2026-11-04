@@ -111,10 +111,8 @@ const settings = [
         <span class="plan__badge" data-plan-badge>Free</span>
       </div>
       <p class="plan__text" data-plan-text>
-        Salary explainer, offer face-off and the first ITR checklist stay free forever. The Coach plan adds Sunday check-ins, renewal alerts
-        and unlimited chats for ₹19/week.
+        Everything in Inhandy is free for now, including the coach, scans and Sunday check-ins. No card or UPI needed.
       </p>
-      <a href={routes.paywall} class="btn btn--mango btn--lg" data-plan-cta>See the Coach plan</a>
     </section>
 
     <section class="card list" aria-label="Settings">
@@ -253,9 +251,6 @@ const settings = [
         ? `Cancelled. You keep Sunday check-ins and renewal alerts until ${shortDate(accessUntil(sub), true)}.`
         : `Sunday check-ins, renewal alerts and unlimited chats, ₹19/week. Next charge ${shortDate(nextCharge())}.`,
     );
-    const cta = document.querySelector<HTMLAnchorElement>('[data-plan-cta]')!;
-    cta.textContent = 'Manage my plan';
-    cta.href = routes.managePlan;
   }
 
   // Notification switches

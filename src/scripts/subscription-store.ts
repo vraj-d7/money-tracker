@@ -2,6 +2,9 @@
 // so this only records what the user chose; no money moves.
 import { readLocal, writeLocal } from './local-state';
 
+/** Everything is free for now. While this is false, the plan and checkout pages redirect away and nothing paid is shown. */
+export const PAID_PLANS_ON = false;
+
 export const PLAN_PRICE = 19;
 /** GST included in the weekly price (18%) */
 export const PLAN_GST = Math.round(((PLAN_PRICE * 18) / 118) * 100) / 100;
@@ -29,6 +32,7 @@ export function saveSubscription(s: Subscription): void {
 
 /** On the plan (including a cancelled plan that runs to the end of the paid week) */
 export function hasCoachPlan(s: Subscription, today = new Date()): boolean {
+  if (!PAID_PLANS_ON) return false;
   if (s.status === 'active') return true;
   return s.status === 'cancelled' && today <= accessUntil(s);
 }

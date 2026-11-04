@@ -45,7 +45,11 @@ const perks = [
 </SheetPage>
 
 <script>
-  import { hasCoachPlan, loadSubscription } from '../../../scripts/subscription-store';
+  import { routes } from '../../../lib/routes';
+  import { PAID_PLANS_ON, hasCoachPlan, loadSubscription } from '../../../scripts/subscription-store';
+
+  // Everything is free for now, so there's nothing to sell here
+  if (!PAID_PLANS_ON) window.location.replace(routes.home);
 
   // Already subscribed? Point to managing the plan instead of buying it again
   const on = hasCoachPlan(loadSubscription());

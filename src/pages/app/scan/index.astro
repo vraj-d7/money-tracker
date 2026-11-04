@@ -670,6 +670,26 @@ const phases = [
     display: none;
   }
 
+  /* Slides open in browsers that support it; others still open, just instantly */
+  .pass-help {
+    interpolate-size: allow-keywords;
+  }
+
+  .pass-help::details-content {
+    block-size: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition:
+      block-size 0.3s ease,
+      opacity 0.3s ease,
+      content-visibility 0.3s allow-discrete;
+  }
+
+  .pass-help[open]::details-content {
+    block-size: auto;
+    opacity: 1;
+  }
+
   .pass-help summary {
     min-height: 44px;
     display: inline-flex;

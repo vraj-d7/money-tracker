@@ -85,7 +85,9 @@ const methods = [
 </SheetPage>
 
 <script>
+  import { routes } from '../../../lib/routes';
   import {
+    PAID_PLANS_ON,
     PLAN_PRICE,
     isValidUpiId,
     loadSubscription,
@@ -93,6 +95,9 @@ const methods = [
     saveSubscription,
     shortDate,
   } from '../../../scripts/subscription-store';
+
+  // Everything is free for now, so nobody should reach checkout
+  if (!PAID_PLANS_ON) window.location.replace(routes.home);
 
   const root = document.querySelector<HTMLElement>('[data-checkout]')!;
   const form = root.querySelector<HTMLFormElement>('[data-step-panel="pay"]')!;

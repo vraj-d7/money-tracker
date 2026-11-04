@@ -3,6 +3,7 @@
 import Logo from './Logo.astro';
 import { routes, type AppSection } from '../lib/routes';
 import { demoUser } from '../data/demo-user';
+import { PAID_PLANS_ON } from '../scripts/subscription-store';
 
 interface Props {
   active?: AppSection;
@@ -68,11 +69,15 @@ const items: { id: AppSection; label: string; href: string; d: string; badge?: b
   </ul>
 
   <div class="appnav__foot">
-    <section class="nav-plus" aria-label="Coach plan" data-nav-plus>
-      <p class="nav-plus__title">Sunday check-ins, every week</p>
-      <p class="nav-plus__text">The Coach plan is ₹19/week. Cancel anytime.</p>
-      <a href={routes.paywall} class="btn btn--mango nav-plus__cta">Try the Coach plan</a>
-    </section>
+    {
+      PAID_PLANS_ON && (
+        <section class="nav-plus" aria-label="Coach plan" data-nav-plus>
+          <p class="nav-plus__title">Sunday check-ins, every week</p>
+          <p class="nav-plus__text">The Coach plan is ₹19/week. Cancel anytime.</p>
+          <a href={routes.paywall} class="btn btn--mango nav-plus__cta">Try the Coach plan</a>
+        </section>
+      )
+    }
     <a
       href={routes.me}
       class:list={['navlink', 'nav-me', { 'navlink--me-on': active === 'me' }]}

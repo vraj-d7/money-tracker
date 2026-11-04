@@ -57,9 +57,13 @@ const startOpen = 4;
               <span class="line__label">{l.label}</span>
               <span class="num line__amt">{inr(l.amount)}</span>
             </button>
-            <p id={`f16-${i}`} class="line__explain" hidden={i !== startOpen}>
-              {l.explain}
-            </p>
+            <div class="line__panel">
+              <div class="line__clip">
+                <p id={`f16-${i}`} class="line__explain">
+                  {l.explain}
+                </p>
+              </div>
+            </div>
           </div>
         ))
       }
@@ -85,7 +89,6 @@ const startOpen = 4;
         const on = l === line && opening;
         l.classList.toggle('line--open', on);
         l.querySelector('button')!.setAttribute('aria-expanded', String(on));
-        l.querySelector<HTMLElement>('.line__explain')!.hidden = !on;
       });
     }),
   );
@@ -273,24 +276,35 @@ const startOpen = 4;
     font-weight: 800;
   }
 
+  /* Slides open by growing from no height to the text's height. The button's aria-expanded drives it. */
+  .line__panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    visibility: hidden;
+    opacity: 0;
+    transition:
+      grid-template-rows 0.3s ease,
+      opacity 0.3s ease,
+      visibility 0.3s;
+  }
+
+  [aria-expanded='true'] + .line__panel {
+    grid-template-rows: 1fr;
+    visibility: visible;
+    opacity: 1;
+  }
+
+  .line__clip {
+    min-height: 0;
+    overflow: hidden;
+  }
+
   .line__explain {
     margin: 2px 10px 10px;
     padding: 12px 14px;
     border-radius: 14px;
     background: #eee9ff;
     line-height: 1.5;
-    animation: open-in 0.3s cubic-bezier(0.3, 1.4, 0.5, 1);
-  }
-
-  @keyframes open-in {
-    0% {
-      opacity: 0;
-      transform: translateY(-6px);
-    }
-    100% {
-      opacity: 1;
-      transform: none;
-    }
   }
 
   @media (max-width: 1279px) {
